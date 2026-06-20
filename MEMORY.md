@@ -40,7 +40,7 @@
 - 面积控制铁律：总金色面积≤30%
 - 技能目录：`skills/film-cinematography-factory/技能系列/镜头级专项/`
 
-### 卓越视频生成系统 v6.5.65-P8 → v6.6.5
+### 暴风战斧AI视频生成系统 v6.6.5（生产版本）
 - 安装路径：`/root/.openclaw/workspace/zhuoyue-system/`
 - 生产版本：`nirath-master-pipeline.js.production-v6.6.5`（当前）
 - 配置：`config/env.js`（环境变量中心）、`config/seedance.json`（Seedance 运行时配置）
@@ -53,6 +53,7 @@
   - **generate_audio 自动检测** (`systems/render-request-builder.js`): 检测到台词引号/对话标记自动设置 `generate_audio: true`
   - **温度参数可配置** (`systems/llm-reasoning-engine.js`): `temperature`/`topP` 从硬编码改为构造函数可覆盖（Stage 5A 显式传入 0.6/0.9 降低主题漂移）
   - **角色外观锚定文本** (`characters/chenzhuo/character-card.json`): 新增 `appearanceAnchor.uniform` 字段，详细描述警服款式配饰
+- **GitHub 发布就绪**：安检通过、.gitignore 配置、.example 模板、SECURITY.md，版本 tag `v6.6.5`
 
 ## 角色档案系统（陈卓）
 - **角色 ID**: chen-zhuo
