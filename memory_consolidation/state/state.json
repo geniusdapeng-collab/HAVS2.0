@@ -1,0 +1,30 @@
+{
+  "stm": {
+    "count": 28,
+    "last_ts": "2026-06-20T21:05:58.383062",
+    "last_sessions": 104,
+    "last_messages": 1085,
+    "last_chars": 21721
+  },
+  "diary": {
+    "count": 39,
+    "last_ts": "2026-06-20T03:53:16.310139",
+    "last_day": 21,
+    "last_sessions": 2,
+    "last_messages": 19,
+    "last_filename": "day21-2026-06-20-sigkill_at_stage_5a_again.md",
+    "last_latency_s": 24.1,
+    "last_skip": "conversation_hash_unchanged",
+    "last_error": "The read operation timed out"
+  },
+  "compact": {
+    "count": 39,
+    "last_ts": "2026-06-20T03:53:19.365167",
+    "last_invoke": 11,
+    "last_sessions": 80,
+    "last_messages": 854,
+    "last_latency_s": 18.7,
+    "last_model": "k2p6",
+    "last_skip": "stm_hash_unchanged"
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "id": "chenzhuo",
+  "name": "陈卓",
+  "alias": "卓姐",
+  "role": "主角/健康科普主持人",
+  "age": 35,
+  "gender": "female",
+  "occupation": "警务系统护士",
+  "portraitSets": {
+    "uniform": {
+      "description": "警服职业装定妆照",
+      "status": "incomplete",
+      "portraits": [
+        {
+          "id": "portrait-uniform-01",
+          "angle": "three-quarter",
+          "type": "master",
+          "file": "portraits/uniform/portrait-uniform-01.jpg",
+          "description": "警服职业装，藏蓝色制服，佩戴警帽，正面偏侧45度，白色背景，专业气质",
+          "tags": ["警服", "制服", "职业装", "正式", "专业", "偏侧"]
+        },
+        {
+          "id": "portrait-uniform-02",
+          "angle": "front",
+          "type": "standard",
+          "file": "portraits/uniform/portrait-uniform-02.jpg",
+          "description": "警服职业装，藏蓝色制服，佩戴警帽，正面全身，白色背景，正式站姿",
+          "tags": ["警服", "制服", "正面", "全身", "正式"]
+        },
+        {
+          "id": "portrait-uniform-03",
+          "angle": "side",
+          "type": "standard",
+          "file": "portraits/uniform/portrait-uniform-03.jpg",
+          "description": "警服职业装，藏蓝色制服，佩戴警帽，背面侧身，白色背景，展示肩章臂章",
+          "tags": ["警服", "制服", "背面", "侧身", "肩章", "臂章"]
+        },
+        {
+          "id": "portrait-uniform-04",
+          "angle": "profile",
+          "type": "standard",
+          "file": "portraits/uniform/portrait-uniform-04.jpg",
+          "description": "警服职业装，藏蓝色制服，佩戴警帽，正侧面90度，白色背景，展示面部轮廓和肩章",
+          "tags": ["警服", "制服", "侧面", "90度", "轮廓"]
+        },
+        {
+          "id": "portrait-uniform-05",
+          "angle": "front",
+          "type": "closeup",
+          "file": "portraits/uniform/portrait-uniform-05.jpg",
+          "description": "警服职业装，藏蓝色制服，佩戴警帽，正面半身特写，白色背景，面部清晰，警徽肩章细节完整",
+          "tags": ["警服", "制服", "正面", "特写", "半身", "面部", "表情"]
+        },
+        {
+          "id": "portrait-uniform-06",
+          "angle": "front",
+          "type": "sitting",
+          "file": "portraits/uniform/portrait-uniform-06.jpg",
+          "description": "警服职业装，藏蓝色制服，佩戴警帽，坐姿办公场景，正面偏侧，双手交叠放桌面，办公椅和办公桌，白色背景，专业办公姿态",
+          "tags": ["警服", "制服", "坐姿", "办公", "桌面", "办公椅"]
+        }
+      ]
+    },
+    "casual": {
+      "description": "日常生活照定妆照",
+      "status": "incomplete",
+      "portraits": [
+        {
+          "id": "portrait-casual-01",
+          "angle": "three-quarter",
+          "type": "master",
+          "file": "portraits/casual/portrait-casual-01.jpg",
+          "description": "日常生活照，浅粉色休闲T恤，室内自然光，窗边柔和光线，短发披肩，温馨居家氛围，自然微笑",
+          "tags": ["生活照", "休闲", "居家", "T恤", "自然光", "微笑"]
+        },
+        {
+          "id": "portrait-casual-02",
+          "angle": "front",
+          "type": "full-body",
+          "file": "portraits/casual/portrait-casual-02.jpg",
+          "description": "日常生活照，浅粉色吊带连衣裙，走廊窗边自然光，全身站姿， barefoot 光脚，木地板，明亮居家氛围",
+          "tags": ["生活照", "休闲", "连衣裙", "全身", "自然光", "居家"]
+        },
+        {
+          "id": "portrait-casual-03",
+          "angle": "profile",
+          "type": "standard",
+          "file": "portraits/casual/portrait-casual-03.jpg",
+          "description": "日常生活照，浅粉色T恤，窗边自然光，正侧面90度半身，短发，浅色背景，自然侧脸轮廓",
+          "tags": ["生活照", "休闲", "T恤", "侧面", "90度", "半身", "自然光"]
+        },
+        {
+          "id": "portrait-casual-04",
+          "angle": "front",
+          "type": "closeup",
+          "file": "portraits/casual/portrait-casual-04.jpg",
+          "description": "日常生活照，浅粉色T恤，沙发背景，正面半身特写，室内自然光，温暖居家氛围，微笑",
+          "tags": ["生活照", "休闲", "T恤", "正面", "特写", "沙发", "微笑"]
+        },
+        {
+          "id": "portrait-casual-05",
+          "angle": "front",
+          "type": "face-master",
+          "file": "portraits/casual/portrait-casual-05.jpg",
+          "description": "日常生活照，白色吊带背心，正面面部特写，浅色背景，面部特征清晰，面部纹理细节完整，面部一致性最佳参考",
+          "tags": ["生活照", "休闲", "吊带", "面部", "特写", "face-master", "一致性参考"]
+        }
+      ]
+    }
+  },
+  "visualIdentity": {
+    "subject": "陈卓",
+    "appearance": {
+      "face": {
+        "description": "东方女性面孔，35岁左右，面容清秀温和",
+        "consistency": "strict",
+        "promptFragment": "东方女性面孔，35岁，面容清秀温和，双眼明亮有神"
+      },
+      "hair": {
+        "description": "深色盘发，整洁干练",
+        "consistency": "strict",
+        "promptFragment": "深色盘发，整洁干练，发髻整齐"
+      },
+      "bodyType": {
+        "description": "中等身材，健康体态",
+        "consistency": "strict",
+        "promptFragment": "中等身材，健康体态，站姿挺拔"
+      }
+    },
+    "style": "超写实CG渲染，电影级光影，次表面散射，毛孔级纹理，8K品质"
+  },
+  "characterStyle": {
+    "uniform": {
+      "full": "身穿藏蓝色警服制服，佩戴警帽，肩章和警徽清晰可见，专业气质，白色背景棚拍",
+      "partial": "藏蓝色警服制服，警帽"
+    },
+    "casual": {
+      "full": "待补充",
+      "partial": "待补充"
+    }
+  },
+  "appearanceAnchor": {
+    "uniform": "陈卓身穿标准藏蓝色警用制服，佩戴警帽，左胸佩戴警徽和警号，两肩佩戴肩章，制服为平驳领、单排四粒扣西装款式，腰系黑色警用腰带，脚穿黑色三接头皮鞋，整体着装整洁规范",
+    "casual": "陈卓穿着日常休闲服装，浅色T恤或连衣裙，短发披肩，自然居家风格"
+  },
+  "portraitAngles": {
+    "required": ["front", "three-quarter", "profile", "closeup", "front-full-body"],
+    "current": ["front", "three-quarter", "profile", "side", "closeup", "sitting", "full-body"],
+    "missing": []
+  },
+  "createdAt": "2026-06-13T21:19:00+08:00",
+  "updatedAt": "2026-06-13T21:19:00+08:00",
+  "version": "1.0"
+}

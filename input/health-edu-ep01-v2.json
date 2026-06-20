@@ -1,0 +1,51 @@
+{
+  "videoType": "documentary",
+  "filmType": "documentary",
+  "subject": "横纹肌溶解的症状及实验室检查",
+  "episode": 1,
+  "totalEpisodes": 3,
+  "episodeTitle": "第一集：横纹肌溶解的症状及实验室检查",
+  "seriesTitle": "横纹肌溶解科普系列",
+  "duration": 62,
+  "targetAudience": "普通大众",
+  "style": "full_realistic",
+  "character": {
+    "id": "chen-zhuo",
+    "name": "陈卓",
+    "role": "主讲人",
+    "costume": "警服定妆照",
+    "referenceImages": [
+      "/root/.openclaw/workspace/characters/chenzhuo/portraits/uniform/front.png",
+      "/root/.openclaw/workspace/characters/chenzhuo/portraits/uniform/threeQuarter.png",
+      "/root/.openclaw/workspace/characters/chenzhuo/portraits/uniform/closeup.png",
+      "/root/.openclaw/workspace/characters/chenzhuo/portraits/uniform/side.png"
+    ]
+  },
+  "content": {
+    "mainTopic": "横纹肌溶解的症状及实验室检查",
+    "keyPoints": [
+      "什么是横纹肌溶解",
+      "横纹肌溶解的典型症状",
+      "实验室检查指标",
+      "如何识别和应对"
+    ],
+    "opening": {
+      "hasOpening": true,
+      "mainTitle": "横纹肌溶解科普",
+      "subTitle": "第一集：症状与检查"
+    }
+  },
+  "cinematography": {
+    "filmType": "documentary",
+    "mood": "professional",
+    "lighting": "soft_natural",
+    "camera": "medium_shot",
+    "style": "documentary_interview"
+  },
+  "outputDir": "/root/.openclaw/workspace/output/health-edu-ep01-rhabdomyolysis-v2",
+  "stages": {
+    "style": {
+      "prompt": ""
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "required": ["title", "topic", "keyPoints", "shots", "targetDuration"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "topic": { "type": "string", "minLength": 1 },
+    "keyPoints": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "shots": { "type": "array", "items": { "type": "object" }, "minItems": 1 },
+    "targetDuration": { "type": "number", "minimum": 1 },
+    "style": { "type": "string" },
+    "world": { "type": "object" },
+    "characters": { "type": "object" },
+    "opening": { "type": "object" }
+  }
+}

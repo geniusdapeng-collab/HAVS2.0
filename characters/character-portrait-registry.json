@@ -1,0 +1,50 @@
+{
+  "characters": {
+    "chen-zhuo": {
+      "styles": {
+        "uniform": {
+          "description": "警服职业装定妆照",
+          "portraits": {
+            "front": "characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg",
+            "threeQuarter": "characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg",
+            "side": "characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg",
+            "closeup": "characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg",
+            "fullBody": "characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg",
+            "back": "characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg",
+            "sitting": "characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg"
+          }
+        },
+        "casual": {
+          "description": "日常生活照定妆照",
+          "portraits": {
+            "front": "characters/chenzhuo/portraits/casual/portrait-casual-02.jpg",
+            "threeQuarter": "characters/chenzhuo/portraits/casual/portrait-casual-01.jpg",
+            "side": "characters/chenzhuo/portraits/casual/portrait-casual-03.jpg",
+            "closeup": "characters/chenzhuo/portraits/casual/portrait-casual-05.jpg",
+            "fullBody": "characters/chenzhuo/portraits/casual/portrait-casual-02.jpg",
+            "faceMaster": "characters/chenzhuo/portraits/casual/portrait-casual-05.jpg"
+          }
+        }
+      }
+    }
+  },
+  "selectionRules": {
+    "sceneToStyleMapping": {
+      "警局": "uniform",
+      "警务": "uniform",
+      "医院": "uniform",
+      "医疗": "uniform",
+      "门诊": "uniform",
+      "急诊": "uniform",
+      "诊疗": "uniform",
+      "检查": "uniform",
+      "健康科普": "uniform",
+      "家庭": "casual",
+      "居家": "casual",
+      "客厅": "casual",
+      "生活": "casual",
+      "休闲": "casual"
+    },
+    "defaultStyle": "uniform"
+  }
+}

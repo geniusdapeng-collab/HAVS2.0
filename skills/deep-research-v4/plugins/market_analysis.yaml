@@ -1,0 +1,358 @@
+# 领域插件：市场分析
+plugin_id: market_analysis
+name: "市场分析"
+description: "市场规模、用户分析、增长机会、竞争格局"
+version: 1.0.0
+match_keywords: ["市场", "用户", "增长", "规模", "渗透率", "消费者"]
+
+dimensions:
+  - id: market_size
+    name: "市场规模"
+    weight: 0.20
+    description: "当前规模、增长预测、细分市场"
+    keywords:
+      core: ["{topic}市场规模", "{topic} market size", "{topic}行业规模"]
+      extended: ["{topic}增长率", "{topic} CAGR", "{topic} TAM"]
+      supplementary: ["{topic}细分市场规模", "{topic}区域市场"]
+
+  - id: user_profile
+    name: "用户画像"
+    weight: 0.15
+    description: "目标用户、用户特征、消费行为"
+    keywords:
+      core: ["{topic}用户画像", "{topic} user profile", "{topic}目标用户"]
+      extended: ["{topic}用户特征", "{topic}消费行为", "{topic} demographics"]
+      supplementary: ["{topic}用户增长", "{topic}留存率"]
+
+  - id: demand_analysis
+    name: "需求分析"
+    weight: 0.15
+    description: "用户需求、痛点、未满足需求"
+    keywords:
+      core: ["{topic}需求分析", "{topic} pain points", "{topic}用户需求"]
+      extended: ["{topic}用户痛点", "{topic}未满足需求", "{topic}使用场景"]
+      supplementary: ["{topic}需求趋势", "{topic}用户调研"]
+
+  - id: competitive_landscape
+    name: "竞争格局"
+    weight: 0.15
+    description: "竞争者、市场份额、竞争策略"
+    keywords:
+      core: ["{topic}竞争格局", "{topic} competitors", "{topic}市场份额"]
+      extended: ["{topic}竞争者分析", "{topic}市场集中度", "{topic} CR5"]
+      supplementary: ["{topic}竞争策略", "{topic}差异化"]
+
+  - id: growth_drivers
+    name: "增长驱动"
+    weight: 0.15
+    description: "增长因素、政策驱动、技术驱动"
+    keywords:
+      core: ["{topic}增长驱动", "{topic} growth drivers", "{topic}驱动因素"]
+      extended: ["{topic}政策利好", "{topic}技术驱动", "{topic}消费升级"]
+      supplementary: ["{topic}宏观环境", "{topic}PEST分析"]
+
+  - id: trend_forecast
+    name: "趋势预测"
+    weight: 0.10
+    description: "未来趋势、行业走向、预测模型"
+    keywords:
+      core: ["{topic}趋势预测", "{topic} forecast", "{topic}未来趋势"]
+      extended: ["{topic}行业走向", "{topic}预测 2027", "{topic}预测 2030"]
+      supplementary: ["{topic}情景分析", "{topic}关键变量"]
+
+  - id: opportunities_risks
+    name: "机会与风险"
+    weight: 0.10
+    description: "市场机会、潜在风险、应对策略"
+    keywords:
+      core: ["{topic}市场机会", "{topic} opportunities", "{topic}风险"]
+      extended: ["{topic}潜在风险", "{topic}应对策略", "{topic}挑战"]
+      supplementary: ["{topic}黑天鹅", "{topic}灰犀牛"]
+
+preferred_sources:
+  - 国家统计局
+  - 艾瑞咨询
+  - 易观分析
+  - QuestMobile
+  - CNNIC
+  - 行业白皮书
+  - 券商研究报告
+
+chart_suggestions:
+  - "市场规模增长曲线"
+  - "用户画像雷达图"
+  - "市场份额饼图"
+  - "PEST 分析矩阵"
+  - "趋势预测折线图"
+
+```
+
+---
+
+## 📋 templates/industry-research.md
+
+```markdown
+# 行业研究模板
+
+## 适用场景
+分析某一行业的市场规模、趋势、竞争格局
+
+## 调研维度
+
+### 1. 行业定义与分类
+- 行业定义与边界
+- 细分赛道分类
+- 产业链位置
+
+### 2. 市场规模与增速
+- 历史市场规模
+- 未来3-5年预测
+- CAGR增长率
+
+### 3. 产业链分析
+- 上游供应商
+- 中游制造商
+- 下游渠道商
+- 价值链分布
+
+### 4. 政策环境(PEST)
+- 政策 (Political)
+- 经济 (Economic)
+- 社会 (Social)
+- 技术 (Technological)
+
+### 5. 竞争格局
+- 市场集中度(CR3/CR5)
+- 主要玩家矩阵
+- 竞争态势分析
+
+### 6. 发展趋势
+- 技术趋势
+- 消费趋势
+- 商业模式创新
+
+### 7. 关键成功因素
+- 核心竞争力
+- 进入壁垒
+- 盈利模式
+
+## 输出结构
+
+```
+
+---
+
+## 📋 templates/tech-research.md
+
+```markdown
+# 技术调研模板
+
+## 适用场景
+对比评估不同技术方案，辅助技术选型
+
+## 调研维度
+
+### 1. 技术原理
+- 核心技术概念
+- 工作原理
+- 技术成熟度(TRL)
+
+### 2. 主流方案对比
+- 方案A vs 方案B vs 方案C
+- 技术路线差异
+- 适用场景
+
+### 3. 性能指标
+- 响应时间/吞吐量
+- 资源消耗
+- 扩展性
+
+### 4. 生态与社区
+- 开源社区活跃度
+- 文档完善度
+- 第三方工具/插件
+
+### 5. 成本评估
+- 开发成本
+- 运维成本
+- 学习成本
+
+### 6. 落地案例
+- 典型应用案例
+- 用户规模
+- 实际效果
+
+### 7. 风险评估
+- 技术风险
+- 供应商锁定风险
+- 维护风险
+
+## 输出结构
+
+```
+
+---
+
+## 📋 templates/competitor-analysis.md
+
+```markdown
+# 竞品分析模板
+
+## 适用场景
+分析竞争对手的产品、策略、优劣势
+
+## 调研维度
+
+### 1. 产品定位与目标用户
+- 产品核心价值主张
+- 目标用户画像
+- 使用场景分析
+
+### 2. 核心功能对比
+- 功能清单对比
+- 差异化功能
+- 功能成熟度评估
+
+### 3. 定价策略
+- 定价模式（免费/订阅/一次性）
+- 价格区间
+- 免费增值策略
+
+### 4. 技术架构
+- 技术栈
+- 性能指标
+- 技术壁垒
+
+### 5. 市场份额
+- 用户规模
+- 市场占有率
+- 增长趋势
+
+### 6. 用户评价
+- 应用商店评分
+- 社交媒体口碑
+- 用户反馈关键词
+
+### 7. SWOT分析
+- 优势 (Strengths)
+- 劣势 (Weaknesses)
+- 机会 (Opportunities)
+- 威胁 (Threats)
+
+## 输出结构
+
+```
+
+---
+
+## 📋 templates/market-entry.md
+
+```markdown
+# 市场进入模板
+
+## 适用场景
+评估新市场进入机会，制定进入策略
+
+## 调研维度
+
+### 1. 市场吸引力
+- 市场规模与增速
+- 利润空间
+- 增长驱动力
+
+### 2. 竞争环境
+- 现有竞争者
+- 潜在进入者
+- 替代品威胁
+
+### 3. 用户洞察
+- 目标用户画像
+- 需求痛点
+- 消费习惯
+
+### 4. 渠道分析
+- 销售渠道结构
+- 关键渠道伙伴
+- 渠道成本
+
+### 5. 政策与合规
+- 行业准入条件
+- 法规要求
+- 合规成本
+
+### 6. 进入模式
+- 自营 vs 合作 vs 收购
+- 轻重资产选择
+- 分阶段进入路径
+
+### 7. 资源需求
+- 资金投入
+- 人才需求
+- 时间周期
+
+## 输出结构
+
+```
+
+---
+
+## 📋 templates/user-research.md
+
+```markdown
+# 用户研究模板
+
+## 适用场景
+深入了解目标用户，发现需求痛点
+
+## 调研维度
+
+### 1. 用户画像
+- 人口统计特征
+- 行为特征
+- 心理特征
+
+### 2. 需求洞察
+- 核心需求
+- 潜在需求
+- 需求优先级
+
+### 3. 使用场景
+- 使用场景描述
+- 使用频率
+- 使用痛点
+
+### 4. 用户旅程
+- 认知阶段
+- 考虑阶段
+- 使用阶段
+- 分享阶段
+
+### 5. 竞品使用体验
+- 当前使用产品
+- 满意度评估
+- 切换意愿
+
+### 6. 付费意愿
+- 价格敏感度
+- 付费动机
+- 预算区间
+
+### 7. 反馈与建议
+- 用户原声
+- 改进建议
+- 期待功能
+
+## 输出结构
+
+```
+
+---
+
+# ✅ 安装完成
+
+本文件包含深度调研工作流 V5.5.1 的全部代码，可直接用于 OpenClaw 一键安装。
+
+**版本**：V5.5.1
+**字数标准**：≥26,000字（最佳50,000-60,000字）
+**生成日期**：2026-04-30
+**作者**：小G（大鹏的AI搭档）

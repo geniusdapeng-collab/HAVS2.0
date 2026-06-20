@@ -1,0 +1,83 @@
+{
+  "camera": {
+    "primary": ["Arri Alexa 65", "Arri Alexa Mini LF"],
+    "secondary": ["RED V-RAPTOR", "Sony Venice 2"],
+    "modifiers": ["65mm sensor", "large format", "IMAX 70mm"]
+  },
+  "lens": {
+    "primary": ["Cooke S7/i", "Arri Master Prime"],
+    "secondary": ["Leica Summilux", "Zeiss Otus", "Panavision Primo"],
+    "modifiers": ["anamorphic 2.39:1", "widescreen cinematic"]
+  },
+  "aperture": {
+    "primary": ["f/1.8", "f/2.0", "f/2.8"],
+    "modifiers": ["shallow DOF", "soft bokeh", "background falls off smoothly", "tack sharp focus on subject eyes"]
+  },
+  "lighting": {
+    "primary": ["natural diffused overcast"],
+    "secondary": ["golden hour soft sunlight", "overcast skylight", "practical lights visible in frame"],
+    "modifiers": ["soft shadows", "no hard light", "subtle rim light separating subject from background"],
+    "forbidden": ["hard light", "studio lighting", "perfect lighting"]
+  },
+  "color": {
+    "primary": ["muted desaturated earth tones"],
+    "secondary": ["teal shadows, warm highlights", "cinematic LUT", "Kodak Vision3 500T color science"],
+    "modifiers": ["subtle color separation"],
+    "forbidden": ["highly saturated", "vivid colors", "colorful"]
+  },
+  "material": {
+    "primary": ["subsurface scattering", "skin pores visible", "individual hair strands"],
+    "secondary": ["fabric weave texture", "subtle imperfections", "microscopic surface detail"],
+    "advanced": ["dust particles in sunlight", "tiny water droplets on skin"]
+  },
+  "motion": {
+    "primary": ["motion blur on fast elements", "wind blowing hair and fabric"],
+    "secondary": ["dust particles floating in air", "shallow depth breathing motion", "natural micro-movements"],
+    "advanced": ["lens flare from practical light", "handheld camera subtle shake"]
+  },
+  "grain": {
+    "primary": ["subtle film grain"],
+    "secondary": ["organic texture", "RAW quality", "fine noise structure"],
+    "advanced": ["Kodak 5219 grain structure"],
+    "forbidden": ["overly clean digital look"]
+  },
+  "antiPatterns": {
+    "perfect skin": "skin pores visible, subtle imperfections",
+    "flawless complexion": "skin pores, individual hair strands",
+    "vivid colors": "muted desaturated earth tones",
+    "highly saturated": "muted, desaturated",
+    "studio lighting": "natural diffused overcast",
+    "perfect lighting": "natural diffused overcast lighting",
+    "dramatic hard shadows": "soft shadows, no hard light",
+    "everything in sharp focus": "shallow DOF, f/1.8",
+    "deep depth of field": "shallow DOF, soft bokeh",
+    "clean digital look": "subtle film grain, organic texture",
+    "crisp sharp": "subtle film grain, organic texture",
+    "cinematic": "Arri Alexa 65, Cooke S7/i, f/2.0",
+    "photorealistic": "subsurface scattering, skin pores visible, individual hair strands",
+    "static pose": "natural micro-movements, wind blowing hair",
+    "frozen moment": "motion blur on fast elements, natural micro-movements"
+  },
+  "templates": {
+    "portrait": {
+      "name": "人物写实",
+      "dimensions": ["camera", "lens", "aperture", "lighting", "color", "material", "motion", "grain"],
+      "core": ["Arri Alexa 65", "Cooke S7/i", "anamorphic 2.39:1", "f/1.8", "natural diffused overcast", "muted earth tones", "subsurface scattering", "wind blowing hair", "subtle film grain"]
+    },
+    "wildlife": {
+      "name": "野生动物/自然纪录片",
+      "dimensions": ["camera", "lens", "aperture", "lighting", "color", "material", "motion", "grain"],
+      "core": ["Arri Alexa Mini LF", "Master Prime", "f/2.8", "natural diffused overcast", "muted earth tones", "individual fur strands", "wind blowing fur", "subtle film grain", "documentary wildlife photography style"]
+    },
+    "interior": {
+      "name": "室内场景",
+      "dimensions": ["camera", "lens", "aperture", "lighting", "color", "material", "grain"],
+      "core": ["Arri Alexa 65", "Cooke S7/i", "2.39:1 anamorphic", "f/2.0", "natural light through window", "muted warm earth tones", "fabric weave texture", "subtle film grain"]
+    },
+    "minimal": {
+      "name": "快速通用",
+      "dimensions": ["camera", "lens", "aperture", "lighting", "color", "material", "motion", "grain"],
+      "core": ["Arri Alexa 65", "Cooke S7/i", "f/2.0", "natural diffused overcast", "muted earth tones", "skin pores", "wind motion", "subtle film grain"]
+    }
+  }
+}

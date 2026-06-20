@@ -1,0 +1,90 @@
+# Stormaxe AI Video System / 暴风战斧AI视频生成系统
+# 安全发布 .gitignore
+
+# === 敏感配置文件（含API密钥）===
+config/env.js
+config/seedance.json
+config/*.local.json
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# === 角色定妆照与媒体资源 ===
+characters/*/
+!characters/chenzhuo/
+characters/chenzhuo/portraits/
+memorized_media/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.mp4
+*.mov
+*.avi
+
+# === 生产输出与临时文件 ===
+output/
+productions/
+tmp/
+temp/
+*.tmp
+
+# === 数据文件（患者数据等）===
+data/patients/
+data/*.csv
+data/*.xlsx
+data/*.xls
+
+# === 日志与审计 ===
+logs/
+log/
+*.log
+audit-logs/
+
+# === 依赖包 ===
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# === 私人内容 ===
+memory/
+memorized_diary/
+.openclaw/
+
+# === IDE与编辑器 ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# === 测试与调试文件 ===
+test-*.js
+test-*.json
+test_*.js
+test_*.json
+verify-*.js
+check-*.js
+debug_*/
+debug-*/
+
+# === 文档生成 ===
+docs/*.md.bak
+*.bak
+*.backup
+*.old
+
+# === 大文件 ===
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# === 备份文件 ===
+*.backup.*
+*.bak.*

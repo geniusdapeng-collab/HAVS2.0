@@ -1,0 +1,31 @@
+{
+  "name": "stormaxe-ai-video-system",
+  "version": "6.6.5",
+  "description": "暴风战斧AI视频生成系统 - 基于 Seedance 2.0 API 的专业级 AI 视频生成系统",
+  "main": "zhuoyue-system/core/nirath-master-pipeline.js",
+  "scripts": {
+    "preproduction": "node run-preproduction-v3.js",
+    "render": "node systems/production-render-cli.js",
+    "test": "node -c zhuoyue-system/core/nirath-master-pipeline.js && echo 'Syntax OK'"
+  },
+  "keywords": [
+    "ai-video",
+    "seedance",
+    "video-generation",
+    "character-consistency",
+    "prompt-engineering",
+    "stormaxe"
+  ],
+  "author": "Stormaxe Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/geniusdapeng-collab/StormaxeAIVideoSystem.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}

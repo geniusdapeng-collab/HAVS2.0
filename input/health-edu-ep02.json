@@ -1,0 +1,52 @@
+{
+  "videoType": "documentary",
+  "filmType": "documentary",
+  "subject": "为什么会发生横纹肌溶解，常见的原因分析",
+  "episode": 2,
+  "totalEpisodes": 3,
+  "episodeTitle": "第二集：为什么会发生横纹肌溶解，常见的原因分析",
+  "seriesTitle": "横纹肌溶解科普系列",
+  "duration": 62,
+  "targetAudience": "普通大众",
+  "style": "full_realistic",
+  "character": {
+    "id": "chen-zhuo",
+    "name": "陈卓",
+    "role": "主讲人",
+    "costume": "警服定妆照",
+    "referenceImages": [
+      "/root/.openclaw/workspace/characters/chenzhuo/portraits/uniform/front.png",
+      "/root/.openclaw/workspace/characters/chenzhuo/portraits/uniform/threeQuarter.png",
+      "/root/.openclaw/workspace/characters/chenzhuo/portraits/uniform/closeup.png",
+      "/root/.openclaw/workspace/characters/chenzhuo/portraits/uniform/side.png"
+    ]
+  },
+  "content": {
+    "mainTopic": "为什么会发生横纹肌溶解，常见的原因分析",
+    "keyPoints": [
+      "横纹肌溶解的常见原因",
+      "运动过度导致的风险",
+      "药物和饮食因素",
+      "高温和脱水的影响",
+      "如何预防诱因"
+    ],
+    "opening": {
+      "hasOpening": false,
+      "mainTitle": "",
+      "subTitle": ""
+    }
+  },
+  "cinematography": {
+    "filmType": "documentary",
+    "mood": "professional",
+    "lighting": "soft_natural",
+    "camera": "medium_shot",
+    "style": "documentary_interview"
+  },
+  "outputDir": "/root/.openclaw/workspace/output/health-edu-ep02-rhabdomyolysis",
+  "stages": {
+    "style": {
+      "prompt": ""
+    }
+  }
+}

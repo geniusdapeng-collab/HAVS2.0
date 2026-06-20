@@ -1,0 +1,130 @@
+{
+  "name": "金色光影通用知识库",
+  "version": "2.0",
+  "source": "《AI视频生成：打光与金色色彩运用通用方法论》",
+  "type": "lighting-knowledge-base",
+  "scope": "exterior_only",
+  
+  "core_formula": {
+    "golden_dream": "WhiteBase(60-75%) + GoldAccent(15-25%) + CoolShadow(8-12%) + ParticulateGold(2-5%)",
+    "perception_threshold": "GoldenPerceptionScore = Saturation_Level × Area_Coverage × Contextual_Contrast"
+  },
+  
+  "lighting_systems": {
+    "rim_backlight": {
+      "description": "光源位于主体后方15°-60°，在边缘形成高光带",
+      "intensity": "0.6 - 1.0",
+      "color_temp": "4000K - 5500K",
+      "optimal_angle": "正后方偏左/右 15°-45°",
+      "spectrum": ["Subtle Rim(0.6)", "Elegant Glow(0.75)", "Dramatic Halo(0.85)", "Sacred Aura(0.95)", "Silhouette(1.0)"]
+    },
+    "volumetric_godrays": {
+      "description": "光束穿过散射介质形成可见光柱（米氏散射）",
+      "beam_direction": "垂直(80°-90°) / 斜射(45°-60°)",
+      "medium_density": "low / medium / high",
+      "beam_count": "1-5 束",
+      "gradient": "顶部纯白 → 中部淡金 → 底部暖金"
+    },
+    "diffused_ambient": {
+      "description": "光线经大面积散射后失去方向性，形成均匀照明",
+      "key_to_fill_ratio": "1:1 到 1:1.5",
+      "shadow_opacity": "80-95%",
+      "color_temp": "5500K - 7500K",
+      "rule": "漫射光负责正确曝光和平滑过渡，不制造视觉焦点"
+    },
+    "particulate_gold": {
+      "description": "悬浮粒子在光路中被照亮形成散射光点（丁达尔效应）",
+      "density": "sparse / scattered / medium / dense",
+      "particle_type": "dust-like / pollen / sparkle / bokeh",
+      "motion": "static / floating / rising / swirling",
+      "distribution": "Foreground(20%) + Midground(50%) + Background(30%)"
+    },
+    "reflective_mapping": {
+      "description": "金色光线在光滑表面反射产生虚拟光源，扩大金色影响力",
+      "surface_types": ["marble", "water", "glass", "metal", "silk"],
+      "intensity": "0.2 - 0.9 (subtle/moderate/strong)",
+      "clarity": "blurred / soft / sharp",
+      "color_bias": "warm(暖金) / neutral(中性) / cool(冷蓝)"
+    }
+  },
+  
+  "three_layer_gold": {
+    "ambient_gold": {
+      "saturation": "10-25%",
+      "brightness": "75-90%",
+      "area": "50-70%",
+      "function": "氛围基底，定义整体色温倾向"
+    },
+    "structural_gold": {
+      "saturation": "35-55%",
+      "brightness": "55-75%",
+      "area": "15-25%",
+      "function": "视觉骨架，引导视线流动"
+    },
+    "highlight_gold": {
+      "saturation": "55-80%",
+      "brightness": "85-100%",
+      "area": "5-15%",
+      "function": "视觉焦点，强调重点"
+    },
+    "area_control_rule": "三层金色总面积不超过画面的30%"
+  },
+  
+  "color_temperature_emotion": {
+    "sacred": { "hue": "偏黄", "hex": "#D4A574", "temp": "4500K" },
+    "tender_dream": { "hue": "偏玫瑰", "hex": "#E8B4A2", "temp": "3800K" },
+    "cool_elegant": { "hue": "偏白金", "hex": "#E5DCC3", "temp": "6200K" },
+    "epic": { "hue": "偏暗赭", "hex": "#B8860B", "temp": "5200K" },
+    "passionate": { "hue": "偏橙", "hex": "#E8985E", "temp": "3500K" },
+    "futuristic": { "hue": "偏柠檬", "hex": "#F0E68C", "temp": "5800K" },
+    "natural": { "hue": "偏草金", "hex": "#C9B037", "temp": "4800K" }
+  },
+  
+  "shadow_hues": {
+    "cool_blue_gray": { "hex_range": "#2C3E50 ~ #4A6274", "effect": "冷暖对比，空间深邃" },
+    "warm_brown_gray": { "hex_range": "#4A3C2A ~ #5C4D3C", "effect": "统一暖调，复古质感" },
+    "purple_gray": { "hex_range": "#3D2B4E ~ #5A3D6E", "effect": "神秘高贵，戏剧性强" },
+    "green_gray": { "hex_range": "#2F4538 ~ #4A6350", "effect": "自然有机，宁静感" },
+    "neutral_gray": { "hex_range": "#404040 ~ #5A5A5A", "effect": "无色彩倾向，极简" }
+  },
+  
+  "prompt_keywords": {
+    "rim_light": ["golden rim light", "luminous edge glow", "backlit gold silhouette"],
+    "volumetric": ["volumetric god rays", "divine light beams", "celestial shafts"],
+    "ambient": ["soft diffused ambient", "ethereal lighting", "weightless atmosphere"],
+    "particle": ["golden particles", "divine dust", "sparkling bokeh", "light motes"],
+    "reflection": ["golden reflections", "light bounce", "mirrored gold surface"],
+    "glow": ["golden glow", "soft halo", "luminous aura"]
+  },
+  
+  "negative_keywords": [
+    "harsh shadows", "oversaturated colors", "pure black shadows", "flat lighting",
+    "cluttered composition", "muddy colors", "distorted proportions", "cheap gold",
+    "orange tint", "yellow cast", "overexposed highlights", "crushed blacks",
+    "noisy grain", "artificial plastic look", "oversharpened edges"
+  ],
+  
+  "diagnosis_table": {
+    "yellow_dirty": { "cause": "金色饱和度太高或面积超限", "fix": "降饱和20%，缩减金色面积至<25%" },
+    "lack_dreaminess": { "cause": "硬光/强阴影/高反差/无雾", "fix": "改用漫射光，阴影区提亮至85%+，添加体积雾" },
+    "cheap_gold": { "cause": "色相偏橙黄而非香槟金", "fix": "色相+15°红偏移，饱和-15%，明度+10%" },
+    "flat_no_depth": { "cause": "缺少冷灰暗部/无温差", "fix": "暗部注入蓝灰(#2C3E50)，确保暖金vs冷灰≥500K温差" },
+    "not_advanced": { "cause": "粒子过多/分布不当", "fix": "粒子密度降半，改为缓慢飘浮，分布侧重中景" },
+    "cold_hard": { "cause": "白色太纯(#FFF)/色温太高", "fix": "白平衡调至6500K，白中加入5%暖黄(#F5F0E8)" }
+  },
+  
+  "injection_interface": {
+    "getLightingTemplate": {
+      "input": ["scene_type", "mood", "gold_level"],
+      "output": ["prompt_block", "json_params", "color_palette", "checklist"]
+    },
+    "getGoldParams": {
+      "input": ["emotion", "context"],
+      "output": ["hex_code", "color_temp_k", "saturation_percent", "recommended_area_percent", "shadow_hue", "keywords"]
+    },
+    "checkParamConflict": {
+      "input": ["params_object"],
+      "output": ["conflicts", "is_valid"]
+    }
+  }
+}

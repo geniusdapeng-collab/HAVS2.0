@@ -1,0 +1,58 @@
+{
+  "version": "v6.6.5",
+  "api": {
+    "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+    "apiKey": "YOUR_API_KEY_HERE",
+    "endpoints": {
+      "seedance2": "YOUR_SEEDANCE_ENDPOINT_HERE",
+      "seedance2Fast": "YOUR_SEEDANCE_FAST_ENDPOINT_HERE",
+      "seedream5": "YOUR_SEEDREAM_ENDPOINT_HERE"
+    }
+  },
+  "render": {
+    "modelPriority": [
+      { "id": "doubao-seedance-2.0", "type": "standard", "endpoint": "YOUR_SEEDANCE_ENDPOINT_HERE" },
+      { "id": "doubao-seedance-2.0-fast", "type": "fast", "endpoint": "YOUR_SEEDANCE_FAST_ENDPOINT_HERE" }
+    ],
+    "maxConcurrent": 1,
+    "retryDelayMs": 2000,
+    "retryDelays": [60000, 120000, 300000],
+    "batchCooldown": 10000,
+    "batchCooldownMs": 3000,
+    "promptMaxLength": 490,
+    "degradationSteps": [
+      { "promptTrim": 30 },
+      { "promptTrim": 60 },
+      { "promptTrim": 100 }
+    ],
+    "outputDir": "productions"
+  },
+  "image": {
+    "model": "doubao-seedream-5.0-lite",
+    "endpoint": "YOUR_SEEDREAM_ENDPOINT_HERE",
+    "size": "2K",
+    "watermark": false
+  },
+  "postProduction": {
+    "enabled": true,
+    "ffmpegOptions": "-c copy"
+  },
+  "compliance": {
+    "maxLength": 490,
+    "alignmentThreshold": 40,
+    "pitchMinScore": 7.5
+  },
+  "promptGen": {
+    "maxTokens": 80,
+    "filenameMaxChars": 50
+  },
+  "timeouts": {
+    "taskPoll": 10000,
+    "videoDownload": 60000,
+    "ffmpeg": 300000
+  },
+  "budget": {
+    "renderBudgetUSD": 10.0,
+    "hardLimit": true
+  }
+}

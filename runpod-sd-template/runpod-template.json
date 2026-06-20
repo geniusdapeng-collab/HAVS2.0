@@ -1,0 +1,28 @@
+{
+  "templateName": "Stable Diffusion WebUI - majicMIX realistic",
+  "description": "基于 AUTOMATIC1111 WebUI 的 RunPod Serverless 模板，预装 majicMIX realistic 模型，支持 txt2img/img2img/ControlNet",
+  "imageName": "runpod-sd-webui:latest",
+  "registry": "docker.io",
+  "containerDiskSizeGb": 50,
+  "volumeDiskSizeGb": 100,
+  "ports": "7860/http",
+  "env": [
+    {
+      "key": "PYTHONUNBUFFERED",
+      "value": "1"
+    },
+    {
+      "key": "SD_WEBUI_API_MODE",
+      "value": "true"
+    }
+  ],
+  "gpuType": "NVIDIA RTX 3090",
+  "gpuCount": 1,
+  "memory": 16,
+  "cpuCount": 4,
+  "flashBoot": true,
+  "idleTimeout": 300,
+  "executionTimeout": 600,
+  "handler": "/workspace/handler.py",
+  "startScript": "/workspace/start.sh"
+}

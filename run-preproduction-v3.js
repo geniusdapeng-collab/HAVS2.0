@@ -1,0 +1,584 @@
+const fs = require('fs');
+const path = require('path');
+const { NirathMasterPipeline } = require('./zhuoyue-system/core/nirath-master-pipeline.js');
+const { UserRequirementParser } = require('./zhuoyue-system/systems/user-requirement-parser.js');
+const { logMemory, dumpMemoryToFile } = require('./systems/runtime-memory-guard');
+
+// v6.6.3-fix: 全局进程心跳 —— 兜底防止子代理活跃度监控 SIGKILL
+// 覆盖所有阶段，即使某阶段 LLM 心跳遗漏也能保活
+// 注意: 必须在 pipeline 启动前注册，进程退出时自动清理
+const globalHeartbeat = setInterval(() => {
+  const m = process.memoryUsage();
+  console.log(`[HEARTBEAT] alive | pid=${process.pid} | uptime=${process.uptime().toFixed(0)}s | rss=${(m.rss / 1048576).toFixed(0)}MB | heap=${(m.heapUsed / 1048576).toFixed(0)}MB`);
+}, 5000);
+globalHeartbeat.unref(); // 不阻止进程正常退出
+
+// 进程退出时清理心跳
+process.on('exit', () => clearInterval(globalHeartbeat));
+
+// v6.6-fix: 启动时内存诊断
+logMemory('bootstrap');
+dumpMemoryToFile('bootstrap', {}, './output/memory-snapshots.log');
+
+process.on('SIGTERM', () => {
+  dumpMemoryToFile('SIGTERM', {}, './output/memory-snapshots.log');
+});
+
+process.on('uncaughtException', (err) => {
+  dumpMemoryToFile('uncaughtException', {
+    message: err.message,
+    stack: err.stack,
+  }, './output/memory-snapshots.log');
+  console.error(err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  dumpMemoryToFile('unhandledRejection', {
+    reason: String(reason),
+  }, './output/memory-snapshots.log');
+  console.error(reason);
+});
+
+const WORKSPACE = '/root/.openclaw/workspace';
+const OUTPUT = path.join(WORKSPACE, 'output', 'health-edu-ep01');
+const CHECKPOINT_FILE = path.join(OUTPUT, '.checkpoint.json');
+
+// ⚠️ v6.6.3: 完整预生产总耗时约 600-900 秒（含 Stage 5A/5B LLM 调用）
+//    若在 OpenClaw exec 等受限环境中运行，请确保调用方 timeout >= 900s
+//    否则将在 ~300-600s 时被 SIGKILL（exec timeout 触发，非代码问题）
+
+if (!fs.existsSync(OUTPUT)) {
+  fs.mkdirSync(OUTPUT, { recursive: true });
+}
+
+const PORTRAIT_BASE = path.join(WORKSPACE, 'characters/chenzhuo/portraits');
+const UNIFORM_DIR = path.join(PORTRAIT_BASE, 'uniform');
+
+const CHENZHUO_PORTRAITS = {
+  front: path.join(UNIFORM_DIR, 'portrait-uniform-02.jpg'),
+  threeQuarter: path.join(UNIFORM_DIR, 'portrait-uniform-01.jpg'),
+  side: path.join(UNIFORM_DIR, 'portrait-uniform-04.jpg'),
+  closeup: path.join(UNIFORM_DIR, 'portrait-uniform-05.jpg'),
+  fullBody: path.join(UNIFORM_DIR, 'portrait-uniform-02.jpg'),
+  back: path.join(UNIFORM_DIR, 'portrait-uniform-03.jpg')
+};
+
+for (const [key, pPath] of Object.entries(CHENZHUO_PORTRAITS)) {
+  if (!fs.existsSync(pPath)) {
+    console.error('❌ 定妆照缺失:', key, pPath);
+    process.exit(1);
+  }
+}
+
+console.log('✅ 定妆照验证通过');
+
+// 用户原始输入（一句话描述）——核心主题前置，确保解析器正确提取
+const userInput = '科普视频。穿警服的陈卓女士讲解横纹肌溶解的症状及实验室检查。第一集，59-65秒，全写实风格，天花板般的创造力，电影级质感。陈卓一个人讲解，生动肢体语言，边走边介绍。三集系列，第一集不预告下一集。开头有片头主标题和副标题。';
+
+// 断点保存函数
+function saveCheckpoint(stages) {
+  try {
+    fs.writeFileSync(CHECKPOINT_FILE, JSON.stringify({
+      stages: stages,
+      timestamp: Date.now()
+    }, null, 2));
+    console.log('📍 断点已保存');
+  } catch (e) {
+    console.error('⚠️ 保存断点失败:', e.message);
+  }
+}
+
+function loadCheckpoint() {
+  if (fs.existsSync(CHECKPOINT_FILE)) {
+    try {
+      const cp = JSON.parse(fs.readFileSync(CHECKPOINT_FILE, 'utf-8'));
+      console.log(`📍 发现断点，已恢复 ${Object.keys(cp.stages || {}).length} 个阶段`);
+      return cp.stages;
+    } catch (e) {
+      console.error('⚠️ 加载断点失败:', e.message);
+    }
+  }
+  return null;
+}
+
+function clearCheckpoint() {
+  if (fs.existsSync(CHECKPOINT_FILE)) {
+    fs.unlinkSync(CHECKPOINT_FILE);
+    console.log('📍 断点已清除');
+  }
+}
+
+async function run() {
+  // === 第一阶段：用户需求解析（新增）===
+  console.log('=== Stage 0: 用户需求解析 ===');
+  const parser = new UserRequirementParser({ debug: true });
+  
+  try {
+    const parsedRequirement = await parser.parse(userInput, {
+      creativityIndex: 0.95  // 天花板级别的创意指数
+    });
+    
+    console.log('✅ 用户需求解析完成');
+    console.log('  标题:', parsedRequirement.title);
+    console.log('  类型:', parsedRequirement.videoType);
+    console.log('  时长:', parsedRequirement.targetDuration + 's');
+    console.log('  风格:', parsedRequirement.visualStyle);
+    console.log('  CP:', parsedRequirement.creativityIndex);
+    
+    // 保存解析结果供审阅
+    fs.writeFileSync(
+      path.join(OUTPUT, 'user-requirement-parsed.json'),
+      JSON.stringify(parsedRequirement, null, 2)
+    );
+    
+    // === 第二阶段：构建Pipeline输入（将解析结果转换为Pipeline期望格式）===
+    const input = buildPipelineInput(parsedRequirement, CHENZHUO_PORTRAITS);
+    
+    // 检查断点
+    const checkpoint = loadCheckpoint();
+    if (checkpoint) {
+      input.__resumeStages = checkpoint;
+      console.log('🔄 将从断点继续执行');
+    }
+    
+    // === 第三阶段：执行预生产流水线 ===
+    const pipeline = new NirathMasterPipeline({
+      mode: 'generic',
+      useLLM: true,
+      skipDirectorReview: false,
+      skipScreenwriterOptimization: false,
+      projectConfig: {
+        requiredCharacters: ['chen-zhuo'],
+        targetDuration: parsedRequirement.targetDuration,
+        hasOpening: parsedRequirement.opening.hasOpening,
+        hasNextEpisodePreview: false,
+        isPreProduction: true
+      }
+    });
+
+    // 定期检查保存进度
+    const progressInterval = setInterval(() => {
+      if (pipeline.stages) {
+        saveCheckpoint(pipeline.stages);
+      }
+    }, 5000); // 每5秒保存一次
+
+    // 信号处理 - 同步保存
+    let isShuttingDown = false;
+    const shutdownHandler = () => {
+      if (isShuttingDown) return;
+      isShuttingDown = true;
+      console.log('');
+      console.log('⏰ 收到终止信号，保存断点...');
+      clearInterval(progressInterval);
+      if (pipeline.stages) {
+        // 强制同步保存
+        try {
+          fs.writeFileSync(CHECKPOINT_FILE, JSON.stringify({
+            stages: pipeline.stages,
+            timestamp: Date.now()
+          }, null, 2));
+          console.log('📍 断点已保存');
+        } catch (e) {
+          console.error('⚠️ 保存断点失败:', e.message);
+        }
+      }
+      process.exit(0);
+    };
+
+    process.on('SIGTERM', shutdownHandler);
+    process.on('SIGINT', shutdownHandler);
+
+    const result = await pipeline.execute(input, !!checkpoint);
+    
+    clearInterval(progressInterval);
+    clearCheckpoint();
+    
+    // === 第四阶段：真实感增强（后置增强层）===
+    const { RealismPromptEnhancer } = require('./zhuoyue-system/core/realism-prompt-enhancer');
+    const realismEnhancer = new RealismPromptEnhancer({
+      enabled: true,
+      injectPosition: 'suffix',
+      maxInjectLength: 800,
+      minDimensionCoverage: 4
+    });
+    
+    let enhancedCount = 0;
+    const storyboard = result.stages?.storyboard;
+    if (storyboard && storyboard.shots) {
+      for (const shot of storyboard.shots) {
+        if (shot.prompt) {
+          const enhanced = realismEnhancer.enhance(shot.prompt, {
+            sceneType: 'portrait',  // 人物写实为主
+            filmType: 'EDU'
+          });
+          if (enhanced.applied) {
+            shot.prompt = enhanced.enhanced;
+            shot._realismMeta = {
+              coverage: enhanced.coverage,
+              changes: enhanced.changes.map(c => c.type),
+              version: enhanced.metadata.enhancerVersion
+            };
+            enhancedCount++;
+          }
+        }
+      }
+      // 记录增强统计到结果
+      result.stages.realismEnhancement = {
+        applied: true,
+        enhancedShots: enhancedCount,
+        totalShots: storyboard.shots.length,
+        stats: realismEnhancer.getStats()
+      };
+    }
+    
+    fs.writeFileSync(path.join(OUTPUT, 'preproduction-result.json'), JSON.stringify(result, null, 2));
+    generateReport(result, path.join(OUTPUT, 'preproduction-report.md'));
+    console.log('✅ Pre-production complete');
+    
+  } catch (error) {
+    console.error('⚠️ Pipeline error:', error.message);
+    
+    if (error.pipeline && error.pipeline.stages && error.pipeline.stages.storyboard) {
+      const partialResult = {
+        stages: error.pipeline.stages,
+        success: false,
+        error: error.message
+      };
+      fs.writeFileSync(path.join(OUTPUT, 'preproduction-result.json'), JSON.stringify(partialResult, null, 2));
+      generateReport(partialResult, path.join(OUTPUT, 'preproduction-report.md'));
+      console.log('✅ Generated report from partial results');
+    } else {
+      generateFallbackReport({ scenes: [], targetDuration: 60 }, path.join(OUTPUT, 'preproduction-report.md'));
+    }
+  }
+}
+
+/**
+ * 将统一需求结构转换为Pipeline输入格式
+ */
+function buildPipelineInput(requirement, portraits) {
+  return {
+    projectName: requirement.title,
+    videoType: requirement.videoType.toLowerCase(),
+    targetDuration: requirement.targetDuration,
+    style: requirement.style.visualStyle || requirement.visualStyleDetail,
+    mode: 'generic',
+    hasOpening: requirement.opening.hasOpening,
+    hasNextEpisodePreview: false,
+    
+    // 创意指数
+    creativityIndex: requirement.creativityIndex,
+    
+    // 统一结构字段直接传递
+    title: requirement.title,
+    topic: requirement.topic,
+    keyPoints: requirement.keyPoints,
+    videoType: requirement.videoType,
+    targetAudience: requirement.targetAudience,
+    platform: requirement.platform,
+    aspectRatio: requirement.aspectRatio,
+    visualStyle: requirement.visualStyle,
+    qualityLevel: requirement.qualityLevel,
+    colorTone: requirement.colorTone,
+    narrativeStyle: requirement.narrativeStyle,
+    contentStyle: requirement.contentStyle,
+    musicStyle: requirement.musicStyle,
+    
+    // 世界观
+    world: requirement.world,
+    
+    // 场景（从统一结构转换）
+    scenes: requirement.scenes.map((scene, index) => ({
+      id: scene.id || `S0${index+1}`,
+      name: scene.name || `场景${index+1}`,
+      type: scene.type || 'content',
+      duration: scene.duration || 10,
+      description: scene.description || '',
+      characters: scene.characters || [],
+      visualComplexity: scene.visualComplexity || 5,
+      importance: scene.importance || 5
+    })),
+    
+    // 角色
+    characters: {
+      'chen-zhuo': {
+        id: 'chen-zhuo', name: '陈卓', role: 'presenter',
+        visual: {
+          age: 35, gender: 'female', build: 'average', height: 'medium',
+          skinTone: 'warm', hair: 'black', eyes: 'brown', facialFeatures: 'asian',
+          outfit: 'standard Chinese police uniform with formal police cap'
+        },
+        portraits: portraits
+      }
+    },
+    
+    // 片头
+    opening: {
+      seriesTitle: '居民健康科普系列',
+      episodeTitle: requirement.title,
+      episodeNumber: `EP0${requirement.currentEpisode || 1}`,
+      subtitle: '', // v6.6.1-fix: 不传递长字符串，让generic-opening-system智能生成
+      style: requirement.visualStyleDetail,
+      duration: requirement.opening.duration || 5
+    },
+    
+    // 内容核心
+    content: {
+      topic: requirement.topic,
+      keyPoints: requirement.keyPoints
+    },
+    
+    // 系列信息
+    isSeries: requirement.isSeries,
+    totalEpisodes: requirement.totalEpisodes,
+    currentEpisode: requirement.currentEpisode,
+    episodeThemes: requirement.episodeThemes
+  };
+}
+
+function generateReport(result, outputPath) {
+  // v6.6.4-fix: 使用标准化后的中文字段数据，而不是原始 storyboard.shots
+  // 标准镜头清单可能在 result.标准镜头清单 或 result.stages.output.标准镜头清单
+  const 标准镜头清单 = result.标准镜头清单 || result.stages?.output?.标准镜头清单 || [];
+  const shots = 标准镜头清单.length > 0 ? 标准镜头清单 : (result.stages?.storyboard?.shots || []);
+  
+  const totalDuration = shots.reduce((sum, s) => sum + (s.时长 || s.duration || 0), 0);
+  
+  // 计算每个镜头的时间轴
+  let currentTime = 0;
+  const timelineData = shots.map(shot => {
+    const duration = shot.时长 || shot.duration || 0;
+    const start = currentTime;
+    const end = currentTime + duration;
+    const startStr = `${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`;
+    const endStr = `${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`;
+    currentTime = end;
+    return { 
+      ...shot, 
+      id: shot.镜头编号 || shot.id || shot.shotId,
+      duration: duration,
+      timeStart: startStr, 
+      timeEnd: endStr, 
+      timeStartSec: start, 
+      timeEndSec: end 
+    };
+  });
+  
+  let md = `# 健康科普系列 - 预生产报告
+
+`;
+  md += `**主讲**: 陈卓（穿警服的护士小姐姐）\n\n`;
+  md += `**总时长**: ${totalDuration} 秒\n\n`;
+  md += `**镜头数**: ${shots.length}\n\n`;
+  
+  // 创意指数报告
+  if (result.creativityParameter) {
+    md += `**创意指数 (CP)**: ${result.creativityParameter}\n\n`;
+    md += `**创意等级**: ${result.creativityLevel || '默认'}\n\n`;
+    md += `**视觉风格**: ${result.creativityStyle || '标准'}\n\n`;
+    if (result.creativitySource) {
+      md += `**解析来源**: ${result.creativitySource}\n\n`;
+    }
+    if (result.creativityActiveModules) {
+      md += `**激活模块**: ${result.creativityActiveModules} 个\n\n`;
+    }
+  }
+  
+  // 真实感增强报告
+  if (result.stages?.realismEnhancement) {
+    const re = result.stages.realismEnhancement;
+    md += `**真实感增强**: ${re.enhancedShots}/${re.totalShots} 镜头增强\n\n`;
+    if (re.stats?.antiPatternsReplaced) {
+      md += `**禁忌词替换**: ${re.stats.antiPatternsReplaced} 次\n\n`;
+    }
+  }
+  
+  md += `---\n\n`;
+  
+  // 时间轴总览
+  md += `## 时间轴总览\n\n`;
+  md += `| 镜头 | 时间段 | 时长 | 场景 | 内容 |\n`;
+  md += `|------|--------|------|------|------|\n`;
+  timelineData.forEach(s => {
+    const contentType = s.镜头类型 === '片头' || s.type === 'opening' ? '片头' : 
+      (s.镜头类型 === '结尾' || s.type === 'ending' ? '结尾' : '内容');
+    const sceneName = s.场景名称 || s.scene || s.name || contentType;
+    md += `| ${s.id} | ${s.timeStart}-${s.timeEnd} | ${s.duration}s | ${sceneName} | ${contentType} |\n`;
+  });
+  md += `\n`;
+  
+  // 镜头详情
+  md += `## 镜头详情\n\n`;
+  
+  timelineData.forEach((shot, i) => {
+    const shotId = shot.镜头编号 || shot.id || shot.shotId || `S${String(i).padStart(2, '0')}`;
+    const sceneName = shot.场景名称 || shot.scene || shot.name || '待定义';
+    md += `## ${shotId} - ${sceneName}\n\n`;
+    
+    // 时间轴
+    md += `**镜头总时长**: ${shot.duration || 0}s\n\n`;
+    md += `**镜头总时间轴**: ${shot.timeStart} - ${shot.timeEnd}\n\n`;
+    md += `**类型**: ${shot.镜头类型 || shot.type || 'unknown'}\n\n`;
+    md += `**场景**: ${sceneName}\n\n`;
+    
+    // 人物列表
+    const charList = shot.人物列表 || shot.characters || [];
+    md += `**角色**: ${charList.join(', ') || '无'}\n\n`;
+    
+    // 绑定定妆照（v6.6.4-fix: 过滤 casual 便装定妆照，只保留 uniform 或角色指定服装）
+    const rawRefImages = shot.绑定定妆照 || shot.referenceImages || [];
+    const refImages = rawRefImages.filter(ref => {
+      const imgPath = ref.路径 || ref.image_url?.url || ref.url || ref.file || '';
+      // 过滤 casual 路径，只保留 uniform 或明确指定的警服/职业装路径
+      return !imgPath.includes('casual');
+    });
+    md += `### 绑定定妆照\n\n`;
+    if (refImages.length > 0) {
+      refImages.forEach((ref, idx) => {
+        const charId = ref.角色ID || ref.character || ref.characterId || '';
+        const angle = ref.角度 || ref.angle || '';
+        const imgPath = ref.路径 || ref.image_url?.url || ref.url || ref.file || '';
+        // 转换为绝对路径
+        const absPath = imgPath.startsWith('characters/') || imgPath.startsWith('portraits/') 
+          ? `/root/.openclaw/workspace/characters/chenzhuo/${imgPath}` 
+          : imgPath;
+        md += `${idx + 1}. \`${absPath}\` (${charId}, ${angle})\n`;
+      });
+    } else {
+      md += `*未绑定定妆照*\n`;
+    }
+    md += `\n`;
+    
+    // 镜头内部详细时间轴
+    md += `### 镜头内部详细时间轴\n\n`;
+    md += generateInternalTimeline(shot, shot.duration || 0);
+    md += `\n`;
+    
+    // 台词
+    md += `### 台词\n\n`;
+    md += `${shot.台词 || shot.dialogue || '(无台词)'}\n\n`;
+    
+    // 动作
+    md += `### 动作\n\n`;
+    md += `${shot.动作 || shot.action || shot.actionDescription || '(无动作描述)'}\n\n`;
+    
+    // 画面提示词
+    const promptText = shot.画面提示词 || shot.prompt || shot.visualPrompt || 'N/A';
+    md += `### 完整 Prompt\n\n`;
+    md += `\`\`\`\n${promptText}\n\`\`\`\n\n`;
+    
+    md += `---\n\n`;
+  });
+  
+  // 附录：定妆照总览（v6.6.4-fix: 过滤 casual 便装定妆照）
+  md += `## 附录：本集使用定妆照清单\n\n`;
+  const allRefs = new Set();
+  timelineData.forEach(shot => {
+    (shot.绑定定妆照 || shot.referenceImages || []).forEach(ref => {
+      const path = ref.路径 || ref.file || ref.url || '';
+      // 只收集 uniform 路径，排除 casual
+      if (path && !path.includes('casual')) {
+        allRefs.add(path);
+      }
+    });
+  });
+  
+  if (allRefs.size > 0) {
+    md += `| 文件名 | 角度 | 用途 | 绝对路径 |\n`;
+    md += `|--------|------|------|----------|\n`;
+    Array.from(allRefs).forEach(refPath => {
+      const filename = refPath.split('/').pop();
+      const angle = refPath.match(/portrait-(uniform|casual)-(\d+)/)?.[0] || 'unknown';
+      const absPath = refPath.startsWith('characters/') || refPath.startsWith('portraits/') 
+        ? `/root/.openclaw/workspace/characters/chenzhuo/${refPath}` 
+        : refPath;
+      md += `| ${filename} | ${angle} | 角色一致性参考 | \`${absPath}\` |\n`;
+    });
+  } else {
+    md += `*本集未绑定定妆照*\n`;
+  }
+  
+  fs.writeFileSync(outputPath, md);
+}
+
+// v6.6.4-fix: 生成镜头内部详细时间轴
+function generateInternalTimeline(shot, duration) {
+  if (duration <= 0) return '*无详细时间轴*';
+  
+  const action = shot.动作 || shot.action || '';
+  const camera = shot.运镜 || shot.cameraMovement || shot.camera || {};
+  const cameraDesc = typeof camera === 'string' ? camera : (camera.描述 || camera.description || '');
+  const emotion = shot.情绪阶段 || shot.emotionPhase || '';
+  const scene = shot.场景名称 || shot.scene || '';
+  
+  // 根据镜头时长和动作，生成每2-3秒一段的详细时间轴
+  const segments = [];
+  const segCount = Math.min(Math.max(Math.ceil(duration / 3), 2), 5); // 2-5段
+  const segDuration = duration / segCount;
+  
+  // 解析动作关键词，分配到各段
+  const actionKeywords = action.split(/[,，]/).map(a => a.trim()).filter(Boolean);
+  
+  // 解析运镜关键词
+  const cameraKeywords = cameraDesc.split(/[,，]/).map(c => c.trim()).filter(Boolean);
+  
+  for (let i = 0; i < segCount; i++) {
+    const segStart = (i * segDuration).toFixed(1);
+    const segEnd = ((i + 1) * segDuration).toFixed(1);
+    const startSec = Math.floor(i * segDuration);
+    const endSec = Math.floor((i + 1) * segDuration);
+    const startStr = `${String(Math.floor(startSec / 60)).padStart(2, '0')}:${String(startSec % 60).padStart(2, '0')}`;
+    const endStr = `${String(Math.floor(endSec / 60)).padStart(2, '0')}:${String(endSec % 60).padStart(2, '0')}`;
+    
+    // 分配动作和运镜到各段
+    const segAction = actionKeywords[i] || actionKeywords[actionKeywords.length - 1] || '保持当前姿态';
+    const segCamera = cameraKeywords[i] || cameraKeywords[Math.floor(i * cameraKeywords.length / segCount)] || '镜头稳定';
+    
+    // 生成画面描述
+    let frame = '';
+    if (i === 0) {
+      frame = '中景构图，人物居中，背景清晰';
+    } else if (i === segCount - 1) {
+      frame = '近景/中景收束，画面稳定，情绪过渡';
+    } else {
+      frame = '景别过渡中，面部细节逐渐清晰';
+    }
+    
+    segments.push({
+      t: `${startStr}-${endStr}`,
+      camera: segCamera,
+      action: segAction,
+      frame: frame
+    });
+  }
+  
+  let md = `| 时间段 | 运镜 | 动作 | 画面描述 |\n`;
+  md += `|--------|------|------|----------|\n`;
+  segments.forEach(seg => {
+    md += `| ${seg.t} | ${seg.camera} | ${seg.action} | ${seg.frame} |\n`;
+  });
+  
+  return md;
+}
+
+function generateFallbackReport(input, outputPath) {
+  let md = `# 健康科普系列 - 预生产报告（基础版）\n\n`;
+  md += `**主讲**: 陈卓\n\n`;
+  md += `**总时长**: ${input.targetDuration} 秒\n\n`;
+  md += `**镜头数**: ${input.scenes.length}\n\n`;
+  md += `---\n\n`;
+  
+  input.scenes.forEach((scene) => {
+    md += `### ${scene.id} - ${scene.name}\n\n`;
+    md += `- **时长**: ${scene.duration}s\n`;
+    md += `- **类型**: ${scene.type}\n\n`;
+    md += `**描述**: ${scene.description}\n\n`;
+    md += `---\n\n`;
+  });
+  
+  fs.writeFileSync(outputPath, md);
+}
+
+run();
