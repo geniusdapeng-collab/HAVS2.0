@@ -181,21 +181,21 @@ class GenericOpeningSystem {
     }
 
     // L3: 场景层
-    parts.push(`【场景】${world.name || '片头'}；${world.setting || '专业环境'}；${world.lighting || '自然光'}；${world.atmosphere || '专业氛围'}`);
+    parts.push(`【场景】${world.name || '片头'} | ${world.setting || '专业环境'} | ${world.lighting || '自然光'} | ${world.atmosphere || '专业氛围'}`);
 
     // L4: 主体层（三幕）
-    parts.push(`【动作】${hook.content}；${reveal.content}；${freeze.content}`);
+    parts.push(`【动作】${hook.content} | ${reveal.content} | ${freeze.content}`);
 
     // L5: 动态层
     parts.push(`【运镜】稳定开场，缓慢推进，标题区域聚焦，适度景深，专业纪录片运镜`);
-    parts.push(`【全局时间定位】00:00-00:${String(this.duration).padStart(2, '0')} / 时长:${this.duration}s / 类型:片头 / 情绪:好奇`);
+    parts.push(`【镜头时间轴】00:00-00:${String(this.duration).padStart(2, '0')} / 时长:${this.duration}s / 类型:片头 / 情绪:好奇`);
 
     // L6: 风格层
-    parts.push(`【情绪】专业开场；清晰；可信；现代`);
+    parts.push(`【情绪】专业开场 | 清晰 | 可信 | 现代`);
     parts.push(`【灯光】${world.lighting || '自然光，柔和明亮，均匀照明'}`);
 
     // L7: 音频层
-    parts.push(`【音频】L1:舒缓背景音，-20LUFS；L2:自然环境音；L3:温暖氛围，72BPM；避让:标题出现时背景音乐降低3dB`);
+    parts.push(`【音频】L1:舒缓背景音，-20LUFS | L2:自然环境音 | L3:温暖氛围，72BPM | 避让:标题出现时背景音乐降低3dB`);
 
     // L8: 内部层
     parts.push(`【渲染参数】超写实电影级画质，35mm胶片颗粒，HDR，照片级真实，16:9画幅，纪录片写实风格`);
@@ -210,8 +210,6 @@ class GenericOpeningSystem {
       if (portraitPath) {
         parts.push(`【绑定定妆照】${portraitPath}`);
       }
-      // v6.6.8-patch2-fix: 添加图片1引用
-      parts.push(`图片1`);
     }
 
     return parts.join('；');

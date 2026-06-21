@@ -474,7 +474,7 @@ function generateReport(result, outputPath) {
     
     // 时间轴
     md += `**镜头总时长**: ${shot.duration || 0}s\n\n`;
-    md += `**【全局时间定位】**: ${shot.timeStart} - ${shot.timeEnd}\n\n`;
+    md += `**镜头总时间轴**: ${shot.timeStart} - ${shot.timeEnd}\n\n`;
     md += `**类型**: ${shot.镜头类型 || shot.type || 'unknown'}\n\n`;
     md += `**场景**: ${sceneName}\n\n`;
     

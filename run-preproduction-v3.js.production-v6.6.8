@@ -474,7 +474,7 @@ function generateReport(result, outputPath) {
     
     // 时间轴
     md += `**镜头总时长**: ${shot.duration || 0}s\n\n`;
-    md += `**【全局时间定位】**: ${shot.timeStart} - ${shot.timeEnd}\n\n`;
+    md += `**镜头总时间轴**: ${shot.timeStart} - ${shot.timeEnd}\n\n`;
     md += `**类型**: ${shot.镜头类型 || shot.type || 'unknown'}\n\n`;
     md += `**场景**: ${sceneName}\n\n`;
     
@@ -511,34 +511,16 @@ function generateReport(result, outputPath) {
     md += generateInternalTimeline(shot, shot.duration || 0);
     md += `\n`;
     
-    // 台词 - v6.6.8-patch2-fix: 竖杠替换为逗号，避免干扰音频生成
-    const rawDialogue = shot.台词 || shot.dialogue || '(无台词)';
-    const fixedDialogue = rawDialogue.replace(/\|/g, '，');
+    // 台词
     md += `### 台词\n\n`;
-    md += `${fixedDialogue}\n\n`;
+    md += `${shot.台词 || shot.dialogue || '(无台词)'}\n\n`;
     
     // 动作
     md += `### 动作\n\n`;
     md += `${shot.动作 || shot.action || shot.actionDescription || '(无动作描述)'}\n\n`;
     
-    // 画面提示词 - v6.6.8-fix: 竖杠替换为分号
-    // v6.6.8-patch2-fix: 服装锁定 + 外观锚定 + 定妆照引用
-    let promptText = (shot.画面提示词 || shot.prompt || shot.visualPrompt || 'N/A').replace(/\|/g, '；');
-    
-    // 修复1: 服装锁定 - 将"穿职业套装"替换为警服描述
-    promptText = promptText.replace(/穿职业套装/g, '穿藏蓝色警用制服，佩戴警帽、左胸警徽和警号、两肩肩章');
-    
-    // 修复2: 外观锚定 - 确保警服配饰描述存在
-    if (!promptText.includes('警帽') && !promptText.includes('警徽')) {
-      // 如果角色字段存在，在角色描述后追加警服锚定
-      promptText = promptText.replace(/(【角色】[^；]+)/, '$1，穿藏蓝色警用制服，佩戴警帽、左胸警徽和警号、两肩肩章');
-    }
-    
-    // 修复3: 定妆照引用 - 在prompt最前面添加"图片1"
-    if (!promptText.includes('图片1')) {
-      promptText = '图片1；' + promptText;
-    }
-    
+    // 画面提示词
+    const promptText = shot.画面提示词 || shot.prompt || shot.visualPrompt || 'N/A';
     md += `### 完整 Prompt\n\n`;
     md += `\`\`\`\n${promptText}\n\`\`\`\n\n`;
     

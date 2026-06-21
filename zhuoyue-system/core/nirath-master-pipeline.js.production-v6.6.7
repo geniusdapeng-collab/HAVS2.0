@@ -2562,121 +2562,100 @@ const { spawn } = require('child_process');
     const config = this._getTopicConfig(projectName, topic);
     const speaker = characters[0]?.name || '主讲人';
 
-    // v6.6.8-fix: 组合方案 D+E+F
-    // D: 主题锚定 + 边界护栏
-    // E: 内容规划器 (内置于 prompt 中)
-    // F: 正面引导替代负面约束
-
     const parts = [];
 
-    // ---------------- 系统角色 (正面引导) ----------------
+    // ---------------- 系统角色 ----------------
     parts.push(`<system>`);
-    parts.push(`你是一位资深健康科普视频剧本策划Agent。你的任务是根据给定的视频主题和场景要求，生成对应的剧本骨架。`);
-    parts.push(`你擅长将医学知识转化为通俗易懂的科普讲解，既保持专业度又兼顾大众理解。`);
+    parts.push(`你是一位资深健康科普视频剧本策划Agent。你的任务 ONLY 是根据给定的视频主题和场景要求，生成对应的剧本骨架。`);
+    parts.push(`你严格遵守指令，绝不会把"原因分析"讲成"症状描述"，也绝不会修改用户给定的场景名称。`);
     parts.push(`</system>`);
 
-    // ---------------- 主题上下文 ----------------
+    // ---------------- 主题上下文（系列内容感知） ----------------
     parts.push(`\n<topic_context>`);
     parts.push(`<series>${config.seriesTitle || '健康科普系列'}</series>`);
     parts.push(`<episode>第 ${config.episodeIndex || 'N'} 集：${config.episodeTitle || topic}</episode>`);
     parts.push(`<topic>${config.topic || topic}</topic>`);
     if (config.episodeIndex > 1) {
       parts.push(`<previous_episodes>前 ${config.episodeIndex - 1} 集已覆盖：${config.forbiddenContext || '前期内容'}</previous_episodes>`);
+      parts.push(`<strict_rule>本集 ONLY 讲解"${config.topic || topic}"，禁止重复前期内容。</strict_rule>`);
     }
     parts.push(`</topic_context>`);
 
-    // ---------------- E: 内容规划器 (每个场景明确内容方向) ----------------
-    parts.push(`\n<content_plan>`);
-    parts.push(`以下是为每个场景规划的内容方向。请严格按此方向生成台词，不得偏离：`);
+    // ---------------- 场景列表（场景名称保护） ----------------
+    parts.push(`\n<scenes>`);
+    parts.push(`<instruction>以下场景名称和描述是用户指定的，你必须原样使用名称，不得修改、优化或重写。</instruction>`);
     for (const scene of batch) {
       const requiredName = config.sceneNameMapping[scene.id] || scene.name;
-      // 根据场景名称和类型自动生成内容规划
-      const contentPlan = this._generateSceneContentPlan(scene, config, topic);
       parts.push(`<scene id="${scene.id}" name="${requiredName}">`);
-      parts.push(`  <content_direction>${contentPlan}</content_direction>`);
-      parts.push(`  <must_cover>${scene.requiredContent || config.topic || topic}</must_cover>`);
+      parts.push(` <description>${scene.description || requiredName}</description>`);
+      parts.push(` <must_cover>${scene.requiredContent || config.topic || topic}</must_cover>`);
       parts.push(`</scene>`);
     }
-    parts.push(`</content_plan>`);
+    parts.push(`</scenes>`);
 
-    // ---------------- F: 正面引导 (替代负面约束) ----------------
+    // ---------------- 必须覆盖的内容点（肯定性约束） ----------------
     if (config.requiredKeywords && config.requiredKeywords.length > 0) {
       parts.push(`\n<required_topics>`);
-      parts.push(`本集台词(dialogue)鼓励覆盖以下方向（每段台词至少对应 1-2 个）：`);
+      parts.push(`本集台词(dialogue)必须覆盖以下原因/机制方向（每段台词至少对应 1-2 个）：`);
       for (const kw of config.requiredKeywords) {
         parts.push(`- ${kw}`);
       }
       parts.push(`</required_topics>`);
     }
 
-    // ---------------- 输出示例 (正面示例) ----------------
+    // ---------------- 禁止内容（后置在肯定性约束之后） ----------------
+    if (config.forbiddenKeywords && config.forbiddenKeywords.length > 0) {
+      parts.push(`\n<forbidden_topics>`);
+      parts.push(`以下内容是前期剧集已讲解的，本集严禁出现：`);
+      for (const kw of config.forbiddenKeywords) {
+        parts.push(`- ${kw}`);
+      }
+      parts.push(`</forbidden_topics>`);
+    }
+
+    // ---------------- 输出示例（完整 few-shot） ----------------
     parts.push(`\n<example>正确示例：</example>`);
     parts.push(`场景 S02 名称固定为："运动过度-最常见原因"`);
     parts.push(`正确 dialogue："运动过度是横纹肌溶解最常见的原因。平时不锻炼的人突然进行大量剧烈运动，比如举重、长跑，肌纤维会大量损伤、破裂，细胞里的肌红蛋白就会漏到血液里。"`);
-    parts.push(`说明：此 dialogue 围绕"原因和机制"展开，符合本集主题。`);
+    parts.push(`错误 dialogue："横纹肌溶解最典型的症状就是肌肉疼痛、无力，尿液颜色加深..."`);
+    parts.push(`注意：错误示例属于第一集内容，本集必须删除。`);
 
     parts.push(`\n<output_format>`);
     parts.push(`请返回严格 JSON，不要包含 markdown 代码块标记：\n`);
     parts.push(`{\n "scenes": [\n {\n "id": "S02",\n "scene": "运动过度-最常见原因",\n "dialogue": "运动过度是横纹肌溶解最常见的原因...",\n "action": "双手做出举重姿势，随后模拟跑步动作",\n "mouthAction": "speaking_normal",\n "emotionPhase": "serious"\n }\n ]\n}`);
     parts.push(`</output_format>`);
 
-    // ---------------- 执行规则 (简化 + 正面引导) ----------------
+    // ---------------- 执行规则（按 filmType 动态化） ----------------
     parts.push(`\n<rules>`);
-    parts.push(`1. 必须直接使用 <content_plan> 中提供的 scene 名称，禁止修改。`);
-    parts.push(`2. 每个 dialogue 必须严格遵循对应场景的 <content_direction>，不得偏离。`);
-    parts.push(`3. 台词必须围绕本集主题"${config.topic || topic}"展开，可以讲解症状、检查、原因、机制等，按场景需要选择侧重点。`);
-    parts.push(`4. 所有医学表述必须准确，检查指标须给出名称与意义，禁止编造数值或检查项目。`);
-    parts.push(`5. 面向大众，专业术语后必须紧跟一句口语化解释。`);
-    parts.push(`6. 禁止出现前期剧集已详细讲解的内容（见 <previous_episodes>）。`);
+    parts.push(`1. 必须直接使用 <scenes> 中提供的 scene 名称，禁止修改。`);
+    
+    // v6.6.7-fix: EDU 科普类允许讲解症状和检查，消除规则冲突
+    const isEdu = (this.input?.filmType || '').toString().toLowerCase() === 'edu' ||
+                  (this.input?.filmType || '').toString().toLowerCase() === 'educational' ||
+                  (this.input?.videoType || '').toString().toLowerCase() === 'educational';
+    
+    if (isEdu) {
+      parts.push(`2. 本片为医学科普(EDU)题材，dialogue 必须围绕主题"${config.topic || topic}"展开，` +
+                 `允许且应当讲解：症状表现、实验室检查指标、病因/机制、临床意义。` +
+                 `按场景需要选择侧重点，不得互相排斥。`);
+      parts.push(`3. 所有医学表述必须准确，检查指标须给出名称与意义，禁止编造数值或检查项目。`);
+      parts.push(`4. 面向大众，专业术语后必须紧跟一句口语化解释。`);
+    } else {
+      parts.push(`2. 每个 dialogue 必须讲解"原因/机制"，不能讲解症状、检查、尿液颜色。`);
+      parts.push(`3. 每个 dialogue 必须基于对应场景描述生成，禁止自行发挥。`);
+      parts.push(`4. 必须在台词中自然融入 <required_topics> 中的关键词。`);
+    }
+    
+    parts.push(`5. 严禁出现 <forbidden_topics> 中的关键词。`);
+    parts.push(`6. 如果某个场景描述要求讲"运动过度"，就必须讲运动过度，不能讲症状。`);
     parts.push(`</rules>`);
 
-    // ---------------- 自我校验 (正面验证) ----------------
+    // ---------------- 自我校验指令 ----------------
     parts.push(`\n<self_check>`);
-    parts.push(`生成 JSON 后，请检查：\n- 是否所有 scene 名称与 <content_plan> 完全一致？\n- 是否每个 dialogue 都遵循了对应场景的 <content_direction>？\n- 是否台词围绕本集主题展开？\n- 如果检查发现偏离，请修正后重新生成。`);
+    parts.push(`生成 JSON 后，请再次检查：\n- 是否所有 scene 名称与输入完全一致？\n- 是否任何 dialogue 包含症状/检查/尿液描述？\n- 是否每个 dialogue 都讲解了原因或机制？\n- 如果检查发现违规，请立即删除违规内容并重新生成。`);
     parts.push(`</self_check>`);
 
     return parts.join('\n');
-  }
-
-  // v6.6.8-fix: E-内容规划器 - 为每个场景生成正面内容方向
-  _generateSceneContentPlan(scene, config, topic) {
-    const sceneName = config.sceneNameMapping[scene.id] || scene.name || '';
-    const sceneType = scene.type || 'explanation';
-    
-    // 根据场景类型和名称自动生成内容方向
-    if (sceneType === 'intro' || sceneType === 'opening') {
-      return `开场引入：简要介绍本集主题，建立观众兴趣，点明本集将要讲解的核心内容。`;
-    }
-    if (sceneType === 'ending' || sceneType === 'closing') {
-      return `总结回顾：梳理本集核心要点，强调关键信息，给出实用建议或行动号召。`;
-    }
-    
-    // 根据场景名称关键词匹配内容方向
-    const nameLower = sceneName.toLowerCase();
-    if (nameLower.includes('症状') || nameLower.includes('表现')) {
-      return `症状讲解：详细描述该主题的典型症状、体征表现，帮助观众识别。`;
-    }
-    if (nameLower.includes('检查') || nameLower.includes('化验') || nameLower.includes('实验室')) {
-      return `检查指标：介绍相关实验室检查项目、指标名称及临床意义。`;
-    }
-    if (nameLower.includes('原因') || nameLower.includes('机制') || nameLower.includes('为什么')) {
-      return `原因分析：讲解发生机制、常见诱因、病理过程。`;
-    }
-    if (nameLower.includes('治疗') || nameLower.includes('处理')) {
-      return `治疗方案：介绍治疗原则、常用方法、注意事项。`;
-    }
-    if (nameLower.includes('预防') || nameLower.includes('避免')) {
-      return `预防措施：给出实用预防建议、生活方式指导。`;
-    }
-    if (nameLower.includes('运动') || nameLower.includes('锻炼')) {
-      return `运动相关：讲解运动相关的知识点、注意事项、正确方法。`;
-    }
-    if (nameLower.includes('药物') || nameLower.includes('用药')) {
-      return `药物知识：介绍相关药物、用药原则、注意事项。`;
-    }
-    
-    // 默认：根据本集主题自动生成
-    return `围绕主题"${topic}"展开讲解，重点突出本场景的核心知识点。`;
   }
 
   // ============================================================
@@ -2697,41 +2676,38 @@ const { spawn } = require('child_process');
     return { ...DEFAULT_TOPIC_CONFIG, topic };
   }
 
-  // 计算单条台词的主题偏离度 (v6.6.8-fix: 放宽标准，避免过度修正)
+  // 计算单条台词的主题偏离度
   _checkTopicDeviation(dialogue, config) {
     if (!dialogue || typeof dialogue !== 'string') return { score: 1, reasons: ['dialogue为空'] };
     const text = dialogue.toLowerCase();
     const reasons = [];
 
-    // 检查是否包含明显的离题内容（如完全无关的话题）
-    const offTopicPatterns = ['篮球', '足球', '股票', '政治', '军事'];
-    let offTopicHits = 0;
-    for (const pattern of offTopicPatterns) {
-      if (text.includes(pattern)) offTopicHits++;
-    }
-    if (offTopicHits > 0) {
-      return { score: 0.8, reasons: ['包含明显离题内容'], offTopicHits };
+    let forbiddenHits = 0;
+    for (const kw of (config.forbiddenKeywords || [])) {
+      if (text.includes(kw.toLowerCase())) {
+        forbiddenHits += 1;
+        reasons.push(`命中禁用词: ${kw}`);
+      }
     }
 
-    // 检查内容长度是否足够（空或过短视为偏离）
-    if (text.length < 20) {
-      return { score: 0.6, reasons: ['内容过短'] };
+    let requiredHits = 0;
+    for (const kw of (config.requiredKeywords || [])) {
+      if (text.includes(kw.toLowerCase())) {
+        requiredHits += 1;
+      }
     }
 
-    // 检查是否包含科普相关关键词（放宽标准）
-    const medicalKeywords = ['横纹肌', '溶解', '症状', '检查', '医院', '治疗', '预防', '肌肉', '尿液', 'CK', '肌红蛋白', '肾功能', '电解质'];
-    let medicalHits = 0;
-    for (const kw of medicalKeywords) {
-      if (text.includes(kw.toLowerCase())) medicalHits++;
+    // 偏离度评分：命中禁用词越多越偏离；无必需词也偏离
+    let score = 0;
+    if (config.forbiddenKeywords && config.forbiddenKeywords.length > 0) {
+      score += forbiddenHits / Math.max(config.forbiddenKeywords.length, 1);
     }
-    
-    // 只要命中 1 个以上医学关键词，就视为基本符合主题
-    if (medicalHits >= 1) {
-      return { score: 0, reasons: [], medicalHits };
+    if (config.requiredKeywords && config.requiredKeywords.length > 0) {
+      const requiredRatio = requiredHits / config.requiredKeywords.length;
+      score += (1 - requiredRatio) * 0.3; // 缺少必需词贡献 30% 偏离
     }
 
-    // 如果没有命中任何医学关键词，给予中等偏离度
-    return { score: 0.4, reasons: ['未命中医学关键词'], medicalHits };
+    return { score: Math.min(score, 1), reasons, requiredHits, forbiddenHits };
   }
 
   // 校验整个剧本的主题一致性
@@ -2749,32 +2725,31 @@ const { spawn } = require('child_process');
     }
 
     const avgDeviation = scenes.length ? totalDeviation / scenes.length : 0;
-    // v6.6.8-fix: 大幅放宽验证阈值，避免过度修正
-    const passed = failedScenes === 0 && avgDeviation < 0.5;
-    
-    // 如果验证未通过但偏离度不高，记录日志但不阻塞
-    if (!passed && avgDeviation < 0.3) {
-      this.log('STAGE-5', `⚠️ 主题偏离度 ${avgDeviation.toFixed(2)} 在可接受范围，跳过修正`);
-      return { passed: true, avgDeviation, failedScenes, details: results, config };
-    }
+    const passed = failedScenes === 0 && avgDeviation < 0.25;
 
     return { passed, avgDeviation, failedScenes, details: results, config };
   }
 
   // 使用 LLM 对偏离场景进行主题修正（保留动作/表情，只改 dialogue）
   async _autoCorrectScene(scene, config, llm) {
-    // v6.6.8-fix: 简化修正 prompt，避免 LLM 陷入长 reasoning
-    const prompt = `<system>你是一位内容优化Agent。你只优化台词(dialogue)的表达方式，不修改场景名称和动作。</system>
+    const forbiddenList = (config.forbiddenKeywords || []).join('、');
+    const requiredList = (config.requiredKeywords || []).join('、');
+
+    const prompt = `<system>你是一位严格的内容修正Agent。你只修改台词(dialogue)，不修改场景名称和动作。</system>
 
 <task>
 原场景名称：${scene.scene}
 原台词："""${scene.dialogue}"""
 
-优化要求：
-1. 确保台词紧密围绕"${config.topic}"展开。
-2. 保持科普视频的口语化、讲解风格，由主讲人直接口述。
-3. 专业术语后必须紧跟一句口语化解释。
-4. 返回严格 JSON：{"dialogue": "优化后的台词"}
+问题：当前台词偏离了主题"${config.topic}"，包含了前期剧集已讲的内容，或没有讲解原因/机制。
+
+要求：
+1. 重写 dialogue，必须围绕"${config.topic}"展开。
+2. 自然融入以下关键词中的至少 2 个：${requiredList}。
+3. 严禁出现以下内容：${forbiddenList}。
+4. 保持原场景名称不变：${scene.scene}。
+5. 保持科普视频的口语化、讲解风格，由主讲人直接口述。
+6. 返回严格 JSON：{"dialogue": "修正后的台词"}
 </task>`;
 
     try {
@@ -2794,27 +2769,17 @@ const { spawn } = require('child_process');
     return scene;
   }
 
-  // 批量修正：只修正偏离度高的场景 (v6.6.8-fix: 激进兜底 - 修正失败时返回原内容，最多修正1轮)
+  // 批量修正：只修正偏离度高的场景
   async _autoCorrectScenes(scenes, validation, llm) {
     if (validation.passed) return scenes;
 
     const corrected = [];
     for (const scene of scenes) {
       const detail = validation.details.find(d => d.id === scene.id);
-      if (detail && detail.score > 0.5) {
-        this.log('STAGE-5', `🔧 尝试修正场景 ${scene.id} (${scene.scene})，偏离度: ${detail.score.toFixed(2)}`);
-        try {
-          const fixed = await this._autoCorrectScene(scene, validation.config, llm);
-          if (fixed && fixed.dialogue && fixed.dialogue !== scene.dialogue) {
-            this.log('STAGE-5', `✅ 场景 ${scene.id} 修正成功`);
-            corrected.push(fixed);
-            continue;
-          }
-        } catch (e) {
-          this.log('STAGE-5', `⚠️ 场景 ${scene.id} 修正失败: ${e.message}，使用原内容`);
-        }
-        // v6.6.8-fix: 修正失败或无效，返回原内容
-        corrected.push(scene);
+      if (detail && detail.score > 0.4) {
+        this.log('STAGE-5', `🔧 自动修正场景 ${scene.id} (${scene.scene})，偏离度: ${detail.score.toFixed(2)}`);
+        const fixed = await this._autoCorrectScene(scene, validation.config, llm);
+        corrected.push(fixed);
       } else {
         corrected.push(scene);
       }
@@ -2844,7 +2809,7 @@ const { spawn } = require('child_process');
     }
   }
 
-  // 从 LLM 结果中安全提取内容 (v6.6.8-fix: 删除禁用词清洗，避免误伤)
+  // 从 LLM 结果中安全提取内容，并做主题清洗
   _extractAndSanitizeContent(rawResult, config) {
     let data = rawResult?.data || rawResult?.content || rawResult;
 
@@ -2871,8 +2836,17 @@ const { spawn } = require('child_process');
 
     if (!data || !Array.isArray(data.scenes)) return null;
 
-    // v6.6.8-fix: 删除禁用词清洗，避免误伤正常医学术语
-    // 改为只保留数据结构，不做内容替换
+    // 对每段 dialogue 做基础禁用词清洗
+    data.scenes = data.scenes.map(scene => {
+      let dialogue = scene.dialogue || '';
+      for (const kw of (config.forbiddenKeywords || [])) {
+        // 简单替换：将禁用词替换为 [已省略]
+        const regex = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        dialogue = dialogue.replace(regex, '[已省略]');
+      }
+      return { ...scene, dialogue };
+    });
+
     return data;
   }
 
@@ -2980,53 +2954,36 @@ const { spawn } = require('child_process');
   }
 
   _buildFallbackDialogue(scene, characters = {}) {
-    const name = scene.name || scene.scene || '当前场景';
-    const desc = scene.description || '';
-    
-    // v6.6.8-fix: 更智能的 fallback，基于场景名称和描述生成具体内容
-    const charNames = Object.values(characters || {}).map(c => c.name || c.id || '').filter(Boolean);
-    const speaker = charNames[0] || '陈卓';
+    const name = scene.name || '当前场景';
 
-    // 根据场景类型和名称生成更具体的 fallback 内容
-    const nameLower = name.toLowerCase();
-    
-    // 开场场景
-    if (scene.type === 'intro' || scene.type === 'opening' || scene.type === 'establishing') {
-      return `大家好，我是${speaker}。今天给大家讲的是横纹肌溶解的相关知识。很多人可能对这个名词不太熟悉，但它其实和我们的生活息息相关。接下来，我会从症状表现和检查方法两个方面，带大家深入了解。`;
+    // v6.5.29: 获取角色名称,确保角色出现在dialogue中
+    const charNames = Object.values(characters || {}).map(c => c.name || c.id || '').filter(Boolean);
+    const speaker = charNames[0] || '主持人';
+
+    // 获取场景指定的角色(优先使用场景的角色列表)
+    const sceneChars = (scene.characters || []).map(cid => {
+      const char = characters[cid];
+      return char ? (char.name || char.id) : cid;
+    }).filter(Boolean);
+    const sceneSpeaker = sceneChars[0] || speaker;
+
+    if (scene.type === 'establishing') {
+      return `大家好,我是${sceneSpeaker},今天我们来了解一下${name}相关的核心内容。`;
     }
-    
-    // 结尾场景
-    if (scene.type === 'ending' || scene.type === 'closing') {
-      return `好了，今天关于横纹肌溶解的内容就讲到这里。记住，如果出现肌肉剧痛、尿液颜色加深等症状，一定要及时就医检查。早发现、早治疗，才能保护好我们的健康。`;
+
+    if (scene.type === 'explanation') {
+      return `这一部分${sceneSpeaker}重点讲解${name},帮助大家快速抓住关键知识点。`;
     }
-    
-    // 根据场景名称关键词生成具体内容
-    if (nameLower.includes('症状') || nameLower.includes('表现')) {
-      return `横纹肌溶解最典型的症状有三个：第一是肌肉疼痛和无力，特别是大腿、小腿和腰部；第二是尿液颜色变深，像浓茶或酱油色；第三是全身乏力、恶心呕吐。这些症状一旦出现，就要高度警惕。`;
+
+    if (scene.type === 'demonstration') {
+      return `接下来${sceneSpeaker}通过一个示范动作,直观理解${name}的表现和检查方式。`;
     }
-    
-    if (nameLower.includes('检查') || nameLower.includes('化验') || nameLower.includes('实验室')) {
-      return `到了医院，医生主要通过几项检查来确诊。最重要的是肌酸激酶，也就是CK值，正常人是几百，横纹肌溶解的患者能飙到几万。还要查肌红蛋白、肾功能和电解质，看看有没有伤到肾脏。`;
+
+    if (scene.type === 'closing') {
+      return `最后${sceneSpeaker}再强调一次,如果出现相关症状,一定要及时就医,不要拖延。`;
     }
-    
-    if (nameLower.includes('原因') || nameLower.includes('机制') || nameLower.includes('为什么')) {
-      return `横纹肌溶解的原因有很多，最常见的是运动过度。平时不锻炼的人突然剧烈运动，肌纤维就会大量损伤。另外，某些药物、外伤、高温脱水也可能引发。简单说，就是肌肉细胞破了，里面的东西漏到血液里。`;
-    }
-    
-    if (nameLower.includes('治疗') || nameLower.includes('处理')) {
-      return `治疗横纹肌溶解，最关键的就是大量补液，帮助身体把肌红蛋白尽快排出去。如果肾功能已经受损，可能还需要做血液净化。所以发现症状千万别拖，越早治疗效果越好。`;
-    }
-    
-    if (nameLower.includes('预防') || nameLower.includes('避免')) {
-      return `预防横纹肌溶解，记住三句话：第一，运动要循序渐进，不要突然上高强度；第二，服药期间注意观察，有不适及时就医；第三，高温天多喝水，避免脱水。做好这三点，风险就能大大降低。`;
-    }
-    
-    // 根据描述生成
-    if (desc) {
-      return `接下来${speaker}重点讲解${desc}，帮助大家快速抓住关键知识点。`;
-    }
-    
-    return `这一部分${speaker}重点讲解${name}，帮助大家快速抓住关键知识点。`;
+
+    return `下面${sceneSpeaker}进入${name}。`;
   }
 
   _buildFallbackNarration(scene) {

@@ -2697,41 +2697,51 @@ const { spawn } = require('child_process');
     return { ...DEFAULT_TOPIC_CONFIG, topic };
   }
 
-  // 计算单条台词的主题偏离度 (v6.6.8-fix: 放宽标准，避免过度修正)
+  // 计算单条台词的主题偏离度 (v6.6.8-fix: 正面评分替代负面扣分)
   _checkTopicDeviation(dialogue, config) {
     if (!dialogue || typeof dialogue !== 'string') return { score: 1, reasons: ['dialogue为空'] };
     const text = dialogue.toLowerCase();
     const reasons = [];
 
-    // 检查是否包含明显的离题内容（如完全无关的话题）
-    const offTopicPatterns = ['篮球', '足球', '股票', '政治', '军事'];
-    let offTopicHits = 0;
-    for (const pattern of offTopicPatterns) {
-      if (text.includes(pattern)) offTopicHits++;
-    }
-    if (offTopicHits > 0) {
-      return { score: 0.8, reasons: ['包含明显离题内容'], offTopicHits };
-    }
-
-    // 检查内容长度是否足够（空或过短视为偏离）
-    if (text.length < 20) {
-      return { score: 0.6, reasons: ['内容过短'] };
-    }
-
-    // 检查是否包含科普相关关键词（放宽标准）
-    const medicalKeywords = ['横纹肌', '溶解', '症状', '检查', '医院', '治疗', '预防', '肌肉', '尿液', 'CK', '肌红蛋白', '肾功能', '电解质'];
-    let medicalHits = 0;
-    for (const kw of medicalKeywords) {
-      if (text.includes(kw.toLowerCase())) medicalHits++;
+    // 正面评分：命中关键词越多越符合主题
+    let requiredHits = 0;
+    for (const kw of (config.requiredKeywords || [])) {
+      if (text.includes(kw.toLowerCase())) {
+        requiredHits += 1;
+      }
     }
     
-    // 只要命中 1 个以上医学关键词，就视为基本符合主题
-    if (medicalHits >= 1) {
-      return { score: 0, reasons: [], medicalHits };
+    // 检查是否包含主题核心词
+    const topicWords = (config.topic || '').split(/[\s,，、]+/).filter(w => w.length > 1);
+    let topicHits = 0;
+    for (const tw of topicWords) {
+      if (text.includes(tw.toLowerCase())) {
+        topicHits += 1;
+      }
+    }
+    
+    // 计算符合度 (0-1, 越高越符合)
+    const requiredRatio = config.requiredKeywords?.length > 0 
+      ? requiredHits / config.requiredKeywords.length 
+      : 0.5;
+    const topicRatio = topicWords.length > 0 
+      ? topicHits / topicWords.length 
+      : 0.5;
+    
+    // 符合度 = 关键词覆盖率 * 0.6 + 主题词覆盖率 * 0.4
+    const alignment = requiredRatio * 0.6 + topicRatio * 0.4;
+    
+    // 偏离度 = 1 - 符合度
+    const score = 1 - alignment;
+    
+    if (requiredHits === 0 && config.requiredKeywords?.length > 0) {
+      reasons.push('未命中任何关键词');
+    }
+    if (topicHits === 0 && topicWords.length > 0) {
+      reasons.push('未包含主题核心词');
     }
 
-    // 如果没有命中任何医学关键词，给予中等偏离度
-    return { score: 0.4, reasons: ['未命中医学关键词'], medicalHits };
+    return { score: Math.min(score, 1), reasons, requiredHits, topicHits, alignment };
   }
 
   // 校验整个剧本的主题一致性
@@ -2749,21 +2759,16 @@ const { spawn } = require('child_process');
     }
 
     const avgDeviation = scenes.length ? totalDeviation / scenes.length : 0;
-    // v6.6.8-fix: 大幅放宽验证阈值，避免过度修正
-    const passed = failedScenes === 0 && avgDeviation < 0.5;
-    
-    // 如果验证未通过但偏离度不高，记录日志但不阻塞
-    if (!passed && avgDeviation < 0.3) {
-      this.log('STAGE-5', `⚠️ 主题偏离度 ${avgDeviation.toFixed(2)} 在可接受范围，跳过修正`);
-      return { passed: true, avgDeviation, failedScenes, details: results, config };
-    }
+    const passed = failedScenes === 0 && avgDeviation < 0.25;
 
     return { passed, avgDeviation, failedScenes, details: results, config };
   }
 
   // 使用 LLM 对偏离场景进行主题修正（保留动作/表情，只改 dialogue）
   async _autoCorrectScene(scene, config, llm) {
-    // v6.6.8-fix: 简化修正 prompt，避免 LLM 陷入长 reasoning
+    const requiredList = (config.requiredKeywords || []).join('、');
+    
+    // v6.6.8-fix: 正面引导替代负面约束
     const prompt = `<system>你是一位内容优化Agent。你只优化台词(dialogue)的表达方式，不修改场景名称和动作。</system>
 
 <task>
@@ -2771,10 +2776,11 @@ const { spawn } = require('child_process');
 原台词："""${scene.dialogue}"""
 
 优化要求：
-1. 确保台词紧密围绕"${config.topic}"展开。
-2. 保持科普视频的口语化、讲解风格，由主讲人直接口述。
-3. 专业术语后必须紧跟一句口语化解释。
-4. 返回严格 JSON：{"dialogue": "优化后的台词"}
+1. 确保台词紧密围绕主题"${config.topic}"展开。
+2. 自然融入以下关键词中的至少 2 个：${requiredList}。
+3. 保持科普视频的口语化、讲解风格，由主讲人直接口述。
+4. 专业术语后必须紧跟一句口语化解释。
+5. 返回严格 JSON：{"dialogue": "优化后的台词"}
 </task>`;
 
     try {
@@ -2794,27 +2800,17 @@ const { spawn } = require('child_process');
     return scene;
   }
 
-  // 批量修正：只修正偏离度高的场景 (v6.6.8-fix: 激进兜底 - 修正失败时返回原内容，最多修正1轮)
+  // 批量修正：只修正偏离度高的场景
   async _autoCorrectScenes(scenes, validation, llm) {
     if (validation.passed) return scenes;
 
     const corrected = [];
     for (const scene of scenes) {
       const detail = validation.details.find(d => d.id === scene.id);
-      if (detail && detail.score > 0.5) {
-        this.log('STAGE-5', `🔧 尝试修正场景 ${scene.id} (${scene.scene})，偏离度: ${detail.score.toFixed(2)}`);
-        try {
-          const fixed = await this._autoCorrectScene(scene, validation.config, llm);
-          if (fixed && fixed.dialogue && fixed.dialogue !== scene.dialogue) {
-            this.log('STAGE-5', `✅ 场景 ${scene.id} 修正成功`);
-            corrected.push(fixed);
-            continue;
-          }
-        } catch (e) {
-          this.log('STAGE-5', `⚠️ 场景 ${scene.id} 修正失败: ${e.message}，使用原内容`);
-        }
-        // v6.6.8-fix: 修正失败或无效，返回原内容
-        corrected.push(scene);
+      if (detail && detail.score > 0.4) {
+        this.log('STAGE-5', `🔧 自动修正场景 ${scene.id} (${scene.scene})，偏离度: ${detail.score.toFixed(2)}`);
+        const fixed = await this._autoCorrectScene(scene, validation.config, llm);
+        corrected.push(fixed);
       } else {
         corrected.push(scene);
       }
@@ -2844,7 +2840,7 @@ const { spawn } = require('child_process');
     }
   }
 
-  // 从 LLM 结果中安全提取内容 (v6.6.8-fix: 删除禁用词清洗，避免误伤)
+  // 从 LLM 结果中安全提取内容，并做主题清洗
   _extractAndSanitizeContent(rawResult, config) {
     let data = rawResult?.data || rawResult?.content || rawResult;
 
@@ -2871,8 +2867,17 @@ const { spawn } = require('child_process');
 
     if (!data || !Array.isArray(data.scenes)) return null;
 
-    // v6.6.8-fix: 删除禁用词清洗，避免误伤正常医学术语
-    // 改为只保留数据结构，不做内容替换
+    // 对每段 dialogue 做基础禁用词清洗
+    data.scenes = data.scenes.map(scene => {
+      let dialogue = scene.dialogue || '';
+      for (const kw of (config.forbiddenKeywords || [])) {
+        // 简单替换：将禁用词替换为 [已省略]
+        const regex = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        dialogue = dialogue.replace(regex, '[已省略]');
+      }
+      return { ...scene, dialogue };
+    });
+
     return data;
   }
 
@@ -2980,53 +2985,36 @@ const { spawn } = require('child_process');
   }
 
   _buildFallbackDialogue(scene, characters = {}) {
-    const name = scene.name || scene.scene || '当前场景';
-    const desc = scene.description || '';
-    
-    // v6.6.8-fix: 更智能的 fallback，基于场景名称和描述生成具体内容
-    const charNames = Object.values(characters || {}).map(c => c.name || c.id || '').filter(Boolean);
-    const speaker = charNames[0] || '陈卓';
+    const name = scene.name || '当前场景';
 
-    // 根据场景类型和名称生成更具体的 fallback 内容
-    const nameLower = name.toLowerCase();
-    
-    // 开场场景
-    if (scene.type === 'intro' || scene.type === 'opening' || scene.type === 'establishing') {
-      return `大家好，我是${speaker}。今天给大家讲的是横纹肌溶解的相关知识。很多人可能对这个名词不太熟悉，但它其实和我们的生活息息相关。接下来，我会从症状表现和检查方法两个方面，带大家深入了解。`;
+    // v6.5.29: 获取角色名称,确保角色出现在dialogue中
+    const charNames = Object.values(characters || {}).map(c => c.name || c.id || '').filter(Boolean);
+    const speaker = charNames[0] || '主持人';
+
+    // 获取场景指定的角色(优先使用场景的角色列表)
+    const sceneChars = (scene.characters || []).map(cid => {
+      const char = characters[cid];
+      return char ? (char.name || char.id) : cid;
+    }).filter(Boolean);
+    const sceneSpeaker = sceneChars[0] || speaker;
+
+    if (scene.type === 'establishing') {
+      return `大家好,我是${sceneSpeaker},今天我们来了解一下${name}相关的核心内容。`;
     }
-    
-    // 结尾场景
-    if (scene.type === 'ending' || scene.type === 'closing') {
-      return `好了，今天关于横纹肌溶解的内容就讲到这里。记住，如果出现肌肉剧痛、尿液颜色加深等症状，一定要及时就医检查。早发现、早治疗，才能保护好我们的健康。`;
+
+    if (scene.type === 'explanation') {
+      return `这一部分${sceneSpeaker}重点讲解${name},帮助大家快速抓住关键知识点。`;
     }
-    
-    // 根据场景名称关键词生成具体内容
-    if (nameLower.includes('症状') || nameLower.includes('表现')) {
-      return `横纹肌溶解最典型的症状有三个：第一是肌肉疼痛和无力，特别是大腿、小腿和腰部；第二是尿液颜色变深，像浓茶或酱油色；第三是全身乏力、恶心呕吐。这些症状一旦出现，就要高度警惕。`;
+
+    if (scene.type === 'demonstration') {
+      return `接下来${sceneSpeaker}通过一个示范动作,直观理解${name}的表现和检查方式。`;
     }
-    
-    if (nameLower.includes('检查') || nameLower.includes('化验') || nameLower.includes('实验室')) {
-      return `到了医院，医生主要通过几项检查来确诊。最重要的是肌酸激酶，也就是CK值，正常人是几百，横纹肌溶解的患者能飙到几万。还要查肌红蛋白、肾功能和电解质，看看有没有伤到肾脏。`;
+
+    if (scene.type === 'closing') {
+      return `最后${sceneSpeaker}再强调一次,如果出现相关症状,一定要及时就医,不要拖延。`;
     }
-    
-    if (nameLower.includes('原因') || nameLower.includes('机制') || nameLower.includes('为什么')) {
-      return `横纹肌溶解的原因有很多，最常见的是运动过度。平时不锻炼的人突然剧烈运动，肌纤维就会大量损伤。另外，某些药物、外伤、高温脱水也可能引发。简单说，就是肌肉细胞破了，里面的东西漏到血液里。`;
-    }
-    
-    if (nameLower.includes('治疗') || nameLower.includes('处理')) {
-      return `治疗横纹肌溶解，最关键的就是大量补液，帮助身体把肌红蛋白尽快排出去。如果肾功能已经受损，可能还需要做血液净化。所以发现症状千万别拖，越早治疗效果越好。`;
-    }
-    
-    if (nameLower.includes('预防') || nameLower.includes('避免')) {
-      return `预防横纹肌溶解，记住三句话：第一，运动要循序渐进，不要突然上高强度；第二，服药期间注意观察，有不适及时就医；第三，高温天多喝水，避免脱水。做好这三点，风险就能大大降低。`;
-    }
-    
-    // 根据描述生成
-    if (desc) {
-      return `接下来${speaker}重点讲解${desc}，帮助大家快速抓住关键知识点。`;
-    }
-    
-    return `这一部分${speaker}重点讲解${name}，帮助大家快速抓住关键知识点。`;
+
+    return `下面${sceneSpeaker}进入${name}。`;
   }
 
   _buildFallbackNarration(scene) {

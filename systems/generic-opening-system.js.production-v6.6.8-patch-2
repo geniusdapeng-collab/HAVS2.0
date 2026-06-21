@@ -188,7 +188,7 @@ class GenericOpeningSystem {
 
     // L5: 动态层
     parts.push(`【运镜】稳定开场，缓慢推进，标题区域聚焦，适度景深，专业纪录片运镜`);
-    parts.push(`【全局时间定位】00:00-00:${String(this.duration).padStart(2, '0')} / 时长:${this.duration}s / 类型:片头 / 情绪:好奇`);
+    parts.push(`【镜头时间轴】00:00-00:${String(this.duration).padStart(2, '0')} / 时长:${this.duration}s / 类型:片头 / 情绪:好奇`);
 
     // L6: 风格层
     parts.push(`【情绪】专业开场；清晰；可信；现代`);

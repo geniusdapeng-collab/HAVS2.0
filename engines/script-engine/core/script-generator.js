@@ -11,7 +11,7 @@ class ScriptGenerator {
     this.config = {
       llmEndpoint: options.llmEndpoint || process.env.LLM_ENDPOINT || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
       apiKey: options.apiKey || process.env.VOLCENGINE_ARK_API_KEY,
-      model: options.model || 'ep-20260518004622-jp46s', // 使用文本模型
+      model: options.model || process.env.LLM_MODEL || 'YOUR_LLM_MODEL_ENDPOINT_ID', // 从环境变量或配置读取
       maxTokens: options.maxTokens || 8192,
       temperature: options.temperature || 0.7,
       promptTemplateDir: options.promptTemplateDir || path.join(__dirname, '../prompts'),

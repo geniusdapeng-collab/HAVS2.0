@@ -134,9 +134,10 @@ const DEFAULT_CONFIG = {
   // 渲染引擎配置
   render: {
     engine: 'Seedance-2.0',
-    endpoint: 'ep-20260518004622-jp46s',
-    fastEndpoint: 'ep-20260518003432-n8v8f',
-    imageEndpoint: 'ep-20260518004750-lz76f',
+    // v6.6.6: 安全占位符 - 请从 config/seedance.json 或环境变量配置实际 endpoint
+    endpoint: process.env.SEEDANCE_ENDPOINT || 'YOUR_SEEDANCE_ENDPOINT_ID',
+    fastEndpoint: process.env.SEEDANCE_FAST_ENDPOINT || 'YOUR_SEEDANCE_FAST_ENDPOINT_ID',
+    imageEndpoint: process.env.SEEDREAM_ENDPOINT || 'YOUR_SEEDREAM_ENDPOINT_ID',
     maxConcurrent: 3,
     safetyGate: {
       tripleLockEnabled: true,

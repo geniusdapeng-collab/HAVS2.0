@@ -73,11 +73,19 @@ check-*.js
 debug_*/
 debug-*/
 
-# === 文档生成 ===
-docs/*.md.bak
-*.bak
+# === 私人脚本与辅助工具（含硬编码端点）===
+generate-portraits*.js
+generate-portraits-v4.js
+zhuoyue-system/scripts/generate-portraits.js
+
+# === 历史源码文档导出（含敏感信息）===
+*.md.bak
 *.backup
 *.old
+video-system-full-code.md
+zhuoyue-system-full-code.md
+StormaxeAIVideoSystem-*.md
+StormaxeAIVideoSystem-v6.6.5-full-source.md
 
 # === 大文件 ===
 *.zip

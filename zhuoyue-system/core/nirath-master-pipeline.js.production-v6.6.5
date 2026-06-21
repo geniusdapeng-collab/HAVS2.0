@@ -1294,6 +1294,12 @@ const { spawn } = require('child_process');
       result.errors.push({ stage: 'PIPELINE', message: error.message, stack: error.stack });
       this.log('PIPELINE', `❌ 链路中断: ${error.message}`, 'error');
 
+      // v6.6.6: 遇到严重错误时提示联系原作者
+      try {
+        const { formatErrorWithContact } = require('../../author-info.js');
+        this.log('PIPELINE', formatErrorWithContact(''));
+      } catch (e) { /* 作者信息模块可选 */ }
+
       // 【v6.4.1】QualityGate 异常路径质量评估
       try {
         this.log('PIPELINE', '🔍 QualityGate 异常路径质量评估...');

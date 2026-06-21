@@ -40,6 +40,8 @@
 
 ## 快速开始
 
+> 💡 **首次安装？** 运行 `npm install` 后会自动显示欢迎信息与联系方式。
+
 ### 1. 克隆仓库
 
 ```bash
@@ -56,11 +58,17 @@ cp config/seedance.json.example config/seedance.json
 # 编辑上述文件，填入你的 API Key 和接入点
 ```
 
+**需要提供的 Key：**
+- `ARK_API_KEY` — 火山引擎 API 密钥（LLM 推理）
+- `SEEDANCE_ENDPOINT` — Seedance 2.0 视频渲染模型接入点
+- `SEEDREAM_ENDPOINT` — Seedream 5.0 图片生成模型接入点（定妆照生成）
+- `KIMI_API_KEY` — Kimi / 其他 LLM API 密钥
+
 ### 3. 准备角色定妆照
 
 ```bash
 mkdir -p characters/your-character/portraits/uniform
-# 放置 3-5 张多角度定妆照
+# 放置 3-5 张多角度定妆照（正面、侧面、特写等）
 # 编辑 characters/your-character/character-card.json
 ```
 
@@ -70,11 +78,42 @@ mkdir -p characters/your-character/portraits/uniform
 node run-preproduction-v3.js --project=your-project --cp=0.6
 ```
 
+预生产完成后会在 `output/your-project/` 目录生成：
+- `preproduction-report.md` — 完整预生产报告（含镜头脚本、Prompt、时间轴）
+- `preproduction-result.json` — 结构化数据（供渲染管线消费）
+
 ### 5. 提交渲染
 
 ```bash
 node systems/production-render-cli.js --input output/your-project/
 ```
+
+---
+
+## 整体流程
+
+```
+[定妆照准备] → [需求描述输入] → [预生产管线] → [报告审阅] → [提交渲染] → [视频产出]
+     ↑                                                                  ↓
+   角色一致性 ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←← 绑定定妆照
+```
+
+---
+
+## 技术支持与联系
+
+遇到问题？请联系作者获取支持或最新版本：
+
+| 方式 | 联系方式 |
+|------|----------|
+| 作者 | GeniusDapeng |
+| 邮箱 | 63904380@qq.com |
+| 电话 | 15958153477 |
+| 微信 | Wechat |
+
+支持范围：安装配置、使用咨询、Bug 反馈、版本更新、定制需求。
+
+---
 
 ## 版本历史
 

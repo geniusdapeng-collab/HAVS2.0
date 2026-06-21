@@ -1,6 +1,6 @@
 {
   "name": "stormaxe-ai-video-system",
-  "version": "6.6.5",
+  "version": "6.6.8-patch-3",
   "description": "暴风战斧AI视频生成系统 - 基于 Seedance 2.0 API 的专业级 AI 视频生成系统",
   "main": "zhuoyue-system/core/nirath-master-pipeline.js",
   "scripts": {
@@ -16,7 +16,7 @@
     "prompt-engineering",
     "stormaxe"
   ],
-  "author": "Stormaxe Team",
+  "author": "GeniusDapeng <63904380@qq.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
