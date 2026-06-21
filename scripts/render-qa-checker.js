@@ -11,6 +11,85 @@ class RenderQAChecker {
   _buildDefaultChecks() {
     return [
       {
+        id: 'SCENE_SPECIFICITY',
+        name: '场景特异性检查',
+        type: 'error',
+        check: (payload, context) => {
+          const text = this._extractPromptText(payload);
+          const sceneMatch = text.match(/【场景】([^【\n]+)/);
+          
+          if (!sceneMatch) {
+            return { pass: true, warning: 'Prompt中未找到【场景】字段' };
+          }
+          
+          const sceneValue = sceneMatch[1].trim();
+          
+          // 检查场景是否过于通用（模板化）
+          const genericPatterns = [
+            /golden\s+hour.*clear\s+sky.*atmospheric/i,
+            /clear\s+sky.*atmospheric\s+haze.*depth/i,
+            /golden\s+hour.*warm\s+sunlight.*long\s+shadows/i,
+            /^[a-z\s,\-]+$/i // 纯英文场景（教育片应为中文）
+          ];
+          
+          for (const pattern of genericPatterns) {
+            if (pattern.test(sceneValue)) {
+              return {
+                pass: false,
+                message: `【场景】字段疑似通用模板："${sceneValue.substring(0,40)}..."，应为镜头特异性描述`
+              };
+            }
+          }
+          
+          // 检查场景长度
+          if (sceneValue.length < 10) {
+            return {
+              pass: false,
+              message: `【场景】字段过短（${sceneValue.length}字符），描述不足`
+            };
+          }
+          
+          // 检查跨镜头重复（如果上下文提供其他镜头）
+          const otherScenes = context?.otherScenes || [];
+          if (otherScenes.length > 0) {
+            const duplicateCount = otherScenes.filter(s => 
+              s.toLowerCase().replace(/\s+/g, '') === sceneValue.toLowerCase().replace(/\s+/g, '')
+            ).length;
+            if (duplicateCount > 0) {
+              return {
+                pass: false,
+                message: `【场景】与${duplicateCount}个其他镜头完全相同，缺乏差异化`
+              };
+            }
+          }
+          
+          return { pass: true, message: '场景描述具有特异性' };
+        }
+      },
+      {
+        id: 'SCENE_LANGUAGE',
+        name: '场景语言检查',
+        type: 'warning',
+        check: (payload) => {
+          const text = this._extractPromptText(payload);
+          const sceneMatch = text.match(/【场景】([^【\n]+)/);
+          
+          if (!sceneMatch) return { pass: true, message: '无场景字段' };
+          
+          const sceneValue = sceneMatch[1].trim();
+          // 检查是否全英文（中文项目应为中文场景）
+          const isEnglish = /^[a-zA-Z\s,\-]+$/.test(sceneValue);
+          if (isEnglish) {
+            return {
+              pass: true,
+              warning: `【场景】字段为纯英文描述："${sceneValue.substring(0,30)}..."，中文项目建议使用中中文场景描述`
+            };
+          }
+          
+          return { pass: true, message: '场景语言正确' };
+        }
+      },
+      {
         id: 'CHARACTER_NAME',
         name: '角色名出现检查',
         type: 'error',
@@ -123,7 +202,7 @@ class RenderQAChecker {
         type: 'warning',
         check: (payload) => {
           const text = this._extractPromptText(payload);
-          const hasDialogue = /[""""].*[""""]/.test(text) || /说[：:]/.test(text);
+          const hasDialogue = /[\u201c\u201d\"\"].*[\u201c\u201d\"\"]/.test(text) || /说[：:]/.test(text);
           const hasAudio = payload.generate_audio === true;
           
           if (hasDialogue && !hasAudio) {

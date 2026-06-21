@@ -1,17 +1,119 @@
-// render-pipeline-guard.js v1.0
+// render-pipeline-guard.js v1.1
 // Seedance 2.0 API - 渲染提交强制检查层
-// 职责：在提交API前进行10项强制检查，不通过则阻止提交
+// 职责：在提交API前进行强制检查，不通过则阻止提交
+// v1.1升级: 新增场景多样性检查、场景模板化检查，修复引用格式检查（支持@imageN）
 
 class RenderPipelineGuard {
   constructor(options = {}) {
     this.strict = options.strict !== false; // 默认严格模式
     this.logChecks = options.logChecks !== false;
     this.customChecks = options.customChecks || [];
+    this.context = options.context || {}; // 跨镜头上下文
   }
 
   // 完整检查清单
   getCheckList() {
     return [
+      // ===== 场景检查（新增）=====
+      {
+        id: 'SCENE_DIVERSITY',
+        type: 'error',
+        name: '场景多样性检查（跨镜头）',
+        check: (payload) => {
+          // 从上下文中获取所有镜头的场景
+          const allScenes = this.context?.allScenes || [];
+          if (allScenes.length < 2) return { pass: true, message: '单镜头项目，无需检查' };
+          
+          // 提取当前payload的场景
+          const textContent = (payload.content || [])
+            .filter(c => c.type === 'text')
+            .map(c => c.text)
+            .join('');
+          const currentSceneMatch = textContent.match(/【场景】([^【\n]+)/);
+          const currentScene = currentSceneMatch ? currentSceneMatch[1].trim() : '';
+          
+          if (!currentScene) return { pass: true, message: '当前镜头无场景字段' };
+          
+          // 统计各场景出现次数
+          const sceneCounts = {};
+          for (const scene of allScenes) {
+            const normalized = scene?.toLowerCase()?.replace(/\s+/g, '')?.trim() || '';
+            if (normalized.length > 5) { // 忽略过短场景
+              sceneCounts[normalized] = (sceneCounts[normalized] || 0) + 1;
+            }
+          }
+          
+          const currentNormalized = currentScene.toLowerCase().replace(/\s+/g, '').trim();
+          const currentCount = sceneCounts[currentNormalized] || 0;
+          const totalScenes = allScenes.length;
+          
+          // 如果当前场景出现超过50%的镜头，报错
+          if (currentCount > totalScenes * 0.5) {
+            return { 
+              pass: false, 
+              message: `场景重复率过高：当前场景"${currentScene.substring(0,40)}..."出现在${currentCount}/${totalScenes}个镜头中，超过50%。各镜头应有差异化场景描述。` 
+            };
+          }
+          
+          return { pass: true, message: '场景多样性正常' };
+        }
+      },
+      {
+        id: 'SCENE_TEMPLATE_CHECK',
+        type: 'error',
+        name: '场景模板化检查',
+        check: (payload) => {
+          const textContent = (payload.content || [])
+            .filter(c => c.type === 'text')
+            .map(c => c.text)
+            .join('');
+          
+          // 检查已知的问题场景模板（硬编码的通用英文场景）
+          const bannedTemplates = [
+            'golden hour,clear sky,atmospheric haze,depth layers,foreground to background',
+            'golden hour, clear sky, atmospheric haze, depth layers, foreground to background',
+            'golden hour, warm sunlight, long shadows',
+            'blue hour, cool twilight, soft gradients',
+            'golden hour,clear sky,atmospheric haze',
+            'clear sky,atmospheric haze,depth layers'
+          ];
+          
+          const textLower = textContent.toLowerCase().replace(/\s+/g, ' ').trim();
+          for (const template of bannedTemplates) {
+            if (textLower.includes(template.toLowerCase())) {
+              return { 
+                pass: false, 
+                message: `Prompt包含已知的问题场景模板："${template.substring(0,50)}..."` 
+              };
+            }
+          }
+          
+          // 检查【场景】字段是否包含英文通用模板（教育片应为中文场景描述）
+          const sceneMatch = textContent.match(/【场景】([^【\n]+)/);
+          if (sceneMatch) {
+            const sceneValue = sceneMatch[1].trim();
+            // 如果场景值全英文且包含常见模板词，视为模板化
+            const isEnglish = /^[a-zA-Z\s,\-]+$/.test(sceneValue);
+            const hasTemplateWords = /\b(golden|hour|blue|atmospheric|haze|depth|layers|foreground|background|warm|cool|twilight|gradients)\b/i.test(sceneValue);
+            if (isEnglish && hasTemplateWords) {
+              return { 
+                pass: false, 
+                message: `【场景】字段疑似模板化英文描述："${sceneValue.substring(0,50)}..."（教育片场景应为中文）` 
+              };
+            }
+            // 检查场景是否过于简短（小于10字符）
+            if (sceneValue.length < 10) {
+              return { 
+                pass: false, 
+                message: `【场景】字段过短（${sceneValue.length}字符），场景描述应具体丰富` 
+              };
+            }
+          }
+          
+          return { pass: true, message: '场景描述无模板化问题' };
+        }
+      },
+      // ===== 原有检查 =====
       {
         id: 'REF_IMAGE_ROLE',
         type: 'error',
@@ -38,7 +140,7 @@ class RenderPipelineGuard {
           const hasDialogue = (payload.content || []).some(c => {
             if (c.type !== 'text') return false;
             // 检查是否有台词引号或对话标记
-            return /[""""].*[""""]/.test(c.text) || /说[：:]/.test(c.text);
+            return /[\u201c\u201d\"\"].*[\u201c\u201d\"\"]/.test(c.text) || /说[：:]/.test(c.text);
           });
           
           if (hasDialogue && payload.generate_audio !== true) {
@@ -124,13 +226,22 @@ class RenderPipelineGuard {
             .map(c => c.text)
             .join('');
           
-          if (/@image\d|@Image\d/.test(textContent)) {
+          // v1.1-fix: Seedance 官方规范要求 @imageN 格式（纯小写，纯数字）
+          // 错误：使用 图片N 或 @ImageN（大写I）
+          // 正确：@image1, @image2 等
+          if (/\b图片\d+\b/.test(textContent)) {
             return { 
               pass: false, 
-              message: `使用@imageN格式，应为"图片N"` 
+              message: `使用"图片N"格式，应为"@imageN"（Seedance官方规范：小写@image+纯数字）` 
             };
           }
-          return { pass: true, message: '引用格式正确' };
+          if (/\b@Image\d+\b/.test(textContent)) {
+            return { 
+              pass: false, 
+              message: `使用"@ImageN"格式（大写I），应为"@imageN"（Seedance官方规范：小写）` 
+            };
+          }
+          return { pass: true, message: '引用格式符合Seedance规范' };
         }
       },
       {
@@ -223,7 +334,7 @@ class RenderPipelineGuard {
     ];
   }
 
-  // 执行检查
+  // 执行检查（支持上下文）
   check(payload) {
     const checks = this.getCheckList();
     const errors = [];
@@ -320,6 +431,11 @@ class RenderPipelineGuard {
     }
     
     return md;
+  }
+  
+  // 设置跨镜头上下文（用于场景多样性检查）
+  setContext(context) {
+    this.context = context || {};
   }
 }
 

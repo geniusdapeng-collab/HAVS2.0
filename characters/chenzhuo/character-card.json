@@ -17,7 +17,14 @@
           "type": "master",
           "file": "portraits/uniform/portrait-uniform-01.jpg",
           "description": "警服职业装，藏蓝色制服，佩戴警帽，正面偏侧45度，白色背景，专业气质",
-          "tags": ["警服", "制服", "职业装", "正式", "专业", "偏侧"]
+          "tags": [
+            "警服",
+            "制服",
+            "职业装",
+            "正式",
+            "专业",
+            "偏侧"
+          ]
         },
         {
           "id": "portrait-uniform-02",
@@ -25,7 +32,13 @@
           "type": "standard",
           "file": "portraits/uniform/portrait-uniform-02.jpg",
           "description": "警服职业装，藏蓝色制服，佩戴警帽，正面全身，白色背景，正式站姿",
-          "tags": ["警服", "制服", "正面", "全身", "正式"]
+          "tags": [
+            "警服",
+            "制服",
+            "正面",
+            "全身",
+            "正式"
+          ]
         },
         {
           "id": "portrait-uniform-03",
@@ -33,7 +46,14 @@
           "type": "standard",
           "file": "portraits/uniform/portrait-uniform-03.jpg",
           "description": "警服职业装，藏蓝色制服，佩戴警帽，背面侧身，白色背景，展示肩章臂章",
-          "tags": ["警服", "制服", "背面", "侧身", "肩章", "臂章"]
+          "tags": [
+            "警服",
+            "制服",
+            "背面",
+            "侧身",
+            "肩章",
+            "臂章"
+          ]
         },
         {
           "id": "portrait-uniform-04",
@@ -41,7 +61,13 @@
           "type": "standard",
           "file": "portraits/uniform/portrait-uniform-04.jpg",
           "description": "警服职业装，藏蓝色制服，佩戴警帽，正侧面90度，白色背景，展示面部轮廓和肩章",
-          "tags": ["警服", "制服", "侧面", "90度", "轮廓"]
+          "tags": [
+            "警服",
+            "制服",
+            "侧面",
+            "90度",
+            "轮廓"
+          ]
         },
         {
           "id": "portrait-uniform-05",
@@ -49,7 +75,15 @@
           "type": "closeup",
           "file": "portraits/uniform/portrait-uniform-05.jpg",
           "description": "警服职业装，藏蓝色制服，佩戴警帽，正面半身特写，白色背景，面部清晰，警徽肩章细节完整",
-          "tags": ["警服", "制服", "正面", "特写", "半身", "面部", "表情"]
+          "tags": [
+            "警服",
+            "制服",
+            "正面",
+            "特写",
+            "半身",
+            "面部",
+            "表情"
+          ]
         },
         {
           "id": "portrait-uniform-06",
@@ -57,7 +91,14 @@
           "type": "sitting",
           "file": "portraits/uniform/portrait-uniform-06.jpg",
           "description": "警服职业装，藏蓝色制服，佩戴警帽，坐姿办公场景，正面偏侧，双手交叠放桌面，办公椅和办公桌，白色背景，专业办公姿态",
-          "tags": ["警服", "制服", "坐姿", "办公", "桌面", "办公椅"]
+          "tags": [
+            "警服",
+            "制服",
+            "坐姿",
+            "办公",
+            "桌面",
+            "办公椅"
+          ]
         }
       ]
     },
@@ -71,7 +112,14 @@
           "type": "master",
           "file": "portraits/casual/portrait-casual-01.jpg",
           "description": "日常生活照，浅粉色休闲T恤，室内自然光，窗边柔和光线，短发披肩，温馨居家氛围，自然微笑",
-          "tags": ["生活照", "休闲", "居家", "T恤", "自然光", "微笑"]
+          "tags": [
+            "生活照",
+            "休闲",
+            "居家",
+            "T恤",
+            "自然光",
+            "微笑"
+          ]
         },
         {
           "id": "portrait-casual-02",
@@ -79,7 +127,14 @@
           "type": "full-body",
           "file": "portraits/casual/portrait-casual-02.jpg",
           "description": "日常生活照，浅粉色吊带连衣裙，走廊窗边自然光，全身站姿， barefoot 光脚，木地板，明亮居家氛围",
-          "tags": ["生活照", "休闲", "连衣裙", "全身", "自然光", "居家"]
+          "tags": [
+            "生活照",
+            "休闲",
+            "连衣裙",
+            "全身",
+            "自然光",
+            "居家"
+          ]
         },
         {
           "id": "portrait-casual-03",
@@ -87,7 +142,15 @@
           "type": "standard",
           "file": "portraits/casual/portrait-casual-03.jpg",
           "description": "日常生活照，浅粉色T恤，窗边自然光，正侧面90度半身，短发，浅色背景，自然侧脸轮廓",
-          "tags": ["生活照", "休闲", "T恤", "侧面", "90度", "半身", "自然光"]
+          "tags": [
+            "生活照",
+            "休闲",
+            "T恤",
+            "侧面",
+            "90度",
+            "半身",
+            "自然光"
+          ]
         },
         {
           "id": "portrait-casual-04",
@@ -95,7 +158,15 @@
           "type": "closeup",
           "file": "portraits/casual/portrait-casual-04.jpg",
           "description": "日常生活照，浅粉色T恤，沙发背景，正面半身特写，室内自然光，温暖居家氛围，微笑",
-          "tags": ["生活照", "休闲", "T恤", "正面", "特写", "沙发", "微笑"]
+          "tags": [
+            "生活照",
+            "休闲",
+            "T恤",
+            "正面",
+            "特写",
+            "沙发",
+            "微笑"
+          ]
         },
         {
           "id": "portrait-casual-05",
@@ -103,7 +174,96 @@
           "type": "face-master",
           "file": "portraits/casual/portrait-casual-05.jpg",
           "description": "日常生活照，白色吊带背心，正面面部特写，浅色背景，面部特征清晰，面部纹理细节完整，面部一致性最佳参考",
-          "tags": ["生活照", "休闲", "吊带", "面部", "特写", "face-master", "一致性参考"]
+          "tags": [
+            "生活照",
+            "休闲",
+            "吊带",
+            "面部",
+            "特写",
+            "face-master",
+            "一致性参考"
+          ]
+        }
+      ]
+    },
+    "cartoon-uniform": {
+      "description": "卡通风格警服定妆照（3D渲染风格，非真人照片，可绕过隐私检测）",
+      "status": "active",
+      "portraits": [
+        {
+          "id": "portrait-cartoon-uniform-01",
+          "angle": "three-quarter",
+          "type": "master",
+          "file": "portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg",
+          "description": "卡通风格警服，藏蓝色制服，佩戴警帽，正面偏侧45度，3D渲染风格，大眼睛可爱卡通形象",
+          "tags": [
+            "卡通",
+            "警服",
+            "制服",
+            "3D渲染",
+            "偏侧",
+            "非真人"
+          ]
+        },
+        {
+          "id": "portrait-cartoon-uniform-02",
+          "angle": "front",
+          "type": "closeup",
+          "file": "portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg",
+          "description": "卡通风格警服，藏蓝色制服，佩戴警帽，正面面部特写，3D渲染风格，大眼睛可爱卡通形象",
+          "tags": [
+            "卡通",
+            "警服",
+            "制服",
+            "正面",
+            "特写",
+            "非真人"
+          ]
+        },
+        {
+          "id": "portrait-cartoon-uniform-03",
+          "angle": "front",
+          "type": "standard",
+          "file": "portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg",
+          "description": "卡通风格警服，藏蓝色制服，佩戴警帽，正面偏侧角度，3D渲染风格，大眼睛可爱卡通形象",
+          "tags": [
+            "卡通",
+            "警服",
+            "制服",
+            "正面",
+            "偏侧",
+            "非真人"
+          ]
+        },
+        {
+          "id": "portrait-cartoon-uniform-04",
+          "angle": "profile",
+          "type": "standard",
+          "file": "portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg",
+          "description": "卡通风格警服，藏蓝色制服，佩戴警帽，正侧面90度，3D渲染风格，大眼睛可爱卡通形象",
+          "tags": [
+            "卡通",
+            "警服",
+            "制服",
+            "侧面",
+            "90度",
+            "非真人"
+          ]
+        },
+        {
+          "id": "portrait-cartoon-uniform-05",
+          "angle": "full-body",
+          "type": "full-body",
+          "file": "portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg",
+          "description": "卡通风格警服，藏蓝色制服，佩戴警帽，全身站姿，3D渲染风格，大眼睛可爱卡通形象，Q版比例",
+          "tags": [
+            "卡通",
+            "警服",
+            "制服",
+            "全身",
+            "Q版",
+            "非真人"
+          ]
         }
       ]
     }
@@ -144,11 +304,26 @@
     "casual": "陈卓穿着日常休闲服装，浅色T恤或连衣裙，短发披肩，自然居家风格"
   },
   "portraitAngles": {
-    "required": ["front", "three-quarter", "profile", "closeup", "front-full-body"],
-    "current": ["front", "three-quarter", "profile", "side", "closeup", "sitting", "full-body"],
+    "required": [
+      "front",
+      "three-quarter",
+      "profile",
+      "closeup",
+      "front-full-body"
+    ],
+    "current": [
+      "front",
+      "three-quarter",
+      "profile",
+      "side",
+      "closeup",
+      "sitting",
+      "full-body"
+    ],
     "missing": []
   },
   "createdAt": "2026-06-13T21:19:00+08:00",
   "updatedAt": "2026-06-13T21:19:00+08:00",
-  "version": "1.0"
+  "version": "1.0",
+  "defaultPortraitSet": "cartoon-uniform"
 }

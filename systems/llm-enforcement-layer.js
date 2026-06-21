@@ -528,17 +528,21 @@ ${sceneDesc}
 
   /**
    * STAGE-11: LLM-渲染Prompt优化
+   * v1.1-fix: 支持批量处理多个shots，确保每个shot获得独立的场景描述
    */
-  STAGE_11_RENDER: (shot, storyboard, cameraDesign, world, characters) => {
-    const charId = (shot.characters || [])[0];
-    const char = characters?.[charId];
+  STAGE_11_RENDER: (shots, stages, mode) => {
+    // 统一处理：支持单shot或多shots数组
+    const shotArray = Array.isArray(shots) ? shots : [shots];
+    const characters = stages?.characters || {};
     
-    return `你是一位专业的视频渲染Prompt优化Agent。
-请整合上游输出（视觉Prompt、故事板、运镜设计），生成最终的1500字符渲染Prompt。
-
-## 输入信息
-- 镜头ID：${shot.id}
-- 类型：${shot.type}
+    // 构建每个shot的详细信息
+    const shotDetails = shotArray.map((shot, index) => {
+      const charId = (shot.characters || [])[0];
+      const char = characters?.[charId];
+      
+      return `
+## 镜头 ${index + 1}: ${shot.id}
+- 类型：${shot.type || '未指定'}
 - 时长：${shot.duration}s
 - 场景：${shot.scene || '未指定'}
 - 台词：${(shot.dialogue || '').substring(0, 100)}
@@ -546,41 +550,61 @@ ${sceneDesc}
 - 角色状态：${shot.state || 'natural pose'}
 - 角色动作：${shot.action || '未指定'}
 - 视觉Prompt：${(shot.visualPrompt || '').substring(0, 200)}
-- 故事板构图：${storyboard?.composition || '未指定'}
-- 故事板动作：${storyboard?.characterAction || '未指定'}
-- 运镜设计：${cameraDesign?.primaryMovement || '未指定'}
-- 世界观：${world?.setting || '未指定'}
-- 氛围：${world?.atmosphere || '未指定'}
+- 故事板构图：${shot.composition || '未指定'}
+- 故事板动作：${shot.characterAction || '未指定'}
+- 运镜设计：${shot.cameraMovement?.type || '未指定'}
+- 世界观：${stages?.world?.setting || '未指定'}
+- 氛围：${stages?.world?.atmosphere || '未指定'}
+`;
+    }).join('\n');
+    
+    return `你是一位专业的视频渲染Prompt优化Agent。
+请为以下每个镜头生成独立的、差异化的1500字符渲染Prompt。
 
-## 输出要求
-生成1500字符的完整渲染Prompt，包含：
+## 关键约束
+1. 每个镜头的场景描述必须独特，不能与其他镜头重复
+2. 场景描述必须具体、丰富，包含环境、光线、氛围等细节
+3. 教育片场景应使用中文描述，避免英文通用模板（如"golden hour"等）
+4. 角色动作必须动态丰富（不能只是"站立""自然姿态"）
+5. 必须包含具体运镜指令
+6. 必须保留【镜头时间轴】
+7. 必须注入@image引用（如果角色有定妆照）
+
+## 镜头列表
+${shotDetails}
+
+## 输出格式
+为每个镜头生成一个Prompt对象，包含以下字段：
+{
+  "prompts": [
+    {
+      "shotId": "S01",
+      "prompt": "1500字符的完整渲染Prompt..."
+    }
+  ]
+}
+
+每个Prompt必须包含：
 1. 【视觉】导演风格、负面提示词
-2. SCENE：场景描述
+2. 【场景】具体场景描述（中文，差异化，不重复）
 3. 【空间】空间布局
 4. 【纵深】景深
 5. 【方位】镜头角度
 6. 【氛围】氛围描述
 7. 【时间】时间/光线
-8. CHARACTER：角色状态、动作（必须丰富动态，不能只是"natural pose"）
-9. ACTION：具体动作指令（边走边说、手势、穿梭等）
-10. CAMERA：运镜（具体镜头、运动、速度）
-11. TIMELINE：时间轴
-12. MOOD：情绪、色调、色温
-13. LIGHTING：光影
-14. AUDIO：音频分层
-15. RENDER：渲染质量
-16. DIRECTOR：导演风格
-17. NEGATIVE：负面提示词
+8. 【角色】角色状态、动作（必须丰富动态）
+9. 【动作】具体动作指令（边走边说、手势、穿梭等）
+10. 【运镜】运镜（具体镜头、运动、速度）
+11. 【时间轴】时间轴
+12. 【情绪】情绪、色调、色温
+13. 【光影】光影
+14. 【音频】音频分层
+15. 【渲染】渲染质量
+16. 【导演】导演风格
+17. 【负面】负面提示词
 18. @image引用（如果角色有定妆照）
 
-## 关键约束
-- 总长度必须接近1500字符（≥1400）
-- 角色动作必须动态丰富（不能只是"站立""自然姿态"）
-- 必须包含具体运镜指令
-- 必须保留【镜头时间轴】
-- 必须注入@image引用（如果角色有定妆照）
-
-只输出纯Prompt文本，不要JSON，不要解释。`;
+只输出JSON，不要解释。`;
   }
 };
 

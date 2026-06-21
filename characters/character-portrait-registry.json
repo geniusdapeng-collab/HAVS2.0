@@ -2,6 +2,17 @@
   "characters": {
     "chen-zhuo": {
       "styles": {
+        "cartoon-uniform": {
+          "description": "卡通风格警服定妆照（3D渲染，非真人，可绕过隐私检测）",
+          "portraits": {
+            "front": "characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg",
+            "threeQuarter": "characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg",
+            "side": "characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg",
+            "closeup": "characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg",
+            "fullBody": "characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg",
+            "profile": "characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg"
+          }
+        },
         "uniform": {
           "description": "警服职业装定妆照",
           "portraits": {
@@ -30,21 +41,21 @@
   },
   "selectionRules": {
     "sceneToStyleMapping": {
-      "警局": "uniform",
-      "警务": "uniform",
-      "医院": "uniform",
-      "医疗": "uniform",
-      "门诊": "uniform",
-      "急诊": "uniform",
-      "诊疗": "uniform",
-      "检查": "uniform",
-      "健康科普": "uniform",
+      "警局": "cartoon-uniform",
+      "警务": "cartoon-uniform",
+      "医院": "cartoon-uniform",
+      "医疗": "cartoon-uniform",
+      "门诊": "cartoon-uniform",
+      "急诊": "cartoon-uniform",
+      "诊疗": "cartoon-uniform",
+      "检查": "cartoon-uniform",
+      "健康科普": "cartoon-uniform",
       "家庭": "casual",
       "居家": "casual",
       "客厅": "casual",
       "生活": "casual",
       "休闲": "casual"
     },
-    "defaultStyle": "uniform"
+    "defaultStyle": "cartoon-uniform"
   }
 }

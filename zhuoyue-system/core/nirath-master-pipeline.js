@@ -1915,6 +1915,7 @@ const { spawn } = require('child_process');
 
       // v6.2-patch55-fix: 添加portraits对象供下游Stage-10.5验证使用
       // v6.6.3-fix: 从 portraitSets 结构读取实际定妆照路径
+      // v6.6.5-fix: 添加 type-based 键（如 closeup），支持景别-specific选择
       const portraits = {};
       
       // 优先从 portraitSets 读取（新格式）
@@ -1929,6 +1930,17 @@ const { spawn } = require('child_process');
             // 同时保留无前缀版本，方便下游选择
             if (!portraits[p.angle]) {
               portraits[p.angle] = p.file;
+            }
+            // v6.6.5-fix: 按 type 添加键（如 closeup, full-body），支持景别-specific选择
+            if (p.type && !portraits[p.type]) {
+              portraits[p.type] = p.file;
+            }
+            // 同时添加 angle_type 组合键，如 front_closeup
+            if (p.type) {
+              const comboKey = `${p.angle}_${p.type}`;
+              if (!portraits[comboKey]) {
+                portraits[comboKey] = p.file;
+              }
             }
           }
         }
@@ -5639,11 +5651,10 @@ ${isNirath
         this.log('STAGE-11', `  ✅ 通用渲染: ${shot.id} | ratio:16:9 | mouthAction:${shot.mouthAction ? '有' : '无'} | ${prompt.length}字符`);
       }
 
-      // 🔥 v6.5.3-fix: 在enhanceShotPrompt前确保shot.prompt包含镜头时间轴
-      // 根因:shot.prompt可能在之前被覆盖,导致enhanceShotPrompt重复增强
-      if (prompt.includes('【镜头时间轴】') && !shot.prompt.includes('【镜头时间轴】')) {
+      // 🔥 v6.5.3-fix: 在enhanceShotPrompt前确保shot.prompt包含全局时间定位或镜头时间轴
+      if ((prompt.includes('【全局时间定位】') || prompt.includes('【镜头时间轴】')) && !(shot.prompt.includes('【全局时间定位】') || shot.prompt.includes('【镜头时间轴】'))) {
         shot.prompt = prompt;
-        this.log('STAGE-11', `  🔥 修复shot.prompt: ${shot.id} | 重新注入镜头时间轴`);
+        this.log('STAGE-11', `  🔥 修复shot.prompt: ${shot.id} | 重新注入时间轴`);
       }
 
       // ========== v6.0-patch23: 自动注入镜头内细分增强 ==========
@@ -5673,7 +5684,7 @@ ${isNirath
         this.log('STAGE-11', `  🔍 DEBUG pre-smartTrim: ${shot.id} | 含运镜=${beforeTrim} | len=${enhanced.prompt.length}`);
 
         prompt = this.smartTrim(enhanced.prompt, 1500, {
-          preserve: ['叙事', '视觉', '独白', '明亮约束', '风格锁', '技术规格', '环境布景', '角色约束', '镜头时间轴', '旁白/台词', '台词', '嘴部动作', '环境质感', '环境音效', '照明方案', '人物鲜活度', '顶级指令', '动作细节', '表情细节', '伴随', '动作产生', '氛围弥漫', '音乐线索', '声画精准同步', '音频'],
+          preserve: ['叙事', '视觉', '独白', '明亮约束', '风格锁', '技术规格', '环境布景', '角色约束', '全局时间定位', '镜头时间轴', '旁白/台词', '台词', '嘴部动作', '环境质感', '环境音效', '照明方案', '人物鲜活度', '顶级指令', '动作细节', '表情细节', '伴随', '动作产生', '氛围弥漫', '音乐线索', '声画精准同步', '音频'],
           trim: ['辅助运镜', '光影细节补充']
         });
         this.log('STAGE-11', `  ⚠️ 增强后超限(${enhanced.prompt.length}字符),智能裁剪至${prompt.length}字符`);
@@ -5681,27 +5692,30 @@ ${isNirath
         prompt = enhanced.prompt;
       }
 
-      // 🔥 v6.5.3-fix: 强制保留【镜头时间轴】,防止被smartTrim截断
-      // 根因:smartTrim按顺序保留核心区块,如果前面的核心区块占用空间过大,后面的【镜头时间轴】被跳过
-      // 修复:smartTrim后检查,如果丢失了【镜头时间轴】,从enhanced.prompt中提取并强制注入
-      if (!prompt.includes('【镜头时间轴】') && enhanced.prompt.includes('【镜头时间轴】')) {
-        const match = enhanced.prompt.match(/【镜头时间轴】[^【]*/);
-        if (match) {
-          const timelineBlock = match[0];
-          if (prompt.length + timelineBlock.length <= 1500) {
-            prompt += timelineBlock;
-          } else {
-            // 空间不足:压缩其他内容以腾出空间
-            const remaining = 1500 - timelineBlock.length;
-            if (remaining > 100) {
-              prompt = this.smartTrim(prompt, remaining, {
-                preserve: ['视觉', '叙事', '旁白/台词', '@image'],
-                trim: ['辅助运镜', '光影细节补充', '环境质感', '环境音效', '技术规格', '照明方案']
-              });
+      // 🔥 v6.5.3-fix: 强制保留【全局时间定位】或【镜头时间轴】,防止被smartTrim截断
+      // 根因:smartTrim按顺序保留核心区块,如果前面的核心区块占用空间过大,后面的时间轴被跳过
+      // 修复:smartTrim后检查,如果丢失了时间轴,从enhanced.prompt中提取并强制注入
+      const timeAxisFields = ['【全局时间定位】', '【镜头时间轴】'];
+      for (const field of timeAxisFields) {
+        if (!prompt.includes(field) && enhanced.prompt.includes(field)) {
+          const match = enhanced.prompt.match(new RegExp(`${field}[^【]*`));
+          if (match) {
+            const timelineBlock = match[0];
+            if (prompt.length + timelineBlock.length <= 1500) {
               prompt += timelineBlock;
+            } else {
+              // 空间不足:压缩其他内容以腾出空间
+              const remaining = 1500 - timelineBlock.length;
+              if (remaining > 100) {
+                prompt = this.smartTrim(prompt, remaining, {
+                  preserve: ['视觉', '叙事', '旁白/台词', '@image'],
+                  trim: ['辅助运镜', '光影细节补充', '环境质感', '环境音效', '技术规格', '照明方案']
+                });
+                prompt += timelineBlock;
+              }
             }
+            this.log('STAGE-11', `  🔥 强制保留${field.replace(/【|】/g, '')}: ${shot.id} | +${timelineBlock.length}字符 | 最终${prompt.length}字符`);
           }
-          this.log('STAGE-11', `  🔥 强制保留镜头时间轴: ${shot.id} | +${timelineBlock.length}字符 | 最终${prompt.length}字符`);
         }
       }
 
@@ -5764,30 +5778,33 @@ ${isNirath
                 // 校验上限
                 if (prompt.length > 1500) {
                   prompt = this.smartTrim(prompt, 1500, {
-                    preserve: ['叙事', '视觉', '独白', '明亮约束', '风格锁', '技术规格', '环境布景', '角色约束', '镜头时间轴', '旁白/台词', '环境质感', '环境音效', '照明方案', '人物鲜活度', '顶级指令', '动作细节', '表情细节'],
+                    preserve: ['叙事', '视觉', '独白', '明亮约束', '风格锁', '技术规格', '环境布景', '角色约束', '全局时间定位', '镜头时间轴', '旁白/台词', '环境质感', '环境音效', '照明方案', '人物鲜活度', '顶级指令', '动作细节', '表情细节'],
                     trim: ['辅助运镜', '光影细节补充']
                   });
                   this.log('STAGE-11', `  🎨 布景增强后超限,智能裁剪至${prompt.length}字符`);
                 }
 
-                // 🔥 v6.5.3-fix: 布景增强后强制保留【镜头时间轴】
-                if (!prompt.includes('【镜头时间轴】') && enhanced.prompt.includes('【镜头时间轴】')) {
-                  const match = enhanced.prompt.match(/【镜头时间轴】[^【]*/);
-                  if (match) {
-                    const timelineBlock = match[0];
-                    if (prompt.length + timelineBlock.length <= 1500) {
-                      prompt += timelineBlock;
-                    } else {
-                      const remaining = 1500 - timelineBlock.length;
-                      if (remaining > 100) {
-                        prompt = this.smartTrim(prompt, remaining, {
-                          preserve: ['视觉', '叙事', '旁白/台词', '@image'],
-                          trim: ['辅助运镜', '光影细节补充', '环境质感', '环境音效', '技术规格', '照明方案']
-                        });
+                // 🔥 v6.5.3-fix: 布景增强后强制保留【全局时间定位】或【镜头时间轴】
+                const timeAxisFields2 = ['【全局时间定位】', '【镜头时间轴】'];
+                for (const field of timeAxisFields2) {
+                  if (!prompt.includes(field) && enhanced.prompt.includes(field)) {
+                    const match = enhanced.prompt.match(new RegExp(`${field}[^【]*`));
+                    if (match) {
+                      const timelineBlock = match[0];
+                      if (prompt.length + timelineBlock.length <= 1500) {
                         prompt += timelineBlock;
+                      } else {
+                        const remaining = 1500 - timelineBlock.length;
+                        if (remaining > 100) {
+                          prompt = this.smartTrim(prompt, remaining, {
+                            preserve: ['视觉', '叙事', '旁白/台词', '@image'],
+                            trim: ['辅助运镜', '光影细节补充', '环境质感', '环境音效', '技术规格', '照明方案']
+                          });
+                          prompt += timelineBlock;
+                        }
                       }
+                      this.log('STAGE-11', `  🔥 布景增强后强制保留${field.replace(/【|】/g, '')}: ${shot.id} | +${timelineBlock.length}字符 | 最终${prompt.length}字符`);
                     }
-                    this.log('STAGE-11', `  🔥 布景增强后强制保留镜头时间轴: ${shot.id} | +${timelineBlock.length}字符 | 最终${prompt.length}字符`);
                   }
                 }
 
@@ -6183,19 +6200,42 @@ ${isNirath
       let imageIdx = 1;
       const letterLabels = ['A', 'B'];
       // 核心视觉锚点(3个不可混淆特征,让LLM能匹配参考图)
-      const charCoreDesc = {
-        'xiaoG': ['银灰装甲', '东亚面孔短发', '年轻男性'],
-        'tao-tie': ['碳化硅质甲壳', '腋下双眼', '巨口能量涡流']
-      };
+      // v6.6.5-fix: 从 character-card.json 读取核心描述，避免硬编码角色
+      let charCoreDesc = {};
+      for (const [cid, cdata] of Object.entries(stages.characters || {})) {
+        const profile = cdata?.profile || {};
+        const visualAnchors = profile?.visualAnchors?.required || [];
+        const baseId = profile?.baseIdentity || {};
+        const visId = profile?.visualIdentity || {};
+        // 构建3个不可混淆特征：外貌+服装+标志性特征
+        const coreFeatures = [];
+        if (baseId.gender) coreFeatures.push(`${baseId.gender === 'female' ? '女性' : '男性'}面孔`);
+        if (visId.hair) coreFeatures.push(`${visId.hair}色发型`);
+        if (visualAnchors.length > 0) coreFeatures.push(visualAnchors[0]);
+        // 如果不足3个，补充通用描述
+        while (coreFeatures.length < 3) {
+          coreFeatures.push('核心特征');
+        }
+        charCoreDesc[cid] = coreFeatures.slice(0, 3);
+      }
+      // 兼容旧硬编码（仅当动态构建为空时）
+      if (Object.keys(charCoreDesc).length === 0) {
+        charCoreDesc = {
+          'xiaoG': ['银灰装甲', '东亚面孔短发', '年轻男性'],
+          'tao-tie': ['碳化硅质甲壳', '腋下双眼', '巨口能量涡流']
+        };
+      }
       // 根据镜头景别选最佳角度(复用上方已声明的isCloseup/isWide/anglePriority)
+      // v6.6.5-fix: anglePriority 使用 character-card.json 中的 angle 命名规范（连字符而非驼峰）
       const selectedAngles = [];
+      const anglePriority = ['closeup', 'front', 'three-quarter', 'side', 'profile'];
       for (const rawCharId of (shot.characters || [])) {
         const charId = charIdMap[rawCharId] || rawCharId;
         const char = stages.characters?.[charId];
         if (!char?.portraits) continue;
-        // 选最佳角度:特写→closeup,全景→front,其他→threeQuarter
-        let bestAngle = isCloseup ? 'closeup' : (isWide ? 'front' : 'threeQuarter');
-        // 如果首选角度不存在,fallback到存在的第一个
+        // 选最佳角度:特写景别→优先closeup类型,全景→front,其他→three-quarter
+        let bestAngle = isCloseup ? 'closeup' : (isWide ? 'front' : 'three-quarter');
+        // 如果首选角度不存在,fallback到anglePriority列表
         if (!char.portraits[bestAngle]) {
           for (const fallback of anglePriority) {
             if (char.portraits[fallback]) {
@@ -6400,6 +6440,7 @@ ${isNirath
         id: shot.id,
         shotId: shot.id,
         type: mappedType,
+        scene: shot.scene || '未指定', // v1.1-fix: 保留场景字段供检查环节使用
         prompt,
         content,  // v6.5.8-fix: 添加 content 数组供 Stage-13 验证
         referenceImages,
@@ -8131,7 +8172,7 @@ ${isNirath
       const gs = shot._globalStartTime || 0;
       const ge = shot._globalEndTime || (gs + (shot.duration || 0));
       const fmt = (n) => `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
-      prefixPatches.push(`【镜头时间轴】${fmt(gs)}-${fmt(ge)} / 时长:${shot.duration}s`);
+      prefixPatches.push(`【全局时间定位】${fmt(gs)}-${fmt(ge)} / 时长:${shot.duration}s`);
     }
 
     if (!has.定妆照 && shot.referenceImages && shot.referenceImages.length > 0) {
@@ -8201,7 +8242,7 @@ ${isNirath
       const gs = shot._globalStartTime || 0;
       const ge = shot._globalEndTime || (gs + shot.duration);
       const fmt = (n) => `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
-      patches.push(`【镜头时间轴】${fmt(gs)}-${fmt(ge)} / 时长:${shot.duration}s`);
+      patches.push(`【全局时间定位】${fmt(gs)}-${fmt(ge)} / 时长:${shot.duration}s`);
     }
 
     if (!has.场景 && shot.scene) {

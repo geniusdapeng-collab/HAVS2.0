@@ -140,22 +140,22 @@ if (require.main === module) {
   
   console.log('=== 测试定妆照选择器 ===\n');
   
-  // 测试1: 警局场景
-  console.log('测试1: 陈卓在警局');
-  const policePortrait = selector.selectPortrait('chen-nurse', '警局', 'front');
+  // 测试1: 健康科普场景
+  console.log('测试1: 陈卓在健康科普场景');
+  const policePortrait = selector.selectPortrait('chen-zhuo', '健康科普', 'front');
   console.log('  结果:', policePortrait);
   console.log();
   
   // 测试2: 家庭场景
   console.log('测试2: 陈卓在家庭客厅');
-  const lifePortrait = selector.selectPortrait('chen-nurse', '客厅', 'sitting');
+  const lifePortrait = selector.selectPortrait('chen-zhuo', '客厅', 'sitting');
   console.log('  结果:', lifePortrait);
   console.log();
   
   // 测试3: 多角色
   console.log('测试3: 多角色场景');
   const multiChar = selector.selectPortraitsForShot([
-    { id: 'chen-nurse', scene: '警局', angle: 'front' },
+    { id: 'chen-zhuo', scene: '健康科普', angle: 'front' },
     { id: 'xiangXiang', scene: '家庭', angle: 'front' }
   ]);
   console.log('  结果:', multiChar);

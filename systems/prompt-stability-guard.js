@@ -47,7 +47,7 @@ function 提取关键块(prompt) {
     提取区块(prompt, '【动作】'),
     提取区块(prompt, '【台词】'),
     提取区块(prompt, '【旁白/台词】'),
-    提取区块(prompt, '【镜头时间轴】'),
+    提取区块(prompt, '【全局时间定位】'),
     提取区块(prompt, '【照明方案】'),
     提取区块(prompt, '【环境音效】'),
     提取区块(prompt, '【负面约束】'),
@@ -81,7 +81,7 @@ function 关键字段存在(prompt) {
     场景: prompt.includes('【场景】') || /SCENE\s*:/i.test(prompt),
     动作: prompt.includes('【动作】') || /ACTION\s*:/i.test(prompt),
     台词: prompt.includes('【台词】') || prompt.includes('【旁白/台词】') || /DIALOGUE\s*:/i.test(prompt),
-    时间轴: prompt.includes('【镜头时间轴】') || /TIMELINE\s*:/i.test(prompt),
+    时间轴: prompt.includes('【全局时间定位】') || prompt.includes('【镜头时间轴】') || /TIMELINE\s*:/i.test(prompt),
     定妆照: prompt.includes('【绑定定妆照】') || /@image\d+/i.test(prompt),
     人物卡: prompt.includes('【人物介绍卡片】'),
     // v6.6.3-fix: 新增关键字段
@@ -139,7 +139,7 @@ function 恢复关键块(当前prompt, 原始prompt, maxLength = 1500) {
   for (const block of 原始关键块) {
     if (!block) continue;
 
-    const isTimeline = block.includes('【镜头时间轴】') || /^TIMELINE\s*:/i.test(block);
+    const isTimeline = block.includes('【全局时间定位】') || block.includes('【镜头时间轴】') || /^TIMELINE\s*:/i.test(block);
     const isDialogue = block.includes('【台词】') || block.includes('【旁白/台词】') || /^DIALOGUE\s*:/i.test(block);
     const isRef = block.includes('【绑定定妆照】') || /@image\d+/i.test(block);
     const isCard = block.includes('【人物介绍卡片】');
@@ -206,7 +206,7 @@ function 最小补洞(prompt, shot = {}) {
 
   const has动作 = out.includes('【动作】') || /ACTION\s*:/i.test(out);
   const has台词 = out.includes('【台词】') || out.includes('【旁白/台词】') || /DIALOGUE\s*:/i.test(out);
-  const has时间轴 = out.includes('【镜头时间轴】') || /TIMELINE\s*:/i.test(out);
+  const has时间轴 = out.includes('【全局时间定位】') || out.includes('【镜头时间轴】') || /TIMELINE\s*:/i.test(out);
 
   if (!has动作 && shot.action) {
     out += ` | 【动作】${shot.action}`;
@@ -218,7 +218,7 @@ function 最小补洞(prompt, shot = {}) {
   }
 
   if (!has时间轴 && shot.duration) {
-    out += ` | 【镜头时间轴】00:00-00:${String(Math.floor(shot.duration)).padStart(2, '0')} / 时长:${shot.duration}s`;
+    out += ` | 【全局时间定位】00:00-00:${String(Math.floor(shot.duration)).padStart(2, '0')} / 时长:${shot.duration}s`;
   }
 
   // v6.6.3-fix: 新增关键字段补洞
