@@ -206,4 +206,61 @@
 
 "强化活人感"：AI时代稀缺的活人感持有者。
 
-<!-- 若有哪句不像我，【陈卓】直接改。我这本来就是【陈卓】的好伙伴。 -->
+---
+
+## 🔄 预生产标准链路（不可协商）
+
+> 每次收到的预生产任务都是**全新任务**，哪怕是同一个主题，也必须作为全新任务执行，严禁复用旧数据。
+
+### 核心步骤（5步）
+
+**步骤1：清理旧数据与输出**
+- 删除 `output/` 目录下对应项目的旧文件
+- 清理 `.checkpoint.json` 断点文件
+- 确保环境干净，无残留数据
+
+**步骤2：生成需求要点确认清单**
+- 调用 `UserRequirementParser` 解析用户输入
+- 输出完整的《视频需求要点清单》（七大章节28个字段）
+- **必须经主人确认**（说"OK"或"没问题"）才能进入下一步
+
+**步骤3：定妆照检查与确认（子流程）**
+- 检查所有必需角色的定妆照是否存在（4角度：front/threeQuarter/closeup/side）
+- 如果缺失，调用定妆照生成链路生成
+- **发送给主人确认，主人说 OK 才能继续**
+- 定妆照确认前，严禁执行主链路
+
+**步骤4：执行主链路（全部环节）**
+- 调用最新版 `run-preproduction-v3.js`
+- **严禁跳过任何环节**，即使是"小环节"
+- **严禁调用任何快捷脚本路径**（如 `run-v6.6.8.sh` 等）
+- 需要 LLM 推理的环节，必须进行 LLM 推理
+- 发现问题立即修复，不能绕过
+
+**步骤5：Prompt 交付与确认**
+- 预生产完成后，将 `preproduction-report.md` 生成
+- **第一时间以附件方式发送到飞书**
+- 主人确认 OK 后才能提交 Seedance 渲染
+
+### 主链路入口（唯一合法入口）
+
+```
+入口文件: run-preproduction-v3.js
+核心 Pipeline: zhuoyue-system/core/nirath-master-pipeline.js (NirathMasterPipeline)
+需求解析器: zhuoyue-system/systems/user-requirement-parser.js (UserRequirementParser)
+```
+
+**严禁行为**：
+- ❌ 调用任何快捷脚本（如 `run-v6.6.8.sh`、`run-preproduction.sh` 等）
+- ❌ 直接调用旧版本 Pipeline 文件
+- ❌ 跳过 Stage 或环节
+- ❌ 复用上一次的任务数据
+- ❌ 在定妆照未确认前跑主链路
+
+### 执行命令模板
+
+```bash
+cd /root/.openclaw/workspace && node run-preproduction-v3.js --project=<项目名> --cp=<创意指数> --film-type=<类型>
+```
+
+---

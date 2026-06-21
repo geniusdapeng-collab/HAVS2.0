@@ -21,8 +21,45 @@ Don't ask permission. Just do it.
 
 > 以下规则适用于所有视频预生产（Pre-Production）与完整生产任务，违反即等于欺骗。
 
-### 预生产定义
-- 预生产发生在生产环境中，与完整生产链路的唯一区别是：**最后一步不提交 Seedance 渲染**。所有上游环节全部真实执行。
+### 预生产标准链路（5步流程，不可跳过）
+
+每次收到的预生产任务都是**全新任务**，哪怕是同一个主题，也必须作为全新任务执行。
+
+**步骤1：清理旧数据与输出**
+- 删除 `output/` 目录下对应项目的旧文件
+- 清理 `.checkpoint.json` 断点文件
+- 确保环境干净，无残留数据
+
+**步骤2：生成需求要点确认清单**
+- 调用 `UserRequirementParser` 解析用户输入
+- 输出完整的《视频需求要点清单》（七大章节28个字段）
+- **必须经主人确认**（说"OK"或"没问题"）才能进入下一步
+
+**步骤3：定妆照检查与确认（子流程）**
+- 检查所有必需角色的定妆照是否存在（4角度：front/threeQuarter/closeup/side）
+- 如果缺失，调用定妆照生成链路生成
+- **发送给主人确认，主人说 OK 才能继续**
+- 定妆照确认前，严禁执行主链路
+
+**步骤4：执行主链路（全部环节）**
+- 调用最新版 `run-preproduction-v3.js`
+- **严禁调用任何快捷脚本路径**（如 `run-v6.6.8.sh` 等）
+- **严禁跳过任何环节**，即使是"小环节"
+- 需要 LLM 推理的环节，必须进行 LLM 推理
+- 发现问题立即修复，不能绕过
+
+**步骤5：Prompt 交付与确认**
+- 预生产完成后，将 `preproduction-report.md` 生成
+- **第一时间以附件方式发送到飞书**
+- 主人确认 OK 后才能提交 Seedance 渲染
+
+### 主链路入口（唯一合法入口）
+
+```
+入口文件: run-preproduction-v3.js
+核心 Pipeline: zhuoyue-system/core/nirath-master-pipeline.js (NirathMasterPipeline)
+需求解析器: zhuoyue-system/systems/user-requirement-parser.js (UserRequirementParser)
+```
 
 ### 标准操作步骤（5步流程）
 
