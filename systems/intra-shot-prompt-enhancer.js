@@ -1794,6 +1794,31 @@ function buildAudioDescription(shot, segments) {
   // 回退：基于时间或通用默认
   let template = sceneKey ? SCENE_AUDIO_MAP[sceneKey].tier : null;
   if (!template) {
+    // v6.6.8-fix: 使用 GenericAudioDesigner 为科普视频生成场景特定音效
+    try {
+      const { GenericAudioDesigner } = require('./generic-audio-designer.js');
+      const designer = new GenericAudioDesigner();
+      const audioDesc = designer.generateForShot({ scene: shot.scene || '', emotionPhase: emotion });
+      if (audioDesc && audioDesc !== '伴随白天环境音,动作产生自然动作声,氛围弥漫明亮日常氛围,声画精准同步，嘴型与发音对齐') {
+        // 解析 GenericAudioDesigner 返回的音频描述
+        const lines = audioDesc.split('\n').filter(l => l.trim());
+        const ambient = lines.find(l => l.includes('L1:')) || '白天环境音，自然 ambient，-22LUFS';
+        const action = lines.find(l => l.includes('L2:')) || '自然动作声';
+        const emotionLine = lines.find(l => l.includes('L3:')) || '明亮日常氛围，72BPM，自然 ambient';
+        const musical = lines.find(l => l.includes('L4:')) || '极简背景音';
+        template = {
+          ambient: ambient.replace('L1:', '').trim(),
+          action: action.replace('L2:', '').trim(),
+          emotion: emotionLine.replace('L3:', '').trim(),
+          musical: musical.replace('L4:', '').trim()
+        };
+      }
+    } catch (e) {
+      // 回退到原有逻辑
+    }
+  }
+  
+  if (!template) {
     if (timeOfDay.includes('night') || timeOfDay.includes('dusk')) {
       template = {
         ambient: '夜晚虫鸣，远处低语，-24LUFS',

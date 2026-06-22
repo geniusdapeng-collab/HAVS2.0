@@ -141,3 +141,57 @@
 - ~~"v6.6.3 心跳方案是核心修复"~~ → 心跳是冗余防御，非核心
 
 **正确的唯一修复**: 调用方 `exec timeout >= 900 秒`。
+
+---
+
+## 八、Stage 9 教育视频 LLM 运镜跳过（v6.6.8-patch5）
+
+> 日期: 2026-06-22
+> 版本: v6.6.8-patch5+
+> 修复人: 小G
+> 状态: ✅ 已验证（生产运行）
+
+### 问题
+exec timeout 已提升至 900s（v6.6.3 方案），但 health-edu-ep01 项目连续两次在 Stage 9（~870s）被 SIGKILL：
+- `sharp-falcon` (PID 3010578): Stage 9 SIGKILL
+- `warm-haven` (PID 3014503): Stage 9 SIGKILL
+
+900s 的 timeout 仍然不够。Stage 9 LLM 运镜调用叠加前面 8 个 Stage 的累积，timeout 紧张时加剧被杀概率。
+
+### 根因
+Stage 9 的 `stageCameraMovement()` 强制调用 LLM Enforcement Layer 进行运镜风格生成。LLM 调用期间内存峰值 + 前面 Stage 的累积状态，在 timeout=900s 时无法完成。
+
+### 修复（代码层 + 调用层双管齐下）
+
+**调用层**（调用方 `run-preproduction-v3.js` 或 exec 参数）：
+- timeout 从 900s 提升到 **1800s**，给足余量
+
+**代码层**（`zhuoyue-system/core/nirath-master-pipeline.js` `stageCameraMovement()`）：
+增加教育/科普视频类型判断，跳过 LLM 运镜，直接回退规则运镜（v3 时间轴 + FPV）：
+
+```javascript
+const isEducational = this.input?.videoType === 'educational' || 
+                      this.input?.filmType === 'educational';
+if (isEducational) {
+  // 跳过 LLM enforcement，直接规则运镜
+  // 避免 LLM 调用带来的内存峰值
+  return this._applyRuleBasedCameraMovements(shots);
+}
+```
+
+### 验证
+- `tide-slug` (PID 3018071): timeout=1800s + Stage 9 跳过 LLM → ✅ code 0, 1065.5s 完成
+- 17 个 Stage 全部完成
+- 输出质量: 82分 | B级 | PASS
+
+### 下次排查清单（修订版）
+1. 首先确认 kill 时间是否 ≈ timeout - 5 秒
+2. 如果 timeout >= 900s 仍然被杀，检查 Stage 9 是否为教育/科普视频
+3. 如果是，应用本修复：提升 timeout + 跳过 Stage 9 LLM
+4. 断点恢复仍然是保底方案
+
+### 生产文件
+| 文件 | 说明 |
+|------|------|
+| `zhuoyue-system/core/nirath-master-pipeline.js` | Stage 9 `isEducational` 跳过逻辑 |
+| `docs/SIGKILL-fix-playbook-v6.6.3.md` | 本 playbook（已追加） |

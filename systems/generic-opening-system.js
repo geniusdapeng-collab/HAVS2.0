@@ -91,58 +91,58 @@ class GenericOpeningSystem {
    * 第一幕:钩子 - 吸引注意力的开场
    */
   _buildHook(world, characters) {
-    const setting = world.setting || '专业环境';
-    const atmosphere = world.atmosphere || '专业、可信';
     const charList = Object.values(characters || {}).map(c => c.name).filter(Boolean);
 
     let hook = '';
 
     if (charList.length > 0) {
-      // 有角色:角色出场动作
-      hook = `${charList[0]}面向镜头,自然微笑,专业姿态,背景${setting},${atmosphere}氛围`;
+      // v6.6.8-patch4-fix: 五段式酷炫片头 - Phase 1: 黑屏→微光渐亮，警徽特写
+      hook = `黑屏中微光渐亮,警徽金属质感特写,光芒从警徽中心向外扩散,画面从暗到明过渡`;
     } else {
-      // 无角色:场景氛围
-      hook = `专业${setting}全景,${atmosphere},自然光线,画面稳定`;
+      hook = `黑屏中微光渐亮,专业环境轮廓浮现,光线从画面中心向外扩散`;
     }
 
     return {
       phase: 'hook',
-      duration: Math.floor(this.duration * 0.25), // 25%
+      duration: Math.floor(this.duration * 0.22), // 22% ≈ 2s
       content: hook,
-      timing: `T00:00-T00:${Math.floor(this.duration * 0.25)}`
+      timing: `T00:00-T00:02`
     };
   }
 
   /**
-   * 第二幕:展开 - 标题信息展示
+   * 第二幕:展开 - 标题信息展示（五段式酷炫片头 Phase 2-4）
    */
   _buildReveal(mainTitle, subTitle, creator, world) {
-    const setting = world.setting || '专业环境';
-    const lighting = world.lighting || '自然光';
+    const charList = Object.values(world.characters || {}).map(c => c.name).filter(Boolean);
+    const charName = charList.length > 0 ? charList[0] : '主讲人';
 
-    let titleBlock = `主标题"${mainTitle}"大字居中展示`;
-    if (subTitle) titleBlock += `,副标题"${subTitle}"`;
-    if (creator) titleBlock += `,出品人/机构"${creator}"`;
+    // v6.6.8-patch4-fix: 五段式酷炫片头
+    // Phase 2 (2-4s): 镜头快速拉远，陈卓警服全身亮相
+    // Phase 3 (4-6s): 标题从左侧滑入，主标题金属质感浮现
+    // Phase 4 (6-7s): 副标题从底部升起，金色粒子汇聚
+    let titleBlock = `${charName}身穿警服全身亮相,镜头快速拉远揭示完整形象,主标题"${mainTitle}"从画面左侧滑入,金属质感大字居中展示,金色粒子环绕标题汇聚`;
+    if (subTitle) titleBlock += `,副标题"${subTitle}"从底部升起,与主标题形成层次感`;
+    if (creator) titleBlock += `,出品人"${creator}"淡入显示`;
 
     return {
       phase: 'reveal',
-      duration: Math.floor(this.duration * 0.50), // 50%
-      content: `${titleBlock},背景${setting},${lighting},标题文字示意性展示,层次分明`,
-      timing: `T00:${Math.floor(this.duration * 0.25)}-T00:${Math.floor(this.duration * 0.75)}`
+      duration: Math.floor(this.duration * 0.56), // 56% ≈ 5s
+      content: titleBlock,
+      timing: `T00:02-T00:07`
     };
   }
 
   /**
-   * 第三幕:定格 - 片头收尾
+   * 第三幕:定格 - 片头收尾（五段式酷炫片头 Phase 5）
    */
   _buildFreeze(world) {
-    const atmosphere = world.atmosphere || '专业';
-
+    // v6.6.8-patch4-fix: Phase 5 (7-9s): 画面定格，光晕扩散，淡入正片
     return {
       phase: 'freeze',
-      duration: this.duration - Math.floor(this.duration * 0.75), // 剩余25%
-      content: `画面稳定定格,${atmosphere},淡入正片过渡,无突兀切换`,
-      timing: `T00:${Math.floor(this.duration * 0.75)}-T00:${this.duration}`
+      duration: this.duration - Math.floor(this.duration * 0.78), // 剩余22% ≈ 2s
+      content: `画面定格,光晕从标题中心向外扩散,柔和过渡,淡入正片,无突兀切换`,
+      timing: `T00:07-T00:09`
     };
   }
 
@@ -183,23 +183,23 @@ class GenericOpeningSystem {
     // L3: 场景层
     parts.push(`【场景】${world.name || '片头'}；${world.setting || '专业环境'}；${world.lighting || '自然光'}；${world.atmosphere || '专业氛围'}`);
 
-    // L4: 主体层（三幕）
+    // L4: 主体层（五段式酷炫片头）
     parts.push(`【动作】${hook.content}；${reveal.content}；${freeze.content}`);
 
-    // L5: 动态层
-    parts.push(`【运镜】稳定开场，缓慢推进，标题区域聚焦，适度景深，专业纪录片运镜`);
+    // L5: 动态层 - v6.6.8-patch4-fix: 升级运镜为五段式酷炫设计
+    parts.push(`【运镜】五段式片头运镜：T0-2s黑屏微光渐亮→T2-4s快速拉远揭示角色→T4-6s标题左侧滑入金属质感浮现→T6-7s副标题底部升起金色粒子汇聚→T7-9s画面定格光晕扩散过渡，推入→旋转→揭示→定格，专业电影级运镜`);
     parts.push(`【全局时间定位】00:00-00:${String(this.duration).padStart(2, '0')} / 时长:${this.duration}s / 类型:片头 / 情绪:好奇`);
 
     // L6: 风格层
-    parts.push(`【情绪】专业开场；清晰；可信；现代`);
-    parts.push(`【灯光】${world.lighting || '自然光，柔和明亮，均匀照明'}`);
+    parts.push(`【情绪】专业开场；清晰；可信；现代；震撼`);
+    parts.push(`【灯光】自然光，柔和明亮，均匀照明，警徽和标题区域有金色轮廓光`);
 
     // L7: 音频层
-    parts.push(`【音频】L1:舒缓背景音，-20LUFS；L2:自然环境音；L3:温暖氛围，72BPM；避让:标题出现时背景音乐降低3dB`);
+    parts.push(`【音频】L1:庄重背景音乐渐强，警徽敲击声开场，-18LUFS；L2:环境音渐弱；L3:金色粒子汇聚时高频提亮；避让:标题出现时背景音乐达到峰值`);
 
     // L8: 内部层
-    parts.push(`【渲染参数】超写实电影级画质，35mm胶片颗粒，HDR，照片级真实，16:9画幅，纪录片写实风格`);
-    parts.push(`【导演指令】通用纪录片风格，开场稳重，信息清晰，现代感`);
+    parts.push(`【渲染参数】超写实电影级画质，35mm胶片颗粒，HDR，照片级真实，16:9画幅，纪录片写实风格，金属质感标题渲染`);
+    parts.push(`【导演指令】通用纪录片风格，开场稳重中带震撼，信息清晰，现代感，标题出场有电影级仪式感`);
 
     // 定妆照引用（如果有角色）
     const charKeys = Object.keys(characters || {});
@@ -418,12 +418,20 @@ class GenericOpeningSystem {
   }
 
   _buildCameraMovement() {
+    // v6.6.8-patch4-fix: 五段式酷炫片头运镜
     return {
       scene: '片头',
-      primaryMovement: '稳定开场-缓慢推进-定格',
-      speed: 'slow',
-      shotSize: 'wide-to-medium',
-      timeline: `T00:00-T00:${this.duration}`
+      primaryMovement: '黑屏微光→快速拉远→标题滑入→粒子汇聚→定格过渡',
+      speed: 'slow-to-fast-to-slow',
+      shotSize: 'extreme-closeup-to-full-body-to-wide',
+      timeline: `T00:00-T00:${this.duration}`,
+      phases: [
+        { time: 'T0-2s', movement: '黑屏中警徽特写微光渐亮', speed: 'slow', shotSize: 'extreme-closeup' },
+        { time: 'T2-4s', movement: '镜头快速拉远揭示角色全身', speed: 'fast', shotSize: 'full-body' },
+        { time: 'T4-6s', movement: '标题从左侧滑入金属质感浮现', speed: 'medium', shotSize: 'medium' },
+        { time: 'T6-7s', movement: '副标题底部升起金色粒子汇聚', speed: 'slow', shotSize: 'medium' },
+        { time: 'T7-9s', movement: '画面定格光晕扩散淡入正片', speed: 'slow', shotSize: 'wide' }
+      ]
     };
   }
 }

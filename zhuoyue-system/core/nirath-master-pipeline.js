@@ -2388,13 +2388,28 @@ const { spawn } = require('child_process');
             // v6.6.5-fix: 场景名保护 - LLM生成优先，配置表降级为fallback
             // 修复: 让LLM生成的差异化场景描述优先，避免强制映射导致内容同质化
             const protectedName = generated.scene || config.sceneNameMapping[srcScene.id] || srcScene.name || '';
+            // v6.6.8-fix: 过滤动作描述中的文字物品（LLM 可能不遵守规则 7）
+            let actionText = generated.action || '';
+            if (actionText) {
+              actionText = actionText
+                .replace(/检验单据|检验单|检测单|化验单/g, '无文字检测图形图示')
+                .replace(/提示单|提示卡|告示牌|信息卡/g, '无文字信息图形')
+                .replace(/手中的文件|文件|纸张|书本|书籍/g, '无文字资料')
+                .replace(/屏幕信息|屏幕数据|屏幕显示|信息图|指向屏幕/g, '指向无文字图形')
+                .replace(/海报|标牌|指示牌|标语/g, '无文字展示板')
+                .replace(/查看.*单|查看.*文件|查看.*纸|查看.*卡/g, '查看图形图示')
+                .replace(/手持.*单|手持.*文件|手持.*卡|手持.*纸/g, '手持图形资料')
+                .replace(/翻阅文件|翻阅资料|翻阅书籍|翻阅.*单/g, '翻阅无文字资料册')
+                .replace(/单据.*指标|单据.*内容|单据.*数据/g, '图形图示');
+            }
+
             return {
               ...srcScene,
               scene: protectedName,
               // v6.5.65-P8-fix: 全局禁用旁白,只保留角色对话(dialogue)
               dialogue: generated.dialogue || this._buildFallbackDialogue(srcScene, input.characters),
               narration: '', // 旁白已禁用,置空
-              action: generated.action || '', // v6.5.65-P8-patch-008: 保留LLM生成的动作描述
+              action: actionText, // v6.6.8-fix: 过滤后的动作描述
               characters: finalChars,
               mouthAction: generated.mouthAction || 'speaking_normal',
               emotionPhase: generated.emotionPhase || this._inferEmotionPhase(srcScene),
@@ -2652,6 +2667,7 @@ const { spawn } = require('child_process');
     parts.push(`4. 所有医学表述必须准确，检查指标须给出名称与意义，禁止编造数值或检查项目。`);
     parts.push(`5. 面向大众，专业术语后必须紧跟一句口语化解释。`);
     parts.push(`6. 禁止出现前期剧集已详细讲解的内容（见 <previous_episodes>）。`);
+    parts.push(`7. 【动作设计约束】角色动作描述(action)中禁止涉及任何含文字的物品或场景，包括：纸张、文件、单据、书籍、屏幕、标牌、海报、信息图表等。动作应聚焦于肢体动作、手势、表情、走位等纯视觉化表达。`);
     parts.push(`</rules>`);
 
     // ---------------- 自我校验 (正面验证) ----------------
@@ -4534,9 +4550,15 @@ ${isNirath
   async stageCameraMovement(storyboard, fpvDecision, durations) {
     this.log('STAGE-9', `运镜系统${this.mode === 'nirath' ? '(Nirath v3 + 镜头内多段式时间轴 + FPV导演决策)' : '(v6.5.64-P0: LLM驱动)'}`);
 
+    // v6.6.8-fix: 科普/教育视频跳过 LLM 运镜，直接使用规则运镜（避免内存问题）
+    const isEducational = this.input?.videoType === 'educational' || this.input?.filmType === 'educational';
+    if (isEducational) {
+      this.log('STAGE-9', '⏭️ 科普视频跳过 LLM 运镜，使用规则运镜');
+    }
+
     // v6.5.64-P0: 尝试LLM驱动运镜设计
     let llmCameraMovements = null;
-    if (this.mode !== 'nirath') {
+    if (this.mode !== 'nirath' && !isEducational) {
       try {
         const { result, driver, attempts } = await this.llmEnforcer.requireLLM(
           'STAGE-9',
@@ -6876,12 +6898,22 @@ ${isNirath
    * v6.37-production+: 构建 audioLayer 结构化对象(片头专属)
    */
   _buildAudioLayerObject(shot, prompt) {
+    // v6.6.8-patch4-fix: 使用 GenericAudioDesigner 为科普视频生成场景特定音效
+    const { GenericAudioDesigner } = require('../../systems/generic-audio-designer.js');
+    const designer = new GenericAudioDesigner();
+    
     const segments = [];
-
-    // 从 prompt 提取音频段
-    const audioMatches = prompt.matchAll(/【音频】([^【]+)/g);
-    for (const match of audioMatches) {
-      segments.push({ time: '0-3s', sound: match[1].trim().substring(0, 50) });
+    
+    // 使用新的音效设计Agent生成场景特定音效
+    try {
+      const audioDesc = designer.generateForShot(shot);
+      segments.push({ time: '0-3s', sound: audioDesc.substring(0, 80) });
+    } catch (e) {
+      // 回退到原有逻辑
+      const audioMatches = prompt.matchAll(/【音频】([^【]+)/g);
+      for (const match of audioMatches) {
+        segments.push({ time: '0-3s', sound: match[1].trim().substring(0, 50) });
+      }
     }
 
     if (segments.length === 0) {
@@ -9221,35 +9253,35 @@ ${isNirath
     // 基于场景类型生成五维空间
     const spatialMap = {
       'intro': {
-        environment: '专业医疗环境,现代化诊疗空间,明亮整洁的室内场景',
+        environment: '专业医疗环境,现代化诊疗空间,明亮整洁的室内场景,背景可见人体肌肉解剖模型和肾脏结构展示',
         depth: '中景到近景过渡,前景有医疗设备,背景可见诊疗室门和走廊',
         orientation: '正面微仰视角,人物占据画面视觉中心,视线引导自然',
         atmosphere: '专业、权威、可信赖,营造安心就医氛围',
         time: '明亮均匀的室内照明,色温5000K-5500K,模拟自然光环境'
       },
       'explanation': {
-        environment: '医疗科普展示空间,整洁专业的背景,可见医疗图表或仪器',
+        environment: '医疗科普展示空间,整洁专业的背景,背景可见运动医学相关图示、人体肌肉解剖投影和尿液颜色对比样本展示',
         depth: '中等景深,主体清晰突出,背景适度虚化保留环境信息',
         orientation: '平视或微俯视角,便于展示讲解内容,画面稳定专业',
         atmosphere: '清晰、严谨、易于理解,知识传递氛围浓厚',
         time: '稳定室内照明,色温4000K-5000K,适合长时间观看不疲劳'
       },
       'demonstration': {
-        environment: '实验室或诊疗室环境,专业设备清晰可见,操作台面整洁',
+        environment: '实验室或诊疗室环境,专业设备清晰可见,操作台面整洁,背景可见生化检验仪器和CK指标动态监测展示',
         depth: '近景特写为主,突出操作细节和仪器显示,背景辅助说明',
         orientation: '正面或侧面特写,聚焦操作区域,手部动作清晰可见',
         atmosphere: '精准、专注、专业示范,步骤清晰可跟随',
         time: '高亮度照明,色温5500K-6500K,确保细节清晰可见,无阴影干扰'
       },
       'ending': {
-        environment: '医疗场景收束,回归专业形象,背景简洁有力',
+        environment: '医疗场景收束,回归专业形象,背景简洁有力,可见肾脏保健科普海报和就医指引图示',
         depth: '中景或全景,展示完整人物姿态和场景氛围',
         orientation: '正面稳定视角,给人以可靠感和安心感,视觉收束',
         atmosphere: '安心、专业、值得信赖,温和有力的收尾',
         time: '温暖柔和照明,色温4000K-4500K,营造人文关怀氛围'
       },
       'generic': {
-        environment: '专业医疗环境,现代化诊疗空间,真实可信的室内场景',
+        environment: '专业医疗环境,现代化诊疗空间,真实可信的室内场景,背景融入运动医学和肾脏健康主题元素',
         depth: '中景到近景过渡,前景有医疗设备,背景可见诊疗环境',
         orientation: '正面微仰视角,人物占据画面视觉中心,构图稳定',
         atmosphere: '专业、权威、可信赖,自然真实的医疗氛围',

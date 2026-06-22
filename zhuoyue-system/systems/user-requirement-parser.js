@@ -43,7 +43,10 @@ class UserRequirementParser {
     const inferred = this._inferMissingInfo(userInput, extracted);
     
     // 3. 解析创意指数
-    const cp = this.parser.parse(userInput, context.creativityIndex);
+    // v6.6.8-fix: 优先使用命令行传入的 CP 值，不从用户输入字符串中解析
+    const cp = context.creativityIndex 
+      ? { value: context.creativityIndex, source: 'cli' }
+      : this.parser.parse(userInput);
     
     // 4. 构建统一结构
     const unifiedRequirement = this._buildUnifiedRequirement({

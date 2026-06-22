@@ -94,15 +94,16 @@ cleanupOldOutput(OUTPUT);
 console.log('🧹 旧输出已清理');
 
 const PORTRAIT_BASE = path.join(WORKSPACE, 'characters/chenzhuo/portraits');
-const UNIFORM_DIR = path.join(PORTRAIT_BASE, 'uniform');
+// v6.6.8-fix: 使用卡通风格定妆照（绕过 Seedance 真实人像检测）
+const UNIFORM_DIR = path.join(PORTRAIT_BASE, 'cartoon-uniform');
 
 const CHENZHUO_PORTRAITS = {
-  front: path.join(UNIFORM_DIR, 'portrait-uniform-02.jpg'),
-  threeQuarter: path.join(UNIFORM_DIR, 'portrait-uniform-01.jpg'),
-  side: path.join(UNIFORM_DIR, 'portrait-uniform-04.jpg'),
-  closeup: path.join(UNIFORM_DIR, 'portrait-uniform-05.jpg'),
-  fullBody: path.join(UNIFORM_DIR, 'portrait-uniform-02.jpg'),
-  back: path.join(UNIFORM_DIR, 'portrait-uniform-03.jpg')
+  front: path.join(UNIFORM_DIR, 'portrait-cartoon-uniform-01.jpg'),
+  threeQuarter: path.join(UNIFORM_DIR, 'portrait-cartoon-uniform-02.jpg'),
+  side: path.join(UNIFORM_DIR, 'portrait-cartoon-uniform-03.jpg'),
+  closeup: path.join(UNIFORM_DIR, 'portrait-cartoon-uniform-04.jpg'),
+  fullBody: path.join(UNIFORM_DIR, 'portrait-cartoon-uniform-05.jpg'),
+  back: path.join(UNIFORM_DIR, 'portrait-cartoon-uniform-01.jpg') // fallback to front
 };
 
 for (const [key, pPath] of Object.entries(CHENZHUO_PORTRAITS)) {
@@ -165,8 +166,21 @@ async function run() {
   const parser = new UserRequirementParser({ debug: true });
   
   try {
+    // v6.6.8-patch4-fix: 支持命令行参数覆盖 creativityIndex
+    const args = process.argv.slice(2);
+    let cliCP = 0.82; // 默认使用用户指定的创意指数
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '--cp' || args[i].startsWith('--cp=')) {
+        const val = args[i].includes('=') ? args[i].split('=')[1] : args[i + 1];
+        if (val && !isNaN(parseFloat(val))) {
+          cliCP = parseFloat(val);
+          console.log(`🎨 命令行覆盖创意指数: ${cliCP}`);
+        }
+      }
+    }
+    
     const parsedRequirement = await parser.parse(userInput, {
-      creativityIndex: 0.95  // 天花板级别的创意指数
+      creativityIndex: cliCP  // 使用命令行参数或默认值
     });
     
     console.log('✅ 用户需求解析完成');
