@@ -208,7 +208,8 @@ class GenericOpeningSystem {
       const char = characters[charId];
       const portraitPath = char?.portraits?.front || char?.portraits?.closeup || '';
       if (portraitPath) {
-        parts.push(`【绑定定妆照】${portraitPath}`);
+        // v6.6.8-patch7: 统一为 Seedance 官方 @imageN 引用格式，与 Stage 11 一致
+        parts.push(`【绑定定妆照】@image1 ${charId}近景,核心特征,超写实`);
       }
       // v6.6.8-patch2-fix: 添加图片1引用
       parts.push(`图片1`);
