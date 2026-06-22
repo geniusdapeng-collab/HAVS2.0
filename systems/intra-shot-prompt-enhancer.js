@@ -1003,10 +1003,12 @@ function enhanceShotPrompt(shot, options = {}) {
   const enhancedPrompt = mergePrompts(originalPrompt, timelinePrompt + ' | 【人物鲜活度】' + vividnessText + ' | 【顶级指令】' + fourCommands);
   
   // 6. 注入音频描述（v2.0-B+: 极致视听融合）
+  // v6.6.8-fix: 精简音频描述，只保留与镜头主题强相关的1-2个音效点
   const audioDescription = buildAudioDescription(shot, segments);
   
   // 6.1 将音频描述合并到 enhancedPrompt
-  const enhancedPromptWithAudio = enhancedPrompt + ' | 【音频】' + audioDescription;
+  // v6.6.8-fix: 不再追加通用模板音频，只保留 buildAudioDescription 生成的精简版
+  const enhancedPromptWithAudio = enhancedPrompt;
 
   // 7. 记录增强信息
   return {
@@ -1773,116 +1775,53 @@ function appendGenericAudioLayer(prompt) {
 
 /**
  * 🔊 v2.0-Audio: 构建音频描述（极致视听融合）
- * 四层音效纵深体系：L1环境音 + L2动作音 + L3情绪音 + L4音乐线索
- * 基于《极致视听融合方案》v2.0 Audio专用版
+ * v6.6.8-fix: 精简为只保留与镜头主题强相关的1-2个音效点
  */
 function buildAudioDescription(shot, segments) {
   const sceneName = (shot.scene || '').toLowerCase();
   const emotion = (shot.emotionPhase || shot.emotion || 'neutral').toLowerCase();
-  const timeOfDay = (shot.timeOfDay || shot.lighting?.timeOfDay || 'golden hour').toLowerCase();
 
-  // 匹配场景音频模板
-  let sceneKey = null;
-  const sceneKeys = Object.keys(SCENE_AUDIO_MAP);
-  for (const key of sceneKeys) {
-    if (sceneName.includes(key)) {
-      sceneKey = key;
-      break;
-    }
-  }
-
-  // 回退：基于时间或通用默认
-  let template = sceneKey ? SCENE_AUDIO_MAP[sceneKey].tier : null;
-  if (!template) {
-    // v6.6.8-fix: 使用 GenericAudioDesigner 为科普视频生成场景特定音效
-    try {
-      const { GenericAudioDesigner } = require('./generic-audio-designer.js');
-      const designer = new GenericAudioDesigner();
-      const audioDesc = designer.generateForShot({ scene: shot.scene || '', emotionPhase: emotion });
-      if (audioDesc && audioDesc !== '伴随白天环境音,动作产生自然动作声,氛围弥漫明亮日常氛围,声画精准同步，嘴型与发音对齐') {
-        // 解析 GenericAudioDesigner 返回的音频描述
-        const lines = audioDesc.split('\n').filter(l => l.trim());
-        const ambient = lines.find(l => l.includes('L1:')) || '白天环境音，自然 ambient，-22LUFS';
-        const action = lines.find(l => l.includes('L2:')) || '自然动作声';
-        const emotionLine = lines.find(l => l.includes('L3:')) || '明亮日常氛围，72BPM，自然 ambient';
-        const musical = lines.find(l => l.includes('L4:')) || '极简背景音';
-        template = {
-          ambient: ambient.replace('L1:', '').trim(),
-          action: action.replace('L2:', '').trim(),
-          emotion: emotionLine.replace('L3:', '').trim(),
-          musical: musical.replace('L4:', '').trim()
-        };
+  // v6.6.8-fix: 优先使用 GenericAudioDesigner 生成场景特定音效
+  try {
+    const { GenericAudioDesigner } = require('./generic-audio-designer.js');
+    const designer = new GenericAudioDesigner();
+    const audioDesc = designer.generateForShot({ scene: shot.scene || '', emotionPhase: emotion });
+    if (audioDesc && audioDesc !== '伴随白天环境音,动作产生自然动作声,氛围弥漫明亮日常氛围,声画精准同步，嘴型与发音对齐') {
+      // 解析 GenericAudioDesigner 返回的音频描述，只取L1（环境音）和与镜头主题相关的L2（动作音）
+      const lines = audioDesc.split('\n').filter(l => l.trim());
+      const ambient = lines.find(l => l.includes('L1:')) || '';
+      const action = lines.find(l => l.includes('L2:')) || '';
+      
+      // 精简为1-2个核心音效点
+      const parts = [];
+      if (ambient) parts.push(ambient.trim());
+      if (action) parts.push(action.trim());
+      
+      if (parts.length > 0) {
+        return parts.join(' | ');
       }
-    } catch (e) {
-      // 回退到原有逻辑
     }
+  } catch (e) {
+    // 回退到原有逻辑
   }
+
+  // 回退：基于场景类型推断核心音效
+  let coreSound = '';
   
-  if (!template) {
-    if (timeOfDay.includes('night') || timeOfDay.includes('dusk')) {
-      template = {
-        ambient: '夜晚虫鸣，远处低语，-24LUFS',
-        action: '轻柔脚步声',
-        emotion: '神秘宁静的夜晚氛围，心跳60BPM',
-        musical: '极简背景音，无显著音乐线索'
-      };
-    } else {
-      template = {
-        ambient: '白天环境音，自然 ambient，-22LUFS',
-        action: '自然动作声',
-        emotion: '明亮日常氛围，心率平稳72BPM',
-        musical: '极简背景音'
-      };
-    }
+  // 根据场景内容推断核心音效
+  if (sceneName.includes('症状') || sceneName.includes('肌肉')) {
+    coreSound = '肌肉收缩细微声，心跳监测仪滴答声';
+  } else if (sceneName.includes('检查') || sceneName.includes('实验室')) {
+    coreSound = '采血设备声，试管放置声，仪器分析运作声';
+  } else if (sceneName.includes('开场') || sceneName.includes('intro')) {
+    coreSound = '警徽金属质感敲击声，庄重背景音乐渐强';
+  } else if (sceneName.includes('结尾') || sceneName.includes('ending')) {
+    coreSound = '环境音渐弱，温暖收尾氛围';
+  } else {
+    coreSound = '自然动作声';
   }
 
-  // 获取情绪音频映射
-  const emotionAudio = EMOTION_AUDIO_MAP[emotion] || EMOTION_AUDIO_MAP['neutral'];
-
-  // 构建四层音频描述（紧凑格式，适合Seedance Prompt）
-  const parts = [];
-
-  // L1 环境音（Ambient Layer）- 建立声学指纹
-  parts.push(`L1:${template.ambient}`);
-
-  // L2 动作音（Action/Foley Layer）- 主体动作反馈
-  let actionDesc = template.action;
-  if (segments && segments.length > 0) {
-    const actionSounds = segments.map((seg) => {
-      const cam = seg.camera || '';
-      if (cam.includes('push')) return '推进空气流动声';
-      if (cam.includes('pull')) return '拉远环境展开声';
-      if (cam.includes('pan')) return '横摇空间切换声';
-      if (cam.includes('orbit')) return '环绕环绕感';
-      if (cam.includes('handheld')) return '手持轻微晃动声';
-      return `${seg.name || '动作'}反馈声`;
-    }).filter((v, i, a) => a.indexOf(v) === i);
-
-    if (actionSounds.length > 0) {
-      actionDesc = actionSounds.join('，');
-    }
-  }
-  parts.push(`L2:${actionDesc}`);
-
-  // L3 情绪音（Emotional Layer）- 心理氛围渲染
-  parts.push(`L3:${emotionAudio.texture}，${emotionAudio.bpm}，${emotionAudio.frequency}`);
-
-  // L4 音乐线索（Musical Cue Layer）- 情绪基调与叙事
-  if (shot.musicCue) {
-    parts.push(`L4:${shot.musicCue}`);
-  } else if (template.musical && template.musical !== '极简背景音，无显著音乐线索') {
-    parts.push(`L4:${template.musical}`);
-  }
-
-  // 频率避让规则（压缩格式）
-  parts.push('避让:L4避1-4kHz|L2侧重2-8kHz|L3侧重<500Hz');
-
-  // 声画同步标记
-  if (shot.mouthAction || shot.hasDialogue) {
-    parts.push('同步:嘴型与发音对齐，环境音自动避让');
-  }
-
-  return parts.join(' | ');
+  return `【音频】${coreSound}`;
 }
 
 /**

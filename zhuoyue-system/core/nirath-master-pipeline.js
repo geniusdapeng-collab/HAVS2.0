@@ -894,11 +894,27 @@ class NirathMasterPipeline {
       // v6.5.64-P2-fix: 预生产模式也运行Stage 11,但降低maxTokens
       result.stages.render = await runStage('STAGE-11', () => this.stageRender(result.stages));
 
-      // Stage 11.5: Prompt质量闸门(v6.0新增:防空转)
+      // Stage 11.5: 空间增强 Agent (v6.6.8-fix: 专门优化【空间】字段)
+      try {
+        const { enhanceAllSpaces } = require('../../systems/space-enhancer.js');
+        const spaceEnhanced = enhanceAllSpaces(result.stages.render, {
+          prd: result.stages.prd,
+          input: this.input
+        });
+        if (spaceEnhanced && spaceEnhanced.length > 0) {
+          result.stages.render = spaceEnhanced;
+          const enhancedCount = spaceEnhanced.filter(s => s._spaceEnhanced).length;
+          this.log('STAGE-11.5', `🌍 空间增强完成 | ${enhancedCount}/${spaceEnhanced.length} 个镜头【空间】字段已优化`);
+        }
+      } catch (e) {
+        this.log('STAGE-11.5', `⚠️ 空间增强跳过: ${e.message}`);
+      }
+
+      // Stage 11.6: Prompt质量闸门(v6.0新增:防空转)
       if (!this.projectConfig?.isPreProduction) {
-        result.stages.promptQualityGate = await runStage('STAGE-11.5', () => this.stagePromptQualityGate(result.stages.render, result.stages.storyboard));
+        result.stages.promptQualityGate = await runStage('STAGE-11.6', () => this.stagePromptQualityGate(result.stages.render, result.stages.storyboard));
         if (!result.stages.promptQualityGate.passed) {
-          this.log('STAGE-11.5', `⚠️ Prompt质量闸门发现${result.stages.promptQualityGate.results.filter(r => !r.passed).length}个镜头质量未达标,记录问题供审阅`);
+          this.log('STAGE-11.6', `⚠️ Prompt质量闸门发现${result.stages.promptQualityGate.results.filter(r => !r.passed).length}个镜头质量未达标,记录问题供审阅`);
         }
       } else {
         result.stages.promptQualityGate = { passed: true, results: [], preProductionSkipped: true };
