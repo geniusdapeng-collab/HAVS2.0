@@ -880,13 +880,12 @@ class OrientPrimordialCoreV24 {
       console.log(`[Core-v24.3] 🎬 动作注入: ${trimmedAction.length}字符 | 角色动作描述`);
     }
 
-    // 🔥 v6.5.3-fix: 镜头时间轴注入提前到核心位置，避免被末尾截断
-    // 根因：在末尾注入时，smartTruncate/smartTrim从末尾截断，直接吃掉【镜头时间轴】
-    // 修复：在【视觉】之后立即注入，确保其优先级
-    if (movementDesc) {
-      prompt += ` ${movementDesc}`;
-      console.log(`[Core-v24.3] 🎬 镜头时间轴注入: ${movementDesc.length}字符 | 核心位置注入`);
-    }
+    // v6.6.6-fix: 镜头时间轴不再在 buildPromptV3 中注入
+    // 由 Stage 11 toStandardPrompt 统一处理【运镜】标记，避免重复
+    // if (movementDesc) {
+    //   prompt += ` ${movementDesc}`;
+    //   console.log(`[Core-v24.3] 🎬 镜头时间轴注入: ${movementDesc.length}字符 | 核心位置注入`);
+    // }
 
     // ========== Step 6.3: 台词视觉化通道（双通道分离）==========
 // v6.5.6-fix: 台词文本注入视觉Prompt（供Seedance对口型）

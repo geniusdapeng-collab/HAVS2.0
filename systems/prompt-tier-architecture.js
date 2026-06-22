@@ -289,11 +289,12 @@ class PromptTierArchitecture {
       parts.push(params.environmentAction);
     }
     
-    // 镜头动作（Camera Movement）
-    if (params.cameraMovement) {
-      const camCore = this._extractCameraCore(params.cameraMovement);
-      parts.push(camCore);
-    }
+    // 镜头动作（Camera Movement）- 跳过，由 toStandardPrompt 统一注入【运镜】标记
+    // 避免双重注入导致 prompt 中出现重复运镜描述
+    // if (params.cameraMovement) {
+    //   const camCore = this._extractCameraCore(params.cameraMovement);
+    //   parts.push(camCore);
+    // }
     
     // 动作速度
     if (params.speed) {
