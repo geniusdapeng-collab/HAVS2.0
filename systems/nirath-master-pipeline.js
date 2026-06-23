@@ -440,7 +440,7 @@ class NirathMasterPipeline {
       actor: 'system',
       input: { projectName: input.projectName, mode: this.mode, shotCount: input.shots?.length },
       result: 'pending',
-      metadata: { projectType: input.videoType }
+      metadata: { projectType: this.input?.videoType }
     }).catch(e => console.error(`[Audit] 日志写入失败: ${e.message}`));
 
     const result = {

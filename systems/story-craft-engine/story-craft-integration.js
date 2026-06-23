@@ -25,13 +25,24 @@ class StoryCraftIntegration {
     this.encounterDynamics = new EncounterDynamics(options.encounter);
     
     // v6.2-patch70: LLM 推理引擎
+    // v6.7.0-fix1: timeoutMs 300000 (5分钟) — 32k token输出量大，120s频繁超时
     this.llmEngine = new LLMEngine({
       model: options.llmModel || 'kimi-k2p6',
       mode: 'production',
       maxRetries: 3,
+      timeoutMs: 300000, // 5分钟：32k token剧本创作需要充足时间
       // v6.2-patch80: 剧本创作需要大量LLM输出（场景描述/角色对话/世界观），提升maxTokens
       maxTokens: 32000
     });
+    
+    // v6.7.0-fix1: LLM调用统计（成功率追踪）
+    this.llmStats = {
+      totalCalls: 0,
+      successCalls: 0,
+      failCalls: 0,
+      avgResponseTime: 0,
+      totalResponseTime: 0
+    };
   }
 
   // 核心方法：完整的 StoryCraft 流程（v6.2-patch70: LLM 推理版）
@@ -165,7 +176,7 @@ class StoryCraftIntegration {
       selected: { id: "", theme: "", twist: "", emotionalAnchor: "", twistStrength: 0 }
     };
 
-    const result = await this.llmEngine.reasonStructured(prompt, schema);
+    const result = await this._trackedReason(prompt, schema, {}, "conceptSeed");
     
     if (result.success) {
       return result.data;
@@ -206,7 +217,7 @@ class StoryCraftIntegration {
       voiceSignature: { style: "", pace: "", tics: [] }
     };
 
-    const result = await this.llmEngine.reasonStructured(prompt, schema);
+    const result = await this._trackedReason(prompt, schema, {}, "psyche");
     
     if (result.success) {
       return result.data;
@@ -251,7 +262,7 @@ validation: { isValid: true/false, errors: [] }
       validation: { isValid: true, errors: [] }
     };
 
-    const result = await this.llmEngine.reasonStructured(prompt, schema);
+    const result = await this._trackedReason(prompt, schema, {}, "beatSheet");
     
     if (result.success) {
       return result.data;
@@ -291,7 +302,7 @@ validation: { isValid: true/false, errors: [] }
       metadata: { diamondQuotaTotal: 3, diamondQuotaUsed: 0 }
     };
 
-    const result = await this.llmEngine.reasonStructured(prompt, schema);
+    const result = await this._trackedReason(prompt, schema, {}, "dialogue");
     
     if (result.success) {
       return result.data;
@@ -334,7 +345,7 @@ validation: { isValid: true/false, errors: [] }
       recommendation: ""
     };
 
-    const result = await this.llmEngine.reasonStructured(prompt, schema);
+    const result = await this._trackedReason(prompt, schema, {}, "twist");
     
     if (result.success) {
       return result.data;
@@ -381,7 +392,7 @@ validation: { isValid: true/false, errors: [] }
       ]
     };
 
-    const result = await this.llmEngine.reasonStructured(prompt, schema);
+    const result = await this._trackedReason(prompt, schema, {}, "dynamics");
     
     if (result.success) {
       return result.data;
@@ -606,6 +617,42 @@ validation: { isValid: true/false, errors: [] }
       fallback: true,
       reason: 'StoryCraft failed, using legacy story generation',
       logs: ['[StoryCraft] 回退到原有剧本生成']
+    };
+  }
+  // v6.7.0-fix1: LLM调用包装器（带统计追踪）
+  async _trackedReason(prompt, schema, options = {}, label = 'unknown') {
+    const startTime = Date.now();
+    this.llmStats.totalCalls++;
+    try {
+      const result = await this.llmEngine.reasonStructured(prompt, schema, options);
+      const elapsed = Date.now() - startTime;
+      this.llmStats.totalResponseTime += elapsed;
+      this.llmStats.avgResponseTime = Math.round(this.llmStats.totalResponseTime / this.llmStats.totalCalls);
+      if (result.success) {
+        this.llmStats.successCalls++;
+        console.log(`[StoryCraft] ✅ LLM[${label}] 成功 | 耗时:${elapsed}ms | 成功率:${Math.round(this.llmStats.successCalls/this.llmStats.totalCalls*100)}%`);
+      } else {
+        this.llmStats.failCalls++;
+        console.log(`[StoryCraft] ⚠️ LLM[${label}] 失败 | 耗时:${elapsed}ms | 原因:${result.error || 'unknown'}`);
+      }
+      return result;
+    } catch (error) {
+      const elapsed = Date.now() - startTime;
+      this.llmStats.failCalls++;
+      this.llmStats.totalResponseTime += elapsed;
+      this.llmStats.avgResponseTime = Math.round(this.llmStats.totalResponseTime / this.llmStats.totalCalls);
+      console.log(`[StoryCraft] ❌ LLM[${label}] 异常 | 耗时:${elapsed}ms | ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // v6.7.0-fix1: 获取LLM统计
+  getLLMStats() {
+    const total = this.llmStats.totalCalls;
+    return {
+      ...this.llmStats,
+      successRate: total > 0 ? Math.round(this.llmStats.successCalls / total * 100) : 0,
+      failRate: total > 0 ? Math.round(this.llmStats.failCalls / total * 100) : 0
     };
   }
 }

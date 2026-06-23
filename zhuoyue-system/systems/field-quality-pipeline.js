@@ -19,6 +19,12 @@ class FieldQualityPipeline {
     const reports = [];
     const logs = [];
 
+    // v6.7.0-patch: 每轮运行前确保 repairer 持有最新 prd
+    if (this.prd && this.repairer) {
+      const { PRD } = require('./field-repair/field-repair-agent');
+      this.repairer.prd = this.repairer.prd || new PRD(this.prd);
+    }
+
     for (let roundNum = 1; roundNum <= this.maxRounds; roundNum++) {
       // 检查环节
       const report = await this.checker.check(currentShot, shotId);

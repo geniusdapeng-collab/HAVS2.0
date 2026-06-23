@@ -51,7 +51,8 @@ class CheckpointManager {
     this.checkpoint.completedStages.push(stageId);
     this.checkpoint.stageResults[stageId] = {
       timestamp: Date.now(),
-      success: true
+      success: true,
+      data: result
     };
     fs.writeFileSync(CHECKPOINT_FILE, JSON.stringify(this.checkpoint, null, 2));
   }

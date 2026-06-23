@@ -9,7 +9,7 @@ const { 字段优先级, 字段标签映射 } = require('../prompt-stability-gua
 class FieldGuard {
   constructor(options = {}) {
     this.log = options.log || console.log;
-    this.maxChars = options.maxChars || 2500;
+    this.maxChars = options.maxChars || 3000;
     this.strictMode = options.strictMode !== false; // 默认严格模式
   }
 

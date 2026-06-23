@@ -6,7 +6,7 @@ class CreativeLLMRouter {
     this.timeoutMs = options.timeoutMs || 120000;
     this.model = options.model || 'kimi-k2p6';
     this.maxRetries = options.maxRetries || 1;
-    this.maxTokens = options.maxTokens || 2500;
+    this.maxTokens = options.maxTokens || 3000;
 
     this.llm = new LLMEngine({
       model: this.model,

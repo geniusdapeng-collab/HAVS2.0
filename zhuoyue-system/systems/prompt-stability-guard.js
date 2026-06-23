@@ -5,7 +5,7 @@
  * 1. 保护关键字段不丢失（25字段体系，P0-P3四级优先级）
  * 2. 裁剪时按优先级保关键块（P0不可裁，P1优先保，P2/P3优先裁）
  * 3. 避免 prompt 被重复重组洗坏
- * 4. 字符上限：2500（v6.7.0从1500扩展）
+ * 4. 字符上限：3000（v6.7.0从1500扩展）
  */
 
 function 是非空字符串(v) {
@@ -157,7 +157,7 @@ function 关键字段存在(prompt) {
 }
 
 // v6.7.0: 按优先级分组的六步截断策略
-function 稳定裁剪(prompt, maxLength = 2500) {
+function 稳定裁剪(prompt, maxLength = 3000) {
   if (!是非空字符串(prompt)) return '';
   if (prompt.length <= maxLength) return prompt;
 
@@ -242,7 +242,7 @@ function 稳定裁剪(prompt, maxLength = 2500) {
 }
 
 // v6.7.0: 恢复关键块，按P0>P1>P2>P3优先级恢复
-function 恢复关键块(当前prompt, 原始prompt, maxLength = 2500) {
+function 恢复关键块(当前prompt, 原始prompt, maxLength = 3000) {
   let out = 当前prompt || '';
   const 当前状态 = 关键字段存在(out);
   const 原始关键块 = 提取关键块(原始prompt || '');

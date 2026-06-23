@@ -80,7 +80,7 @@ for (const spec of FIELD_SPECS) {
   SPEC_MAP[spec.name_en] = spec;
 }
 
-const MAX_TOTAL_CHARS = 2500;
+const MAX_TOTAL_CHARS = 3000;
 
 module.exports = {
   Priority, Severity, IssueType, RepairMethod,

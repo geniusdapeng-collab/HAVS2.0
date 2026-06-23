@@ -34,8 +34,21 @@ class DirectorReviewAgentV4 {
     // 3. 阻断条件检查
     const blockCheck = this._checkBlockConditions(shotCard, adjacentShots);
     
-    // 4. 导演决策（综合判断）
-    const decision = this._makeDecision(sixQuestions, fiveDimensions, blockCheck);
+    // v6.7.0-fix8: LLM辅助审片——当规则评分边界或存在争议时，调用LLM深度分析
+    let llmReview = null;
+    const isBorderline = fiveDimensions.totalScore >= 55 && fiveDimensions.totalScore <= 75;
+    const hasConflicts = blockCheck.details?.cameraActionConflict || (blockCheck.blocks?.length > 0);
+    if (isBorderline || hasConflicts) {
+      try {
+        llmReview = await this._llmAssistReview(shotCard, sceneCard, adjacentShots, sixQuestions, fiveDimensions, blockCheck);
+        console.log(`[DirectorReview] 🧠 LLM辅助审片完成: ${shotCard.shot_id} | 建议: ${llmReview.recommendation}`);
+      } catch (e) {
+        console.log(`[DirectorReview] ⚠️ LLM辅助审片失败: ${e.message} | 继续使用规则评分`);
+      }
+    }
+    
+    // 4. 导演决策（综合判断，如LLM有建议则融合）
+    const decision = this._makeDecision(sixQuestions, fiveDimensions, blockCheck, llmReview);
     
     // 5. 生成审片报告
     const review = {
@@ -251,32 +264,48 @@ class DirectorReviewAgentV4 {
   }
 
   /**
-   * 导演决策
+   * 导演决策（v6.7.0-fix8: 融合LLM辅助建议）
    */
-  _makeDecision(sixQuestions, fiveDimensions, blockCheck) {
+  _makeDecision(sixQuestions, fiveDimensions, blockCheck, llmReview = null) {
     const sixTotal = Object.values(sixQuestions).reduce((sum, q) => sum + q.score, 0);
     const sixAverage = sixTotal / 6;
+    
+    // v6.7.0-fix8: 如LLM建议驳回，尊重LLM意见（边界情况人工审查）
+    const llmOverride = llmReview && llmReview.recommendation === 'reject';
+    const llmUpgrade = llmReview && llmReview.recommendation === 'approve';
     
     // 通过条件：
     // 1. 无阻断条件
     // 2. 五维总分≥60
     // 3. 六问平均分≥5
+    // 4. LLM不驳回
     const canRender = !blockCheck.blocked && 
                        fiveDimensions.totalScore >= 60 && 
-                       sixAverage >= 5;
+                       sixAverage >= 5 &&
+                       !llmOverride;
     
     // 是否需要导演人工确认
     const needsDirectorConfirm = (sixQuestions.q5_simpler_method?.needsDirectorInput) ||
                                   fiveDimensions.totalScore < 75 ||
-                                  blockCheck.blocks.length > 0;
+                                  blockCheck.blocks.length > 0 ||
+                                  !!llmReview; // 有LLM建议时也需确认
+    
+    // v6.7.0-fix8: 融合LLM建议到导演备注
+    const llmNotes = llmReview ? `\n[LLM深度分析] ${llmReview.reasoning}` : '';
+    const suggestions = this._generateSuggestions(sixQuestions, fiveDimensions, blockCheck);
+    if (llmReview?.suggestions) {
+      suggestions.push(...llmReview.suggestions);
+    }
     
     return {
       approved: canRender,
       canRender,
       needsDirectorConfirm,
-      directorNotes: this._generateDirectorNotes(sixQuestions, fiveDimensions, blockCheck),
-      modificationSuggestions: this._generateSuggestions(sixQuestions, fiveDimensions, blockCheck),
-      priorityAdjustment: fiveDimensions.totalScore < 60 ? 'upgrade_to_P2' : 'keep'
+      directorNotes: this._generateDirectorNotes(sixQuestions, fiveDimensions, blockCheck) + llmNotes,
+      modificationSuggestions: suggestions,
+      priorityAdjustment: fiveDimensions.totalScore < 60 ? 'upgrade_to_P2' : 'keep',
+      llmAssisted: !!llmReview,
+      llmRecommendation: llmReview?.recommendation || null
     };
   }
 
@@ -360,6 +389,79 @@ class DirectorReviewAgentV4 {
     if (!shotCard.transition_intent) return 4;
     if (shotCard.rhythm_level && shotCard.rhythm_level !== '未指定') return 7;
     return 6;
+  }
+
+  /**
+   * v6.7.0-fix8: LLM辅助深度审片
+   * 当规则评分边界或存在争议时，调用LLM进行深度分析
+   */
+  async _llmAssistReview(shotCard, sceneCard, adjacentShots, sixQuestions, fiveDimensions, blockCheck) {
+    const promptText = this._safeGetPromptText(shotCard);
+    const prevShot = adjacentShots.find(s => s.shot_id === shotCard.prev_shot_id);
+    const nextShot = adjacentShots.find(s => s.shot_id === shotCard.next_shot_id);
+    
+    const prompt = `你是一位资深电影导演，请对以下镜头进行深度审片分析。
+
+镜头信息：
+- 镜头ID: ${shotCard.shot_id}
+- 场景: ${sceneCard?.scene_name || '未指定'}
+- 情绪目标: ${shotCard.emotion_target || '未指定'}
+- 主体: ${shotCard.primary_poi || '未指定'}
+- 动作: ${shotCard.primary_action || '未指定'}
+- 起幅: ${shotCard.ofa || '未指定'}
+- 落幅: ${shotCard.efa || '未指定'}
+- 运镜: ${shotCard.camera_movement || '未指定'}
+- 角色绑定: ${shotCard.character_bindings || '未指定'}
+- 转场意图: ${shotCard.transition_intent || '未指定'}
+- 是否英雄镜头: ${shotCard.is_hero_shot ? '是' : '否'}
+
+相邻镜头：
+- 上一镜: ${prevShot ? prevShot.shot_id + ' | ' + (prevShot.ofa || '无') : '无'}
+- 下一镜: ${nextShot ? nextShot.shot_id + ' | ' + (nextShot.ofa || '无') : '无'}
+
+规则评分结果：
+- 六问总分: ${Object.values(sixQuestions).reduce((s, q) => s + q.score, 0)}/60
+- 五维总分: ${fiveDimensions.totalScore}/100
+- 阻断条件: ${blockCheck.blocked ? '有' : '无'}
+
+Prompt文本（前500字）：
+${promptText.substring(0, 500)}
+
+请分析：
+1. 这个镜头的叙事价值——是否值得保留？
+2. 运镜与动作是否冲突？
+3. 与相邻镜头的连续性如何？
+4. 是否有更好的拍法？
+
+输出JSON格式：
+{
+  "recommendation": "approve|reject|review",
+  "reasoning": "详细分析...",
+  "suggestions": ["建议1", "建议2"]
+}`;
+
+    try {
+      const result = await this.engine.reasonStructured(prompt, {
+        recommendation: 'review',
+        reasoning: '',
+        suggestions: []
+      }, {
+        maxTokens: 2000,
+        timeoutMs: 60000
+      });
+      
+      if (result.success && result.data) {
+        return {
+          recommendation: result.data.recommendation || 'review',
+          reasoning: result.data.reasoning || '',
+          suggestions: result.data.suggestions || []
+        };
+      }
+      return null;
+    } catch (e) {
+      console.log(`[DirectorReview] ⚠️ LLM调用失败: ${e.message}`);
+      return null;
+    }
   }
 
   /**

@@ -586,7 +586,7 @@ const 字符预算 = {
   转场: { min: 30, max: 50, 可压缩: true }
 };
 
-const PROMPT_MAX_CHARS = 2500; // v6.7.0: 从1500扩展到2500
+const PROMPT_MAX_CHARS = 3000; // v6.7.0: 从1500扩展到3000
 
 module.exports = {
   片头字段模板,
