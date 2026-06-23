@@ -139,7 +139,9 @@ function 关键字段存在(prompt) {
 
   // 所有25字段
   for (const [field, tag] of Object.entries(字段标签映射)) {
-    out[field] = prompt.includes(tag);
+    // v6.7.0-fix: 统一使用前缀匹配，与 FieldGuard / FieldQualityPipeline 保持一致
+    const prefix = tag.replace(/】$/, '');
+    out[field] = new RegExp(prefix).test(prompt);
   }
 
   // 兼容旧字段名/标签变体

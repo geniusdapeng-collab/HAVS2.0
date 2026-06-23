@@ -151,6 +151,17 @@ class ReferenceImageGate {
   }
 
   /**
+   * 角色ID归一化：处理脚本生成阶段与角色系统阶段的ID不一致问题
+   * 例如：taotie → tao-tie
+   */
+  normalizeCharId(id) {
+    if (!id) return id;
+    const idLower = String(id).toLowerCase();
+    const map = { 'taotie': 'tao-tie' };
+    return map[idLower] || idLower;
+  }
+
+  /**
    * 从镜头中提取角色ID
    */
   extractCharacters(shot) {
@@ -176,7 +187,8 @@ class ReferenceImageGate {
       });
     }
     
-    return Array.from(characters);
+    // v6.7.0-fix: 归一化角色ID，消除脚本阶段与角色系统阶段的不一致
+    return Array.from(characters).map(c => this.normalizeCharId(c));
   }
 
   /**
@@ -211,8 +223,9 @@ class ReferenceImageGate {
     const promptText = this.getPromptText(shot) || '';
     
     // 1. 检查是否有该角色的 reference_image
+    const normalizedCharId = this.normalizeCharId(charId);
     const charRefs = referenceImages.filter(ref => 
-      ref.characterId === charId || ref.characterId === this.camelToKebab(charId)
+      this.normalizeCharId(ref.characterId) === normalizedCharId
     );
     
     if (charRefs.length === 0) {
@@ -443,9 +456,10 @@ class ReferenceImageGate {
    */
   extractReferenceImageAngles(charId, referenceImages) {
     const angles = [];
+    const normalizedCharId = this.normalizeCharId(charId);
     for (const ref of referenceImages) {
-      const refCharId = ref.characterId || this.extractCharacterIdFromUrl(ref.url);
-      if (refCharId === charId || refCharId === this.camelToKebab(charId)) {
+      const refCharId = this.normalizeCharId(ref.characterId || this.extractCharacterIdFromUrl(ref.url));
+      if (refCharId === normalizedCharId) {
         // 🔥 优先使用显式声明的 angle 字段
         if (ref.angle) {
           angles.push(ref.angle);

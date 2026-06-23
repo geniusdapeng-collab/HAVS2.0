@@ -1800,7 +1800,7 @@ const { spawn } = require('child_process');
     prd.constraints = prd.constraints || input.constraints || {};
 
     // Nirath模式:注入Nirath世界观 — v6.6.4-root-fix: 教育片禁用
-    if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+    if (this.isNirathContent) {
       prd.world.nirathWorld = {
         planet: 'Nirath',
         era: 'Post-Convergence Era',
@@ -2214,7 +2214,7 @@ const { spawn } = require('child_process');
 
       // 4.4: Nirath角色增强(仅Nirath模式且非教育片)
       let nirathEnhancement = null;
-      if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+      if (this.isNirathContent) {
         try {
           nirathEnhancement = this.modules.nirathCharacterEnhancer.enhance(charProfile, input.scenes?.[0]);
           this.log('STAGE-4', `  ✅ NirathCharacterEnhancer: ${charId}`);
@@ -3674,7 +3674,7 @@ ${isNirath
     const storyCraftEnabled = input?.storyCraftVersion === 'v2.0' || input?.storyCraftVersion === 'v1.0' || input?.enableStoryCraft === true;
     const beastProfile = input?.beastProfile || input?.beast || input?.core?.beast || {};
 
-    if (storyCraftEnabled && beastProfile?.name && this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+    if (storyCraftEnabled && beastProfile?.name && this.isNirathContent) {
       this.log('STAGE-5.0', 'StoryCraft Engine v2.0 启用 - 异兽视角叙事 + 60秒三幕引擎 + 钻石台词');
 
       try {
@@ -3802,7 +3802,7 @@ ${isNirath
           }
 
           // 【v6.0-patch22 新增】Nirath视觉锚点注入(StoryCraft路径) — v6.6.4-root-fix: 教育片禁用
-          if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+          if (this.isNirathContent) {
             const injector = this.modules.nirathVisualInjector;
             scShots = injector.injectBatch(scShots);
             const injectedCount = scShots.filter(s => s._nirathAnchors?.wasInjected).length;
@@ -3810,7 +3810,7 @@ ${isNirath
           }
 
             // v6.2-patch106-3-fix: S02发现场景台词优化 — v6.6.4-root-fix: 教育片禁用
-          if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+          if (this.isNirathContent) {
             scShots.forEach(shot => {
               if (shot.type === 'discovery' || shot.shotType === 'discovery') {
                 this._optimizeDiscoverySceneDialogue(shot, shot.scene);
@@ -3836,7 +3836,7 @@ ${isNirath
           }
 
           // v6.2-patch106-4-fix: S05结尾场景情绪统一 — v6.6.4-root-fix: 教育片禁用
-          if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+          if (this.isNirathContent) {
             scShots.forEach(shot => {
               if (shot.type === 'closing' || shot.shotType === 'closing' || shot.emotionPhase === 'closing') {
                 this._unifyClosingSceneEmotion(shot);
@@ -3867,7 +3867,7 @@ ${isNirath
           }
 
           // v6.2-patch106-5-fix: S03对峙场景台词视觉化 — v6.6.4-root-fix: 教育片禁用
-          if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+          if (this.isNirathContent) {
             scShots.forEach(shot => {
               if (shot.type === 'confrontation' || shot.shotType === 'confrontation') {
                 this._visualizeConfrontationDialogue(shot);
@@ -4111,7 +4111,7 @@ ${isNirath
     }
 
     // 【v6.0-patch22 新增】Nirath视觉锚点注入(原有路径) — v6.6.4-root-fix: 教育片禁用
-    if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+    if (this.isNirathContent) {
       const injector = this.modules.nirathVisualInjector;
       const injectedShots = injector.injectBatch(shots);
       const injectedCount = injectedShots.filter(s => s._nirathAnchors?.wasInjected).length;
@@ -4225,7 +4225,7 @@ ${isNirath
 
     // === 要素3: 情感共鸣(情绪弧线设计)===
     // v6.6.4-root-fix: 教育片禁用Nirath情感注入
-    if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+    if (this.isNirathContent) {
       if (isBefore) {
         // 前半场:注入好奇、试探、轻微不安
         const hasCuriosity = ['好奇', '疑问', '探索', '试探', '想知道', '观察'].some(kw => enriched.includes(kw));
@@ -4243,7 +4243,7 @@ ${isNirath
 
     // === 要素4: 成长转变 ===
     // v6.6.4-root-fix: 教育片禁用Nirath成长注入
-    if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+    if (this.isNirathContent) {
       if (index === 0) {
         // 开场:轻微犹豫
         if (!['犹豫', '紧张', '不安', '警惕'].some(kw => enriched.includes(kw))) {
@@ -4259,7 +4259,7 @@ ${isNirath
 
     // === 要素5: Nirath世界观 ===
     // v6.6.4-root-fix: 教育片禁用Nirath世界观注入
-    if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+    if (this.isNirathContent) {
       const nirathKeywords = ['Nirath', '双恒星', '5800K', '6500K', '以太', '磁场', '共鸣', '紫晶', '青丘', '孢子'];
       const hasNirath = nirathKeywords.some(kw => enriched.includes(kw));
       if (!hasNirath) {
@@ -5036,7 +5036,7 @@ ${isNirath
         this.log('STAGE-9', `  🎬 FPV运镜: ${shot.id} | 导演决策: ${shot.fpvReason || '特殊场景FPV'}`);
 
         // v6.6.4-root-fix: 教育片禁用Nirath FPV运镜
-        if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+        if (this.isNirathContent) {
           // Nirath模式:生成FPV电影感运镜 + v3时间轴
           const sceneName = (shot.scene || '').split('-')[0]?.trim() || shot.scene || 'default';
           const phase = shot.emotionPhase || 'climax';
@@ -5702,7 +5702,7 @@ ${isNirath
       }
 
       // v6.6.4-root-fix: Nirath模式渲染核心仅在非教育片时启用
-      if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+      if (this.isNirathContent) {
         // Nirath模式:调用Nirath渲染核心v24.3(风格前置化)
         // 🔥 v24.3: 风格约束包作为输入传入,确保Prompt第一句话就受Nirath美学约束
         const styleConstraint = {
@@ -5797,7 +5797,7 @@ ${isNirath
 
         // v6.2-patch104: 注入差异化照明方案(解决灯光0分问题) — v6.6.4-root-fix: 教育片禁用
         // 注:必须在buildPromptV3之后执行,此时prompt已有值
-        if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+        if (this.isNirathContent) {
           const beforeLighting = prompt.length;
           prompt = this.injectLightingIfMissing(shot, prompt);
           if (prompt.length > beforeLighting) {
@@ -5807,7 +5807,7 @@ ${isNirath
 
         // v6.2-patch106-fix: 注入场景化环境描述(解决模板段落场景化问题) — v6.6.4-root-fix: 教育片禁用
         // 注:必须在buildPromptV3之后执行,此时prompt已有值
-        if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+        if (this.isNirathContent) {
           const beforeEnv = prompt.length;
           const sceneSpecificEnv = this.generateSceneSpecificEnvironment(shot.scene, shot.shotType || shot.type);
           if (sceneSpecificEnv && !prompt.includes(sceneSpecificEnv.substring(0, 20))) {
@@ -5952,7 +5952,7 @@ ${isNirath
         }
 
         // v6.5.34-fix: Nirath模式内容镜注入缺失的约束(风格锁等Nirath专属) — 教育片禁用
-        if (this.mode === 'nirath' && this.input?.videoType !== 'educational' && this.input?.filmType !== 'educational') {
+        if (this.isNirathContent) {
           // 1. 注入风格锁(仅片头有的,内容镜缺失)
           if (!prompt.includes('【风格锁】')) {
             prompt += ' 【风格锁】禁止卡通/动漫/暗黑。必须双恒星明亮光照+磁场可见+低重力飘浮。这是Nirath。';
@@ -7025,6 +7025,24 @@ ${isNirath
     }
 
     this.log('STAGE-11', `✅ 渲染完成 | 镜头数: ${prompts.length} | 理想利用率: ${prompts.filter(p => p.utilizationStatus.includes('理想')).length}/${prompts.length}`);
+
+    // v6.7.0-fix: Stage 10.5 真正的 referenceImages 绑定验证
+    // 检查每个含角色的 shot 的 prompt 是否含 @image 引用，且 referenceImages 数组非空
+    for (const p of prompts) {
+      const hasCharacters = p.content && p.content.some(c => c.role === 'reference_image' && c.characterId);
+      if (hasCharacters) {
+        const hasImageRef = p.prompt && p.prompt.includes('@image');
+        const hasReferenceImages = p.referenceImages && p.referenceImages.length > 0;
+        if (!hasImageRef || !hasReferenceImages) {
+          const errMsg = `❌ STAGE-11 定妆照绑定验证失败: ${p.shotId} | prompt含@image=${hasImageRef} | referenceImages非空=${hasReferenceImages}`;
+          this.log('STAGE-11', `  ${errMsg}`);
+          if (this.mode === 'production') {
+            throw new Error(errMsg);
+          }
+        }
+      }
+    }
+
     return prompts;
   }
 
@@ -8839,7 +8857,8 @@ ${isNirath
     result = 稳定裁剪(result, 3000);
 
     // 4. 二次恢复（防止裁剪时误删关键块）
-    result = 恢复关键块(result, prompt, 3000);
+    // v6.7.0-fix: 从裁剪后的 result 恢复，不从原始 prompt 恢复，避免逆转裁剪决策
+    result = 恢复关键块(result, result, 3000);
 
     return result;
   }
@@ -8955,8 +8974,9 @@ ${isNirath
     }
 
     // 最终裁剪（优先保关键块）
+    // v6.7.0-fix: 从裁剪后的 result 恢复，不从原始 prompt 恢复，避免逆转裁剪决策
     result = 稳定裁剪(result, 3000);
-    result = 恢复关键块(result, prompt || '', 3000);
+    result = 恢复关键块(result, result, 3000);
 
     return result;
   }
