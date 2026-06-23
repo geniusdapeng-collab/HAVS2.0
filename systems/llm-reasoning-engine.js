@@ -201,10 +201,16 @@ class LLMEngine {
         }
       }
 
+      // v6.7.0-fix: 如果 content 有效，将 reasoning_content 截断为摘要，避免外部内存膨胀
+      let trimmedReasoning = reasoningContent;
+      if (finalContent && finalContent.length > 50 && reasoningContent && reasoningContent.length > 200) {
+        trimmedReasoning = reasoningContent.substring(0, 200) + '... (truncated, ' + reasoningContent.length + ' chars)';
+      }
+
       return {
         success: true,
         content: finalContent,
-        reasoning_content: reasoningContent,
+        reasoning_content: trimmedReasoning,
         source: normalized.source,
         tokenCount
         // raw: result  // v6.6-fix: 不返回完整raw响应,减少内存占用
@@ -326,11 +332,17 @@ class LLMEngine {
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`[LLMEngine] ✅ reasonStructured成功 | 耗时:${elapsed}s 尝试:${attempt} source=${normalized.source}`);
 
+        // v6.7.0-fix: 截断 reasoning_content，避免外部内存膨胀
+        let trimmedReasoning = reasoningContent;
+        if (reasoningContent && reasoningContent.length > 200) {
+          trimmedReasoning = reasoningContent.substring(0, 200) + '... (truncated, ' + reasoningContent.length + ' chars)';
+        }
+
         return {
           success: true,
           data: parsed,
           rawContent: finalContent,
-          reasoning_content: reasoningContent,
+          reasoning_content: trimmedReasoning,
           source: normalized.source,
           attempts: attempt,
           elapsed: parseFloat(elapsed)

@@ -1,19 +1,33 @@
 const fs = require('fs');
 const path = require('path');
 
-// v6.6.6-fix: 暴露 GC 函数用于内存管理
-if (!global.gc) {
-  try {
-    require('v8').setFlagsFromString('--expose_gc');
-    global.gc = require('vm').runInNewContext('gc');
-  } catch (e) {
-    // GC 不可用，跳过
+  // v6.7.0-fix: 强制暴露 GC 函数（polyfill 不可靠，但命令行已加 --expose-gc）
+  // 如果命令行已加 --expose-gc，global.gc 会自然存在
+  // 此段作为双重保险：在命令行未加 --expose-gc 时尝试 polyfill
+  if (typeof global.gc !== 'function') {
+    try {
+      require('v8').setFlagsFromString('--expose_gc');
+      global.gc = require('vm').runInNewContext('gc');
+    } catch (e) {
+      console.warn('[WARN] global.gc 不可用，请在启动时加 --expose-gc 参数');
+    }
   }
-}
+  
+  // 验证 GC 可用性
+  if (typeof global.gc === 'function') {
+    console.log('[INIT] ✅ global.gc 可用');
+  } else {
+    console.warn('[INIT] ⚠️ global.gc 不可用，内存管理将受限');
+  }
 
 const { NirathMasterPipeline } = require('./zhuoyue-system/core/nirath-master-pipeline.js');
 const { UserRequirementParser } = require('./zhuoyue-system/systems/user-requirement-parser.js');
+const { MemoryGuard, getMemoryGuard } = require('./lib/memory-guard');
 const { logMemory, dumpMemoryToFile } = require('./systems/runtime-memory-guard');
+
+// v6.7.0-fix: 启动内存守卫（1秒高频采样 + 分级阈值）
+const memGuard = getMemoryGuard();
+memGuard.start();
 
 // v6.6.6: 作者信息模块 - 安装成功与错误时显示联系方式
 let authorInfo;

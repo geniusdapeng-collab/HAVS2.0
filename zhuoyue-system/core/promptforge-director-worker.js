@@ -8,11 +8,27 @@
  * Stage 2b: 摄影指导设计镜头 (Cinematographer)
  * Stage 3: 分镜合成师融合Prompt (Prompt Synthesis)
  * 
+ * v6.7.0-fix: 添加 stdout EPIPE 错误捕获，防止 OOM 时进程崩溃
  * v6.5.63-P3-fix: 支持本地合成模式（无LLM API Key时自动回退，不阻塞pipeline）
  */
 
 const fs = require('fs');
 const path = require('path');
+
+// v6.7.0-fix: 捕获 stdout EPIPE 错误，防止主进程关闭管道后子进程崩溃
+process.stdout.on('error', (err) => {
+  if (err.code === 'EPIPE') {
+    // 主进程已关闭管道，静默退出
+    process.exit(0);
+  }
+});
+
+// v6.7.0-fix: 同样捕获 stderr 错误
+process.stderr.on('error', (err) => {
+  if (err.code === 'EPIPE') {
+    process.exit(0);
+  }
+});
 
 // v6.6.2-fix: 根据环境变量和API Key自动判断，不再硬编码为true
 const LOCAL_MODE =
@@ -53,7 +69,7 @@ async function callLLM(prompt, options = {}) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const result = await Promise.race([
-        engine.generate(prompt, { maxTokens: 8192 }),
+        engine.generate(prompt, { maxTokens: 4096 }),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('LLM timeout')), timeout)
         )

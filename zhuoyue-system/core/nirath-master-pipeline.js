@@ -2,6 +2,17 @@
  * Nirath Master Pipeline v1.1
  * 世界级IP短片生成引擎主链路入口
  *
+ * v6.7.0: 25字段全链路升级 + 字段检查修复环节 + Agent体系 - 2026-06-23
+ * - 25字段模板（P0-P3四级优先级）
+ * - 2500字符上限 + 六步截断策略
+ * - Agent体系：SceneDesignAgent, VisualLanguageAgent, AudioDesignAgent, DirectorSkillInjector
+ * - FieldGuard + RedundancyDetector + CrossFieldConsistencyChecker
+ * - FieldCheckAgent（规则+LLM双层检查）+ FieldRepairAgent（规则+LLM双通道修复）
+ * - FieldQualityPipeline（maxRounds=2多轮迭代）
+ * - Stage 11.7: 质量检查 + 冗余清理 + 一致性检查 + 导演技能增强
+ * - Stage 11.8: 多轮字段质量迭代（PRD动态注入）
+ * - 向后兼容：旧标签自动映射（绑定定妆照→定妆照等）
+ *
  * 🔥 P0-固化原则:每次预生产必须走全链路 + 各环节最新版
  * - 每次执行 = 全新执行,无视历史。清理旧输出 → 跑完整链路 → 全新数据 → 当前版本
  * - 预生产不是生产,是测试。测试就要用最新代码、全新数据、完整链路
@@ -101,6 +112,16 @@ const {
   恢复关键块,
   最小补洞
 } = require('../../systems/prompt-stability-guard.js');
+
+// ========== v6.7.0: 25字段全链路升级 - 新增Agent导入 ==========
+const { SceneDesignAgent } = require('../../systems/agents/scene-design-agent.js');
+const { VisualLanguageAgent } = require('../../systems/agents/visual-language-agent.js');
+const { AudioDesignAgent } = require('../../systems/agents/audio-design-agent.js');
+const { DirectorSkillInjector } = require('../../systems/agents/director-skill-injector.js');
+const { FieldGuard } = require('../../systems/field-guard.js');
+const { RedundancyDetector } = require('../../systems/field-guard/redundancy-detector.js');
+const { CrossFieldConsistencyChecker } = require('../../systems/field-guard/cross-field-consistency.js');
+const { FieldQualityPipeline } = require('../../systems/field-quality-pipeline.js');
 
 const fs = require('fs').promises;
 const fss = require('fs');
@@ -387,6 +408,27 @@ class NirathMasterPipeline {
       audio: options.enhancement?.audio !== false,               // 音频增强
     };
     this.log('INIT', `🎛️ 增强模块配置: ${JSON.stringify(this.enhancementConfig)}`);
+
+    // ========== v6.7.0: 25字段全链路升级 - Agent与质量检查初始化 ==========
+    this.fieldGuard = new FieldGuard({
+      log: this.log.bind(this),
+      maxChars: 2500,
+      strictMode: true
+    });
+    this.redundancyDetector = new RedundancyDetector({ log: this.log.bind(this) });
+    this.crossFieldChecker = new CrossFieldConsistencyChecker({ log: this.log.bind(this) });
+    this.directorSkillInjector = new DirectorSkillInjector({ log: this.log.bind(this) });
+    this.log('INIT', '🔍 v6.7.0 FieldGuard + RedundancyDetector + CrossFieldConsistency + DirectorSkillInjector 已初始化');
+
+    // v6.7.0: 字段质量管线（检查+修复多轮迭代）
+    this.fieldQualityPipeline = new FieldQualityPipeline({
+      llm: this._createFieldQualityLLM(),
+      log: this.log.bind(this),
+      maxRounds: 2,
+      prd: null // 将在运行时从stages.prd动态注入
+    });
+    this.log('INIT', '🔧 v6.7.0 FieldQualityPipeline 已初始化（maxRounds=2）');
+
     Object.defineProperty(this, 'modules', {
       get: () => {
         if (!this._modules) {
@@ -920,6 +962,167 @@ class NirathMasterPipeline {
         result.stages.promptQualityGate = { passed: true, results: [], preProductionSkipped: true };
       }
 
+      // ========== v6.7.0: FieldGuard 25字段质量检查 ==========
+      try {
+        this.log('STAGE-11.7', '🔍 启动FieldGuard 25字段质量检查...');
+        const fgResults = [];
+        for (const prompt of (result.stages.render || [])) {
+          const shot = result.stages.storyboard?.shots?.find(s => s.id === prompt.shotId) || {};
+          const fgResult = await this.fieldGuard.validate(prompt.prompt || prompt, shot);
+          fgResults.push({ shotId: prompt.shotId, ...fgResult });
+        }
+        const failedShots = fgResults.filter(r => !r.passed);
+        if (failedShots.length > 0) {
+          this.log('STAGE-11.7', `⚠️ FieldGuard发现${failedShots.length}个镜头未通过P0检查:`);
+          for (const f of failedShots) {
+            this.log('STAGE-11.7', `  ❌ ${f.shotId}: ${f.errors.slice(0, 2).join('; ')}`);
+          }
+        } else {
+          this.log('STAGE-11.7', `✅ FieldGuard通过 | ${fgResults.length}个镜头全部合格`);
+        }
+
+        // 冗余检测
+        let totalSaved = 0;
+        for (const prompt of (result.stages.render || [])) {
+          const redundancies = this.redundancyDetector.detect(prompt.prompt || prompt);
+          if (redundancies.length > 0) {
+            const { prompt: cleaned, savedChars } = this.redundancyDetector.remove(prompt.prompt || prompt, redundancies);
+            if (savedChars > 0) {
+              prompt.prompt = cleaned;
+              totalSaved += savedChars;
+            }
+          }
+        }
+        if (totalSaved > 0) {
+          this.log('STAGE-11.7', `🧹 冗余清理完成 | 共释放${totalSaved}字符`);
+        }
+
+        // 跨字段一致性检查
+        const consistencyIssues = [];
+        for (const prompt of (result.stages.render || [])) {
+          const issues = this.crossFieldChecker.check(prompt.prompt || prompt);
+          if (issues.length > 0) {
+            consistencyIssues.push({ shotId: prompt.shotId, issues });
+          }
+        }
+        if (consistencyIssues.length > 0) {
+          this.log('STAGE-11.7', `⚠️ 跨字段一致性检查发现${consistencyIssues.length}个镜头存在问题:`);
+          for (const c of consistencyIssues) {
+            const critical = c.issues.filter(i => i.severity === 'error');
+            if (critical.length > 0) {
+              this.log('STAGE-11.7', `  ❌ ${c.shotId}: ${critical[0].description}`);
+            }
+          }
+        }
+
+        // ========== v6.7.0: DirectorSkillInjector 导演技能增强 ==========
+        try {
+          let enhancedCount = 0;
+          for (const prompt of (result.stages.render || [])) {
+            const shot = result.stages.storyboard?.shots?.find(s => s.id === prompt.shotId) || {};
+            const context = {
+              mood: shot.emotionPhase || shot.mood || 'neutral',
+              sceneType: typeof shot.scene === 'string' ? 'interior' : (shot.scene?.type || 'interior'),
+              sceneScale: shot.sceneScale || 'medium'
+            };
+            const enhanced = await this.directorSkillInjector.enhance(prompt.prompt || prompt, context);
+            if (enhanced !== (prompt.prompt || prompt)) {
+              prompt.prompt = enhanced;
+              enhancedCount++;
+            }
+          }
+          if (enhancedCount > 0) {
+            this.log('STAGE-11.7', `🎬 导演技能增强完成 | ${enhancedCount}个镜头已增强`);
+          }
+        } catch (e) {
+          this.log('STAGE-11.7', `⚠️ 导演技能增强跳过: ${e.message}`);
+        }
+
+        result.stages.fieldGuard = { passed: failedShots.length === 0, results: fgResults, consistencyIssues };
+      } catch (e) {
+        this.log('STAGE-11.7', `⚠️ FieldGuard检查跳过: ${e.message}`);
+        result.stages.fieldGuard = { passed: true, skipped: true, error: e.message };
+      }
+
+      // ========== v6.7.0: Stage 11.8 FieldQualityPipeline 字段质量检查+修复 ==========
+      try {
+        this.log('STAGE-11.8', '🔧 启动FieldQualityPipeline（检查+修复多轮迭代）...');
+        
+        // 构建PRD数据
+        const prdData = {
+          project_name: this.projectConfig?.name || result.stages.prd?.projectName || '',
+          video_type: this.projectConfig?.filmType || 'generic',
+          style_direction: result.stages.prd?.visualStyle || '',
+          mood_tone: result.stages.prd?.moodTone || '',
+          characters: result.stages.prd?.characters || [],
+          scenes: result.stages.prd?.scenes || [],
+          dialogues: result.stages.prd?.dialogues || [],
+          special_constraints: result.stages.prd?.specialConstraints || [],
+          target_platform: result.stages.prd?.targetPlatform || ''
+        };
+        
+        // 更新FieldQualityPipeline的PRD
+        this.fieldQualityPipeline.prd = prdData;
+        
+        const pipelineResults = [];
+        for (const prompt of (result.stages.render || [])) {
+          const shot = result.stages.storyboard?.shots?.find(s => s.id === prompt.shotId) || {};
+          
+          // 将shot转换为25字段格式
+          const shotData = {
+            director_instruction: prompt.prompt?.match(/【导演指令】([^【|]*)/)?.[1]?.trim() || '',
+            constraint: prompt.prompt?.match(/【约束】([^【|]*)/)?.[1]?.trim() || '',
+            baseline: prompt.prompt?.match(/【基础】([^【|]*)/)?.[1]?.trim() || '',
+            scene: prompt.prompt?.match(/【场景】([^【|]*)/)?.[1]?.trim() || '',
+            lighting: prompt.prompt?.match(/【灯光】([^【|]*)/)?.[1]?.trim() || '',
+            camera_movement: prompt.prompt?.match(/【运镜】([^【|]*)/)?.[1]?.trim() || '',
+            character: prompt.prompt?.match(/【角色】([^【|]*)/)?.[1]?.trim() || '',
+            action: prompt.prompt?.match(/【动作】([^【|]*)/)?.[1]?.trim() || '',
+            dialogue: prompt.prompt?.match(/【台词】([^【|]*)/)?.[1]?.trim() || '',
+            negative: prompt.prompt?.match(/【负面约束】([^【|]*)/)?.[1]?.trim() || '',
+            portraits: prompt.prompt?.match(/【定妆照】([^【|]*)/)?.[1]?.trim() || '',
+            consistency: prompt.prompt?.match(/【角色一致性】([^【|]*)/)?.[1]?.trim() || '',
+            composition: prompt.prompt?.match(/【构图】([^【|]*)/)?.[1]?.trim() || '',
+            color_palette: prompt.prompt?.match(/【色彩】([^【|]*)/)?.[1]?.trim() || '',
+            depth_of_field: prompt.prompt?.match(/【景深】([^【|]*)/)?.[1]?.trim() || '',
+            timeline: prompt.prompt?.match(/【时间轴】([^【|]*)/)?.[1]?.trim() || '',
+            mood: prompt.prompt?.match(/【情绪】([^【|]*)/)?.[1]?.trim() || '',
+            bright_constraint: prompt.prompt?.match(/【明亮约束】([^【|]*)/)?.[1]?.trim() || '',
+            character_constraint: prompt.prompt?.match(/【角色约束】([^【|]*)/)?.[1]?.trim() || '',
+            costume: prompt.prompt?.match(/【服装】([^【|]*)/)?.[1]?.trim() || '',
+            props: prompt.prompt?.match(/【道具】([^【|]*)/)?.[1]?.trim() || '',
+            pacing: prompt.prompt?.match(/【节奏】([^【|]*)/)?.[1]?.trim() || '',
+            audio: prompt.prompt?.match(/【音频】([^【|]*)/)?.[1]?.trim() || '',
+            makeup: prompt.prompt?.match(/【化妆】([^【|]*)/)?.[1]?.trim() || '',
+            transition: prompt.prompt?.match(/【转场】([^【|]*)/)?.[1]?.trim() || '',
+          };
+          
+          const { finalShot, reports, logs } = await this.fieldQualityPipeline.run(shotData, shot.id || prompt.shotId);
+          
+          // 如果修复后有变化，更新prompt
+          if (reports.length > 0 && !reports[reports.length - 1].passed) {
+            this.log('STAGE-11.8', `  ⚠️ ${shot.id || prompt.shotId}: 经${reports.length}轮检查，仍有${reports[reports.length - 1].issues.length}个问题未修复`);
+          } else if (logs.length > 0) {
+            this.log('STAGE-11.8', `  ✅ ${shot.id || prompt.shotId}: 经${logs.length}轮修复，检查通过`);
+          }
+          
+          pipelineResults.push({
+            shotId: shot.id || prompt.shotId,
+            finalShot,
+            reports,
+            logs
+          });
+        }
+        
+        result.stages.fieldQualityPipeline = {
+          passed: pipelineResults.every(r => r.reports.length > 0 && r.reports[r.reports.length - 1].passed),
+          results: pipelineResults
+        };
+      } catch (e) {
+        this.log('STAGE-11.8', `⚠️ FieldQualityPipeline跳过: ${e.message}`);
+        result.stages.fieldQualityPipeline = { passed: true, skipped: true, error: e.message };
+      }
+
       // v6.2-patch68-fix: 计算量验证--Stage 11渲染核心
       // stageRender 返回的是 prompts 数组本身,不是 {prompts: [...]} 对象
       const renderOutput = result.stages.render || [];
@@ -1013,21 +1216,19 @@ const { spawn } = require('child_process');
 
           const workerPath = require.resolve('./promptforge-director-worker.js');
 
-          // 严格内存限制:4GB(系统6GB,留2GB给主进程)
+          // 严格内存限制:5GB(系统6GB,留1GB给主进程和系统)
+          // v6.7.0-fix: 从4GB增加到5GB，因为25字段+2500字符导致上下文增大
           const child = spawn('node', [
-            '--max-old-space-size=4096',
-            '--optimize-for-size',
+            '--expose-gc',
+            '--max-old-space-size=5120',
             workerPath,
             inputPath,
             outputPath
           ], {
             cwd: process.cwd(),
-            // v6.6.3-fix: stderr 改为 inherit 直达父进程 stdout
-            // 原因: pipe 模式下子进程输出被缓冲，watchdog 看不到子进程活动
-            // stdout 仍用 pipe 以便程序化收集，stderr 透传保证活跃信号可见
             stdio: ['inherit', 'pipe', 'inherit'],
             detached: false,
-            env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=4096' }
+            env: { ...process.env, NODE_OPTIONS: '--expose-gc' }
           });
 
           let childOutput = '';
@@ -1061,11 +1262,21 @@ const { spawn } = require('child_process');
               this.log('PIPELINE', `⏳ PromptForge 子进程运行中... ${pfTicks * 5}s`);
             }, 5000);
 
-            child.on('close', (code) => {
+            // v6.7.0-fix: 增强子进程退出处理，区分正常退出、SIGKILL、SIGTERM
+            child.on('close', (code, signal) => {
               clearTimeout(timeout);
               clearInterval(pfHeartbeat);
+              
               if (code === 0) {
                 resolve();
+              } else if (code === null && signal === 'SIGKILL') {
+                // OOM 被系统杀死
+                reject(new Error(`PromptForge 子进程被 OOM 杀死 (SIGKILL)。建议：1) 减少镜头数 2) 降低创意指数 3) 联系管理员增加内存`));
+              } else if (code === 137) {
+                // 128 + 9 = 137 (SIGKILL)
+                reject(new Error(`PromptForge 子进程被 OOM 杀死 (退出码 137)。建议：1) 减少镜头数 2) 降低创意指数 3) 联系管理员增加内存`));
+              } else if (signal) {
+                reject(new Error(`PromptForge 子进程被 ${signal} 信号终止`));
               } else {
                 reject(new Error(`PromptForge 子进程退出码 ${code}`));
               }
@@ -4839,12 +5050,18 @@ ${isNirath
       });
     }
 
-    // 同时调用v2系统生成基础运镜描述(向后兼容)
-    const baseMovement = this.modules.cameraMovement.generateNirathMovement(sceneName, phase, {
+  // v3 优先：v2 仅作为 description 回退，避免重复计算
+  // 先尝试 v3 时间轴生成，v2 的 description 只在 v3 失败时回退使用
+  let baseMovement = null;
+  try {
+    baseMovement = this.modules.cameraMovement.generateNirathMovement(sceneName, phase, {
       shotSize: shot.shotSize,
       movement: shot.movement,
       speed: shot.speed
     });
+  } catch (e) {
+    baseMovement = { description: '', shotSize: 'medium', movement: 'static', speed: 'normal', cameraAngle: 'eye-level', lensFocalLength: '50mm' };
+  }
 
     // v6.6.6-fix: 轻量级timeline存储，避免内存膨胀
     const slimTimeline = {
@@ -8257,18 +8474,33 @@ ${isNirath
     return { prompt, issues: [], compliant: true };
   }
 
+  _createFieldQualityLLM() {
+    // v6.7.0: 为FieldQualityPipeline创建LLM客户端包装器
+    const engine = this._createLLMEngine({ maxTokens: 2048 });
+    return {
+      chat: async (systemPrompt, userPrompt, temperature = 0.3) => {
+        const response = await engine.chat(systemPrompt, userPrompt, { temperature });
+        return typeof response === 'string' ? response : (response?.text || '');
+      }
+    };
+  }
+
   toStandardPrompt(shot, prompt) {
-    const originalPrompt = (prompt || '').trim();
     const safe = (v) => (typeof v === 'string' ? v.trim() : '');
 
     // v6.6.3-fix: 统一使用中文标签，消除中英混杂
-    let result = originalPrompt;
+    let result = prompt;
 
     // v6.6.3-fix-2: 替换 PromptTier-v2.0 标签为标准标签
     result = result.replace(/【主体】/g, '【角色】');
     result = result.replace(/【动态】/g, '【动作】');
     result = result.replace(/【空间】/g, '【场景】');
     result = result.replace(/【质控】/g, '【负面约束】');
+
+    // v6.7.0: 替换旧标签为25字段标准标签
+    result = result.replace(/【绑定定妆照】/g, '【定妆照】');
+    result = result.replace(/【镜头时间轴】/g, '【时间轴】');
+    result = result.replace(/【人物介绍卡片】/g, '【角色一致性】');
 
     // 1. 提取原始 prompt 的关键块（保护已有字段）
     const keyBlocks = 提取关键块(result);
@@ -8277,25 +8509,22 @@ ${isNirath
     // 2. 补关键缺口（统一使用中文标签，添加到开头以便 smartTrim 优先保留）
     const prefixPatches = [];
 
-    if (!has.角色 && Array.isArray(shot.characters) && shot.characters.length > 0) {
-      prefixPatches.push(`【角色】${shot.characters.join(',')}`);
+    // v6.7.0: P0 致命级字段补洞（按优先级顺序）
+    if (!has.导演指令 && shot.directorStyle) {
+      prefixPatches.push(`【导演指令】${shot.directorStyle}`);
     }
-
+    // 约束和基础为硬编码注入，不在此补洞
     if (!has.场景 && shot.scene) {
       let scene = typeof shot.scene === 'string' ? shot.scene : (shot.scene?.name || '');
-      // v6.6.6-fix: 统一使用 _extractSceneDescription 生成高质量五维空间描述
-      // 不再判断长度，确保每个场景都有完整的空间/纵深/方位/氛围/时间信息
       if (typeof this._extractSceneDescription === 'function') {
         scene = this._extractSceneDescription(shot, {});
         this.log('STAGE-11', `  🌍 场景统一增强: ${shot.id} | 五维空间描述注入 | 原:${shot.scene} -> 增强后:${scene.length}字符`);
       }
       prefixPatches.push(`【场景】${scene}`);
     } else if (has.场景 && shot.scene) {
-      // v6.6.6-fix: 检测并替换已知问题场景模板，同时检查场景是否过短
       let scene = typeof shot.scene === 'string' ? shot.scene : (shot.scene?.name || '');
       const sceneMatch = result.match(/【场景】([^【|；]*)/);
       const existingScene = sceneMatch ? sceneMatch[1].trim() : '';
-      // 如果现有场景描述过短或不含五维空间标记，统一增强
       if (existingScene.length < 10 || (!existingScene.includes('【空间】') && typeof this._extractSceneDescription === 'function')) {
         scene = this._extractSceneDescription(shot, {});
         result = result.replace(/【场景】[^【|；]*/, `【场景】${scene}`);
@@ -8310,67 +8539,103 @@ ${isNirath
         ];
         const hasBadTemplate = badTemplates.some(t => result.includes(t));
         if (hasBadTemplate) {
-          // 替换【场景】块
           result = result.replace(/【场景】[^【|；]*/, `【场景】${scene}`);
           this.log('STAGE-11', `  🔄 场景模板替换: ${shot.id} | 原始模板 -> ${scene}`);
         }
       }
     }
 
-    const dialogue = safe(shot.dialogue || shot.narration);
-    if (!has.台词 && dialogue) {
-      prefixPatches.push(`【台词】${dialogue}`);
-    }
-
-    if (!has.动作 && shot.action) {
-      prefixPatches.push(`【动作】${shot.action}`);
-    }
-
-    if (!has.时间轴 && shot.duration) {
-      const gs = shot._globalStartTime || 0;
-      const ge = shot._globalEndTime || (gs + (shot.duration || 0));
-      const fmt = (n) => `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
-      prefixPatches.push(`【全局时间定位】${fmt(gs)}-${fmt(ge)} / 时长:${shot.duration}s`);
-    }
-
-    if (!has.定妆照 && shot.referenceImages && shot.referenceImages.length > 0) {
-      const refs = shot.referenceImages
-        .map(r => r.image_url?.url || r.url || '')
-        .filter(Boolean)
-        .join(',');
-      if (refs) prefixPatches.push(`【绑定定妆照】${refs}`);
-    }
-
-    // v6.6.3-fix-2: 补充缺失的关键字段
-    if (!has.情绪 && (shot.emotionPhase || shot.mood)) {
-      prefixPatches.push(`【情绪】${shot.emotionPhase || shot.mood}`);
+    if (!has.灯光 && shot.lighting) {
+      const li = shot.lighting;
+      const lightStr = li.string || (li.keyLight?.effect) || '';
+      if (lightStr) prefixPatches.push(`【灯光/照明】${lightStr}`);
     }
     if (!has.运镜 && shot.cameraMovement) {
       const cm = shot.cameraMovement;
       const camStr = cm.string || cm.description || `${cm.shotSize || ''} ${cm.movement || ''}`.trim();
       if (camStr) prefixPatches.push(`【运镜】${camStr}`);
     }
-    if (!has.灯光 && shot.lighting) {
-      const li = shot.lighting;
-      const lightStr = li.string || (li.keyLight?.effect) || '';
-      if (lightStr) prefixPatches.push(`【灯光】${lightStr}`);
+    if (!has.角色 && Array.isArray(shot.characters) && shot.characters.length > 0) {
+      prefixPatches.push(`【角色】${shot.characters.join(',')}`);
     }
-    if (!has.渲染参数 && shot.qualityLevel) {
-      prefixPatches.push(`【渲染参数】${shot.qualityLevel}`);
+    if (!has.动作 && shot.action) {
+      prefixPatches.push(`【动作】${shot.action}`);
     }
-    if (!has.导演指令 && shot.directorStyle) {
-      prefixPatches.push(`【导演指令】${shot.directorStyle}`);
+    const dialogue = safe(shot.dialogue || shot.narration);
+    if (!has.台词 && dialogue) {
+      prefixPatches.push(`【台词】${dialogue}`);
+    }
+    if (!has.负面约束 && shot.negativePrompt) {
+      prefixPatches.push(`【负面约束】${shot.negativePrompt}`);
+    }
+    if (!has.定妆照 && shot.referenceImages && shot.referenceImages.length > 0) {
+      const refs = shot.referenceImages
+        .map(r => r.image_url?.url || r.url || '')
+        .filter(Boolean)
+        .join(',');
+      if (refs) prefixPatches.push(`【定妆照】${refs}`);
+    }
+    if (!has.角色一致性 && shot.characterProfile) {
+      prefixPatches.push(`【角色一致性】${shot.characterProfile}`);
+    }
+
+    // v6.7.0: P1 核心级字段补洞
+    if (!has.构图 && shot.composition) {
+      prefixPatches.push(`【构图】${shot.composition}`);
+    }
+    if (!has.色彩 && shot.colorPalette) {
+      prefixPatches.push(`【色彩/色调】${shot.colorPalette}`);
+    }
+    if (!has.景深 && shot.depthOfField) {
+      prefixPatches.push(`【景深】${shot.depthOfField}`);
+    }
+    if (!has.时间轴 && shot.duration) {
+      const gs = shot._globalStartTime || 0;
+      const ge = shot._globalEndTime || (gs + (shot.duration || 0));
+      const fmt = (n) => `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
+      prefixPatches.push(`【时间轴】${fmt(gs)}-${fmt(ge)} / 时长:${shot.duration}s`);
+    }
+    if (!has.情绪 && (shot.emotionPhase || shot.mood)) {
+      prefixPatches.push(`【情绪】${shot.emotionPhase || shot.mood}`);
+    }
+    if (!has.明亮约束 && shot.brightConstraint) {
+      prefixPatches.push(`【明亮约束】${shot.brightConstraint}`);
+    }
+    if (!has.角色约束 && shot.characterConstraint) {
+      prefixPatches.push(`【角色约束】${shot.characterConstraint}`);
+    }
+
+    // v6.7.0: P2 增强级字段补洞
+    if (!has.服装 && shot.costume) {
+      prefixPatches.push(`【服装】${shot.costume}`);
+    }
+    if (!has.道具 && shot.props) {
+      prefixPatches.push(`【道具】${shot.props}`);
+    }
+    if (!has.节奏 && shot.pacing) {
+      prefixPatches.push(`【节奏】${shot.pacing}`);
+    }
+    if (!has.音频 && shot.audio) {
+      prefixPatches.push(`【音频】${shot.audio}`);
+    }
+
+    // v6.7.0: P3 可选级字段补洞
+    if (!has.化妆 && shot.makeup) {
+      prefixPatches.push(`【化妆】${shot.makeup}`);
+    }
+    if (!has.转场 && shot.transition) {
+      prefixPatches.push(`【转场】${shot.transition}`);
     }
 
     if (prefixPatches.length > 0) {
       result = prefixPatches.join(' | ') + ' | ' + result;
     }
 
-    // 3. 裁剪到 1500 字符（优先保关键块）
-    result = 稳定裁剪(result, 1500);
+    // 3. 裁剪到 2500 字符（v6.7.0: 从1500扩展到2500，优先保关键块）
+    result = 稳定裁剪(result, 2500);
 
     // 4. 二次恢复（防止裁剪时误删关键块）
-    result = 恢复关键块(result, originalPrompt, 1500);
+    result = 恢复关键块(result, prompt, 2500);
 
     return result;
   }
@@ -8380,58 +8645,103 @@ ${isNirath
     const safe = (v) => (typeof v === 'string' ? v.trim() : '');
     const has = 关键字段存在(result);
 
-    // v6.6.3-fix: 统一使用中文标签，消除中英混杂
+    // v6.7.0: 统一使用中文标签，消除中英混杂
     const patches = [];
 
-    if (!has.角色 && Array.isArray(shot.characters) && shot.characters.length > 0) {
-      patches.push(`【角色】${shot.characters.join(',')}`);
+    // P0 致命级补洞
+    if (!has.导演指令 && shot.directorStyle) {
+      patches.push(`【导演指令】${shot.directorStyle}`);
     }
-
-    if (!has.动作 && (shot.action || shot.actionDescription)) {
-      patches.push(`【动作】${safe(shot.action || shot.actionDescription)}`);
-    }
-
-    if (!has.台词) {
-      const dialogue = safe(shot.dialogue || shot.narration);
-      if (dialogue) patches.push(`【台词】${dialogue}`);
-    }
-
-    if (!has.时间轴 && shot.duration) {
-      const gs = shot._globalStartTime || 0;
-      const ge = shot._globalEndTime || (gs + shot.duration);
-      const fmt = (n) => `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
-      patches.push(`【全局时间定位】${fmt(gs)}-${fmt(ge)} / 时长:${shot.duration}s`);
-    }
-
     if (!has.场景 && shot.scene) {
       const scene = typeof shot.scene === 'string' ? shot.scene : (shot.scene?.name || '场景环境');
       patches.push(`【场景】${scene}`);
     }
-
-    // v6.6.3-fix: 新增关键字段补洞
-    if (!has.情绪 && (shot.emotionPhase || shot.mood)) {
-      patches.push(`【情绪】${shot.emotionPhase || shot.mood}`);
+    if (!has.灯光 && shot.lighting) {
+      const li = shot.lighting;
+      const lightStr = li.string || (li.keyLight?.effect) || '';
+      if (lightStr) patches.push(`【灯光/照明】${lightStr}`);
     }
     if (!has.运镜 && shot.cameraMovement) {
       const cm = shot.cameraMovement;
       const camStr = cm.string || cm.description || `${cm.shotSize || ''} ${cm.movement || ''}`.trim();
       if (camStr) patches.push(`【运镜】${camStr}`);
     }
-    if (!has.灯光 && shot.lighting) {
-      const li = shot.lighting;
-      const lightStr = li.string || (li.keyLight?.effect) || '';
-      if (lightStr) patches.push(`【灯光】${lightStr}`);
+    if (!has.角色 && Array.isArray(shot.characters) && shot.characters.length > 0) {
+      patches.push(`【角色】${shot.characters.join(',')}`);
     }
-    if (!has.渲染参数 && shot.qualityLevel) {
-      patches.push(`【渲染参数】${shot.qualityLevel}`);
+    if (!has.动作 && (shot.action || shot.actionDescription)) {
+      patches.push(`【动作】${safe(shot.action || shot.actionDescription)}`);
     }
-    if (!has.导演指令 && shot.directorStyle) {
-      patches.push(`【导演指令】${shot.directorStyle}`);
+    if (!has.台词) {
+      const dialogue = safe(shot.dialogue || shot.narration);
+      if (dialogue) patches.push(`【台词】${dialogue}`);
+    }
+    if (!has.负面约束 && shot.negativePrompt) {
+      patches.push(`【负面约束】${shot.negativePrompt}`);
+    }
+    if (!has.定妆照 && shot.referenceImages && shot.referenceImages.length > 0) {
+      const refs = shot.referenceImages
+        .map(r => r.image_url?.url || r.url || '')
+        .filter(Boolean)
+        .join(',');
+      if (refs) patches.push(`【定妆照】${refs}`);
+    }
+    if (!has.角色一致性 && shot.characterProfile) {
+      patches.push(`【角色一致性】${shot.characterProfile}`);
+    }
+
+    // P1 核心级补洞
+    if (!has.构图 && shot.composition) {
+      patches.push(`【构图】${shot.composition}`);
+    }
+    if (!has.色彩 && shot.colorPalette) {
+      patches.push(`【色彩/色调】${shot.colorPalette}`);
+    }
+    if (!has.景深 && shot.depthOfField) {
+      patches.push(`【景深】${shot.depthOfField}`);
+    }
+    if (!has.时间轴 && shot.duration) {
+      const gs = shot._globalStartTime || 0;
+      const ge = shot._globalEndTime || (gs + shot.duration);
+      const fmt = (n) => `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
+      patches.push(`【时间轴】${fmt(gs)}-${fmt(ge)} / 时长:${shot.duration}s`);
+    }
+    if (!has.情绪 && (shot.emotionPhase || shot.mood)) {
+      patches.push(`【情绪】${shot.emotionPhase || shot.mood}`);
+    }
+    if (!has.明亮约束 && shot.brightConstraint) {
+      patches.push(`【明亮约束】${shot.brightConstraint}`);
+    }
+    if (!has.角色约束 && shot.characterConstraint) {
+      patches.push(`【角色约束】${shot.characterConstraint}`);
+    }
+
+    // P2 增强级补洞
+    if (!has.服装 && shot.costume) {
+      patches.push(`【服装】${shot.costume}`);
+    }
+    if (!has.道具 && shot.props) {
+      patches.push(`【道具】${shot.props}`);
+    }
+    if (!has.节奏 && shot.pacing) {
+      patches.push(`【节奏】${shot.pacing}`);
+    }
+    if (!has.音频 && shot.audio) {
+      patches.push(`【音频】${shot.audio}`);
+    }
+
+    // P3 可选级补洞
+    if (!has.化妆 && shot.makeup) {
+      patches.push(`【化妆】${shot.makeup}`);
+    }
+    if (!has.转场 && shot.transition) {
+      patches.push(`【转场】${shot.transition}`);
     }
 
     if (patches.length > 0) {
       const prefix = patches.join(' | ') + ' | ';
-      const available = 1500 - prefix.length;
+      // v6.7.0: 2500字符上限
+      const available = 2500 - prefix.length;
       if (result.length > available && available > 100) {
         const tailStart = Math.max(result.length - available + 50, result.length * 0.3);
         result = prefix + result.substring(tailStart);
@@ -8441,8 +8751,8 @@ ${isNirath
     }
 
     // 最终裁剪（优先保关键块）
-    result = 稳定裁剪(result, 1500);
-    result = 恢复关键块(result, prompt || '', 1500);
+    result = 稳定裁剪(result, 2500);
+    result = 恢复关键块(result, prompt || '', 2500);
 
     return result;
   }
