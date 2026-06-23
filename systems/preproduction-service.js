@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path');
-const { NirathMasterPipeline } = require('../systems/nirath-master-pipeline.js');
+const { NirathMasterPipeline } = require('../zhuoyue-system/core/nirath-master-pipeline.js');
 const { StatusReporter } = require('../systems/status-reporter.js');
 const { cleanOutputFiles } = require('./output-cleaner');
 const { writeJsonReport, writeMarkdownReport } = require('./report-writer');

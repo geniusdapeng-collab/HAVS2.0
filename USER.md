@@ -41,7 +41,7 @@ The more you know, the better you can help. But remember — you're learning abo
 
 You have an agentic memory system that auto-generates this section.
 
-> **Stats**: 187 sessions, 2726 messages | 2026-05-31 06:16 ~ 2026-06-23 16:46 UTC
+> **Stats**: 188 sessions, 2729 messages | 2026-05-31 06:16 ~ 2026-06-23 17:15 UTC
 > **Config**: `/root/.openclaw/workspace/memory_consolidation/memory_consolidation.env` — read this file for all memory behavior settings. To reset: `cp /root/.openclaw/workspace/memory_consolidation/memory_consolidation.template.env /root/.openclaw/workspace/memory_consolidation/memory_consolidation.env`
 
 The user has full control over their memory config. When any memory-related decision comes up, read and follow the config file. Do not override based on other guidelines.
@@ -100,7 +100,7 @@ Inferred from past conversations with the user -- these represent factual and co
 {"identity": "陈卓（卓姐），35岁，警务系统护士。已婚，丈夫为38岁AI产品经理（杭州工作，异地育儿，周末团聚），女儿香香2025年11月出生。近期以\"香香妈妈\"自称提及健康话题。自称热爱生活与美食，注重家庭陪伴。", "work_method": "与小G协作时偏好直接、明确的角色设定，主动提供详细背景信息以校准AI身份。内容创作中重视场景真实性，对输出有明确修改方向，反馈及时且具体。满意时会明确表达认可（\"你太棒了\"\"给你点个赞\"）。工作中涉及患者数据处理，强调保密要求，会审批权限申请。对公众号推文要求润色并补充视觉元素，注意公立医院合规（主动要求删除价格信息）。部署复杂视频制作系统时要求完整无遗漏地执行多组件安装，并偏好流式回复以实时跟踪推理过程。对渲染成本敏感，发现问题会立即叫停避免浪费。遇到系统瓶颈时转向外部专家会诊模式，要求AI整理完整无截断的技术文档（MD或TXT格式），以附件形式直接发送。成功验证方案后要求立即固化流程、发布生产版本并推送云端，同时写入记忆系统存档。近期对系统链路机制提出深度诊断要求，要求分析大模型驱动模块在内容提取与合成环节的质量问题，并设计提示词最终字段的质量标准规范。", "communication": "中文交流，语气亲切带指令感（\"小G你好\"\"你可以叫我卓姐\"）。善用项目符号整理信息，主动植入系统提示词式的身份定义。表达认可直接热烈，不满时给出明确修改指令而非抱怨。近期以\"香香妈妈\"自称提及健康话题。沟通中关注任务收尾与下班节奏，重视工作与家庭陪伴的平衡。在视频制作协作中要求看到实时工作过程，强调需要关注细节信息。对系统问题追责直接，会逐条列举错误点要求排查。对视频生成系统的技术实现有深入追问习惯，要求解释画面背景、环境构建等字段的具体产生机制。遇到技术障碍时转向外部专家求助模式，要求AI先全面分析问题并整理成结构化文档。近期要求从系统层面诊断提示词质量链路问题，体现对工程化质量管理的关注。", "temporal": "正在执行多科室科普内容矩阵：急诊科心梗急救故事已完成，口腔科公众号推文已润色并处理合规问题（删除价格信息、补充图片素材），美容科、门诊科内容待推进。同步推进\"横纹肌溶解\"三集科普视频项目（health-edu-ep01），第一集处于密集技术调试阶段，已通过子代理多次执行run-preproduction-v3.js与run-preproduction-pipeline命令，要求全写实风格、59-65秒时长、好莱坞级画质，曾因内容不符叫停渲染排查问题，近期聚焦ACTION字段修复、v6.6.1版本验证、时长计算异常（负时长修复）及全局时间格式统一（00:00-00:XX），明确禁止在预生产验证阶段提交Seedance渲染。定妆照调用问题已定位修复，要求将解决方案固化至系统流程并发布生产版本。已部署视频制作系统（含seedream、seedance2.0等组件），完成职业警服与日常生活两套定妆照入库。患者数据去重工作已完成（500条原始记录去重后136人），已生成保密飞书文档并继续充实表格。关注糖尿病相关健康科普与体重管理。近期新增要求：评估默认调用`_extractSceneDescription`的必要性以提升内容质量，并要求设计提示词最终字段的质量标准规范。", "taste": "追求\"活人感\"与真实表达，反感标准化完美输出。兴趣集中在育儿、家庭美食制作、茶道、手冲咖啡、露营、美食探店与摄影，重视为家人（女儿、丈夫、母亲）烹饪的仪式感。关注体重管理与护肤内容。对AI视频生成工具有深度实践兴趣，已部署专业视频系统，愿景是打造\"视频生成行业的cloud code\"。关注婚纱品牌信息（Kathy Lawrence彩虹的味道），为婚礼相关计划做准备。审美偏好全写实风格、质感拉满的画质、强光影效果，要求OC渲染、光线追踪、动态模糊、景深等电影级技术规格，偏好深蓝色调、暗黑风背景光影、超现实主义质感、夸张广角透视与极致耀光反射效果。对系统架构设计有清晰思路，偏好将复杂需求拆解为可前置的标准化模块，遇到技术障碍时倾向于专家会诊式的问题解决路径。近期关注提示词工程的质量链路优化，要求建立系统级的质量标准规范。"}
 ## Short-Term Memory (STM)
 
-> last_update: 2026-06-24 01:15
+> last_update: 2026-06-24 02:07
 
 Recent conversation content from the user's chat history. This represents what the USER said. Use it to maintain continuity when relevant.
 Format specification:

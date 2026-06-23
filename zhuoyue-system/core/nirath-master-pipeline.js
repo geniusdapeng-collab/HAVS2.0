@@ -714,32 +714,54 @@ class NirathMasterPipeline {
     // 辅助方法:包装每个Stage,自动审计 + 真实耗时计时
     const stageTimings = {}; // v6.2-patch68-fix: 记录每个Stage真实耗时
     const runStage = async (stageName, stageFn) => {
-      const stageStart = Date.now(); // 真实计时开始
+      const stageStart = Date.now();
       enforcer.recordStageStart(stageName, JSON.stringify(stageFn.toString()));
-      try {
-        const output = await stageFn();
-        const stageDuration = Date.now() - stageStart; // 真实耗时
-        stageTimings[stageName] = stageDuration;
 
-        // v6.2-patch68-fix: 性能基线记录
-        const baselineResult = performanceBaseline.record(stageName, stageDuration);
-        if (baselineResult.alert) {
-          this.log('PIPELINE', baselineResult.alert.message);
+      const MAX_RETRIES = 3;
+      let lastError = null;
+
+      // P1-8-fix: 保存输入快照，重试前回滚被污染的数据
+      const snapshotStages = { ...result.stages };
+
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          // 回滚：浅拷贝恢复，避免重试读到被污染的数据
+          if (attempt > 1) {
+            result.stages = { ...snapshotStages };
+            this.log('PIPELINE', `🔄 ${stageName} 第${attempt}次尝试，已回滚阶段数据快照`);
+          }
+
+          const output = await stageFn();
+          const stageDuration = Date.now() - stageStart;
+          stageTimings[stageName] = stageDuration;
+
+          const baselineResult = performanceBaseline.record(stageName, stageDuration);
+          if (baselineResult.alert) {
+            this.log('PIPELINE', baselineResult.alert.message);
+          }
+          if (stageDuration < 1) {
+            this.log('PIPELINE', `⚠️ [性能警告] ${stageName} 耗时仅${stageDuration}ms,疑似空转或未真实执行`);
+          }
+
+          enforcer.recordStageEnd(stageName, JSON.stringify(output));
+          return output;
+        } catch (e) {
+          lastError = e;
+          const stageDuration = Date.now() - stageStart;
+          stageTimings[stageName] = stageDuration;
+          performanceBaseline.record(stageName, stageDuration);
+          enforcer.recordStageEnd(stageName, JSON.stringify({ error: e.message, attempt }));
+
+          if (attempt < MAX_RETRIES) {
+            const jitter = Math.random() * 500;
+            const wait = 1000 * Math.pow(2, attempt - 1) + jitter;
+            this.log('PIPELINE', `⚠️ ${stageName} 第${attempt}/${MAX_RETRIES}次失败: ${e.message} | ${Math.round(wait)}ms后重试`);
+            await new Promise(r => setTimeout(r, wait));
+          } else {
+            this.log('PIPELINE', `❌ ${stageName} ${MAX_RETRIES}次重试全部失败，链路中断: ${e.message}`);
+            throw lastError;
+          }
         }
-
-        // v6.2-patch68-fix: 单个Stage耗时异常检查(<1ms = 疑似空转)
-        if (stageDuration < 1) {
-          this.log('PIPELINE', `⚠️ [性能警告] ${stageName} 耗时仅${stageDuration}ms,疑似空转或未真实执行`);
-        }
-
-        enforcer.recordStageEnd(stageName, JSON.stringify(output));
-        return output;
-      } catch (e) {
-        const stageDuration = Date.now() - stageStart;
-        stageTimings[stageName] = stageDuration;
-        performanceBaseline.record(stageName, stageDuration);
-        enforcer.recordStageEnd(stageName, JSON.stringify({ error: e.message }));
-        throw e;
       }
     };
 
@@ -5591,6 +5613,27 @@ ${isNirath
             scene: shot.scene || '未指定',
             referenceImages: shot.referenceImages || [],
             mouthAction: shot.mouthAction,
+            // P1-7-fix: 补充内容分支标准字段，避免下游遍历缺失
+            content: [],
+            mood: '',
+            camera: null,
+            cameraString: '',
+            lighting: null,
+            lightingString: '',
+            characterRef: '',
+            character: '',
+            action: '',
+            timeline: null,
+            timelineString: '',
+            backgroundSound: null,
+            backgroundSoundString: '',
+            physicsLayer: '',
+            colorScience: '',
+            negativePrompt: '',
+            renderStyle: '',
+            directorStyle: '',
+            priorities: [],
+            promptCharCount: savedShot.prompt.length || 0,
           });
           this.log('STAGE-11', `  🔄 从断点恢复: ${shot.id} | 已跳过`);
           continue;
@@ -5667,7 +5710,28 @@ ${isNirath
           // v6.37-fix: 添加可选字段
           emotionPhase: shot.emotionPhase || 'neutral',
           importance: shot.importance || 5,
-          visualComplexity: shot.visualComplexity || 5
+          visualComplexity: shot.visualComplexity || 5,
+          // P1-7-fix: 补充内容分支标准字段，避免下游遍历缺失
+          content: [],
+          mood: '',
+          camera: null,
+          cameraString: '',
+          lighting: null,
+          lightingString: '',
+          characterRef: '',
+          character: '',
+          action: '',
+          timeline: null,
+          timelineString: '',
+          backgroundSound: null,
+          backgroundSoundString: '',
+          physicsLayer: '',
+          colorScience: '',
+          negativePrompt: '',
+          renderStyle: '',
+          directorStyle: '',
+          priorities: [],
+          promptCharCount: openingPrompt.length || 0,
         });
 
         // v6.6.1-fix: 片头完成后落盘checkpoint

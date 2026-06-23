@@ -6,21 +6,18 @@ const { normalizeLLMOutput } = require('./llm-output-normalizer');
 
 class LLMEngine {
   constructor(options = {}) {
-    this.model = options.model || 'kimi-k2p6';
-    this.maxTokens = options.maxTokens || 4096;
-  // v6.6.3-fix: 超时 10 分钟→2 分钟
-  // 原因: kimi-k2p6 正常响应 30-120 秒；超过 2 分钟大概率是 API 卡死
-  // 配合心跳保活，即使超时也能快速 retry，避免长时间空等
-  this.timeoutMs = options.timeoutMs || 120000;
-    this.temperature = options.temperature ?? 1;  // v6.6.5-fix: 允许覆盖，默认1
-    this.topP = options.topP ?? 0.95;            // v6.6.5-fix: 允许覆盖，默认0.95
-    this.maxRetries = options.maxRetries || 3;
+    this.model = options.model || process.env.STORMAXE_MODEL || 'kimi-k2p6';
+    this.maxTokens = options.maxTokens || parseInt(process.env.STORMAXE_MAX_TOKENS, 10) || 4096;
+    this.timeoutMs = options.timeoutMs || parseInt(process.env.STORMAXE_TIMEOUT_MS, 10) || 180000;
+    this.temperature = options.temperature ?? (process.env.STORMAXE_TEMPERATURE ? parseFloat(process.env.STORMAXE_TEMPERATURE) : 1);
+    this.topP = options.topP ?? 0.95;
+    this.maxRetries = options.maxRetries || parseInt(process.env.STORMAXE_MAX_RETRIES, 10) || 3;
     this.contextWindow = options.contextWindow || 8192;
     this.conversationHistory = [];
     this.stats = { totalCalls: 0, totalTokens: 0, totalDuration: 0, errors: 0 };
     this.mode = options.mode || 'production';
-    this.baseUrl = options.baseUrl || 'https://agent-gw.kimi.com/coding/v1/chat/completions';
-    this.apiKey = options.apiKey || process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || process.env.KIMI_PLUGIN_API_KEY;
+    this.baseUrl = options.baseUrl || process.env.STORMAXE_BASE_URL || 'https://agent-gw.kimi.com/coding/v1/chat/completions';
+    this.apiKey = options.apiKey || process.env.STORMAXE_API_KEY || process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || process.env.KIMI_PLUGIN_API_KEY;
 
     if (!this.apiKey) {
       console.warn('[LLMEngine] ⚠️ 未检测到 API Key，请确认环境变量 KIMI_API_KEY 或 MOONSHOT_API_KEY');
@@ -60,6 +57,14 @@ class LLMEngine {
     try {
       const res = await fetch(url, { ...options, signal: controller.signal });
       return res;
+    } catch (err) {
+      if (err.name === 'AbortError' || err.code === 'ABORT_ERR') {
+        const error = new Error(`Request timeout after ${timeoutMs}ms`);
+        error.code = 'TIMEOUT';
+        error.original = err;
+        throw error;
+      }
+      throw err;
     } finally {
       clearTimeout(timer);
       clearInterval(heartbeat);
@@ -256,8 +261,8 @@ class LLMEngine {
           lastError = result.error;
           console.warn(`[LLMEngine] ⚠️ reasonStructured attempt ${attempt}/${maxRetries} API失败: ${lastError}`);
           if (attempt < maxRetries) {
-            const wait = 1000 * Math.pow(2, attempt - 1);
-            console.log(`[LLMEngine] ${wait}ms 后重试...`);
+            const wait = 1000 * Math.pow(2, attempt - 1) + Math.random() * 500;
+            console.log(`[LLMEngine] ${Math.round(wait)}ms 后重试...`);
             await new Promise(r => setTimeout(r, wait));
           }
           continue;
@@ -352,8 +357,8 @@ class LLMEngine {
         lastError = err;
         console.log(`[LLMEngine] ❌ 第 ${attempt}/${maxRetries} 次失败: ${err.message}`);
         if (attempt < maxRetries) {
-          const wait = 1000 * Math.pow(2, attempt - 1);
-          console.log(`[LLMEngine] ${wait}ms 后重试...`);
+          const wait = 1000 * Math.pow(2, attempt - 1) + Math.random() * 500;
+          console.log(`[LLMEngine] ${Math.round(wait)}ms 后重试...`);
           await new Promise(r => setTimeout(r, wait));
         }
       }

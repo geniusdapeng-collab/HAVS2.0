@@ -46,6 +46,7 @@ class CheckReport {
 class RuleChecker {
   constructor(options = {}) {
     this.log = options.log || console.log;
+    this.mode = options.mode || 'nirath'; // P1-4-fix: 模式感知
     this.SHOT_SIZE_PATTERNS = [
       /extreme long shot/i, /establishing shot/i, /long shot/i, /full shot/i,
       /medium shot/i, /close-?up/i, /extreme close-?up/i, /wide shot/i,
@@ -59,6 +60,12 @@ class RuleChecker {
       /hard cut/i, /fade in/i, /fade out/i, /dissolve/i, /wipe/i, /zoom/i,
       /切镜/i, /淡入/i, /淡出/i, /叠化/i, /划像/i
     ];
+  }
+
+  // P1-4-fix: 模式感知——generic模式下FATAL降级为MAJOR
+  _severity(defaultSeverity) {
+    if (this.mode === 'generic' && defaultSeverity === 'FATAL') return 'MAJOR';
+    return defaultSeverity;
   }
 
   check(shot) {
@@ -107,7 +114,7 @@ class RuleChecker {
       if (missing.length > 0) {
         issues.push(new Issue({
           field_en: 'director_instruction', field_cn: '导演指令',
-          severity: 'FATAL', issue_type: 'INCOMPLETE',
+          severity: this._severity('FATAL'), issue_type: 'INCOMPLETE',
           description: `导演指令缺少要素：${missing.join('、')}`,
           suggestion: '导演指令须覆盖四要素（风格定位+写实要求+情绪基调+技术方向）',
           current_value: di.slice(0, 60)
@@ -127,7 +134,7 @@ class RuleChecker {
       if (missing.length > 0) {
         issues.push(new Issue({
           field_en: 'constraint', field_cn: '约束',
-          severity: 'FATAL', issue_type: 'INCOMPLETE',
+          severity: this._severity('FATAL'), issue_type: 'INCOMPLETE',
           description: `约束字段缺少技术参数：${missing.join('、')}`,
           suggestion: '约束须包含画幅+分辨率+格式+帧率',
           current_value: cs.slice(0, 60)
@@ -146,7 +153,7 @@ class RuleChecker {
       if (missing.length > 0) {
         issues.push(new Issue({
           field_en: 'lighting', field_cn: '灯光',
-          severity: 'FATAL', issue_type: 'INCOMPLETE',
+          severity: this._severity('FATAL'), issue_type: 'INCOMPLETE',
           description: `灯光字段缺少要素：${missing.join('、')}`,
           suggestion: '灯光须含主光+色温+光质三要素',
           current_value: lt.slice(0, 60)
@@ -168,7 +175,7 @@ class RuleChecker {
       if (missing.length > 0) {
         issues.push(new Issue({
           field_en: 'camera_movement', field_cn: '运镜',
-          severity: 'FATAL', issue_type: 'INCOMPLETE',
+          severity: this._severity('FATAL'), issue_type: 'INCOMPLETE',
           description: `运镜字段缺少要素：${missing.join('、')}`,
           suggestion: '运镜须含运动方式+速度+时间分布',
           current_value: cm.slice(0, 60)
@@ -183,7 +190,7 @@ class RuleChecker {
       if (!ngLower.includes('no text') || !ngLower.includes('no watermark')) {
         issues.push(new Issue({
           field_en: 'negative', field_cn: '负面约束',
-          severity: 'FATAL', issue_type: 'INCOMPLETE',
+          severity: this._severity('FATAL'), issue_type: 'INCOMPLETE',
           description: '负面约束缺少基础排除项：no text 和 no watermark',
           suggestion: '负面约束必须包含 no text, no watermark 两项基础排除',
           current_value: ng.slice(0, 60)
@@ -254,7 +261,7 @@ class RuleChecker {
     if (pt && !/\/characters\/[\w_]+\/portrait_v\d+\.(png|jpg)/i.test(pt)) {
       issues.push(new Issue({
         field_en: 'portraits', field_cn: '定妆照',
-        severity: 'FATAL', issue_type: 'FORMAT_ERROR',
+        severity: this._severity('FATAL'), issue_type: 'FORMAT_ERROR',
         description: `定妆照路径格式不规范：${pt.slice(0, 40)}`,
         suggestion: '路径格式应为：/characters/{角色英文名}/portrait_v{版本号}.{png|jpg}',
         current_value: pt.slice(0, 40)
@@ -267,7 +274,7 @@ class RuleChecker {
       if (!/[。！？…]$/.test(dl)) {
         issues.push(new Issue({
           field_en: 'dialogue', field_cn: '台词',
-          severity: 'FATAL', issue_type: 'FORMAT_ERROR',
+          severity: this._severity('FATAL'), issue_type: 'FORMAT_ERROR',
           description: '台词缺少句末标点（须以 。！？… 结尾）',
           suggestion: '句末标点是口型闭合的信号标记，不可省略',
           current_value: dl.slice(0, 60)

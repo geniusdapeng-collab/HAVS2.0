@@ -1,3 +1,14 @@
+/** *
+ * ⚠️ DEPRECATED - This is the old v6.5.13 version kept for historical reference only.
+ * ⚠️ 生产版本已迁移至: zhuoyue-system/core/nirath-master-pipeline.js
+ * ⚠️ 请勿直接调用此文件进行预生产或渲染任务。
+ * */
+/**
+ * ⚠️ DEPRECATED: 此文件为旧版本，已废弃。
+ * 生产环境请使用: zhuoyue-system/core/nirath-master-pipeline.js
+ * 保留此文件仅作历史参考，请勿在此文件上做新修改。
+ */
+
 /**
  * Nirath Master Pipeline v1.1
  * 世界级IP短片生成引擎主链路入口
@@ -217,6 +228,7 @@ const WORKSPACE = process.env.WORKSPACE_DIR || path.join(__dirname, '..');
 
 class NirathMasterPipeline {
   constructor(options = {}) {
+    console.warn('[DEPRECATED] systems/nirath-master-pipeline.js is deprecated. Production version moved to zhuoyue-system/core/nirath-master-pipeline.js. Do not use this file for new production tasks.');
     this.mode = options.mode || 'nirath'; // 'generic' | 'nirath'
     this.projectConfig = options.projectConfig || {};
     this.useLLM = options.useLLM !== false; // v6.2-patch71-fix: 默认启用LLM
@@ -8579,5 +8591,8 @@ async function runStandaloneStage(pipeline, stageName, upstreamStages = {}, inpu
     return { stageName, error: err.message, elapsedMs: elapsed, success: false };
   }
 }
+
+// ⚠️ DEPRECATED 警告：旧版本加载提醒
+console.warn('[DEPRECATED] systems/nirath-master-pipeline.js 是旧版本，已废弃。生产环境请使用 zhuoyue-system/core/nirath-master-pipeline.js');
 
 module.exports = { NirathMasterPipeline, runStandaloneStage };
