@@ -1025,10 +1025,13 @@ class NirathMasterPipeline {
             }
           }
           // 重新校验
-          const reCheck = (result.stages.render || []).map(p => {
+          // P0-fix: validate 是 async，必须用 for...of + await，不能用同步 .map
+          const reCheck = [];
+          for (const p of (result.stages.render || [])) {
             const s = result.stages.storyboard?.shots?.find(x => x.id === p.shotId) || {};
-            return { shotId: p.shotId, ...this.fieldGuard.validate(p.prompt || p, s) };
-          });
+            const r = await this.fieldGuard.validate(p.prompt || p, s);
+            reCheck.push({ shotId: p.shotId, ...r });
+          }
           const stillFailed = reCheck.filter(r => !r.passed);
           if (stillFailed.length > 0) {
             this.log('STAGE-11.7', `⚠️ 二次补洞后仍有 ${stillFailed.length} 个镜头 P0 不达标，标记为质量告警`);
@@ -1472,13 +1475,20 @@ const { spawn } = require('child_process');
           // 【v6.3-patch7-fix】任何异常发生时确保 render 数据恢复
           result.stages.render = originalRenderBackup;
 
+          // P1-fix: 超时/SIGKILL 升级为 error，而非 warning
+          const isTimeout = e.message.includes('超时') || e.message.includes('timeout') || e.message.includes('SIGKILL') || e.message.includes('137');
           this.log('PIPELINE', `⚠️ PromptForge Director 失败: ${e.message},已恢复原始 Prompt`);
           result.errors.push({
             stage: 'PROMPTFORGE-DIRECTOR',
             message: e.message,
             stack: e.stack,
-            severity: 'warning'
+            severity: isTimeout ? 'error' : 'warning'
           });
+          // P1-fix: 记录算力损失
+          if (isTimeout) {
+            result.warnings = result.warnings || [];
+            result.warnings.push(`PromptForge 子进程超时/SIGKILL，已回退未优化 Prompt，质量可能降级`);
+          }
 
           // 异常时也清理临时文件
           try { fs.unlinkSync(inputPath); } catch (e) { /* ignore */ }
@@ -3831,61 +3841,26 @@ ${isNirath
             this.log('STAGE-5.2', `🌍 Nirath锚点注入完成: ${injectedCount}/${scShots.length} 镜注入`);
           }
 
-            // v6.2-patch106-3-fix: S02发现场景台词优化 — v6.6.4-root-fix: 教育片禁用
+            // P1-fix: 合并重复的 Nirath 优化调用，同一 shot 只优化一次
           if (this.isNirathContent) {
+            let optimizedCount = 0;
+            let unifiedCount = 0;
             scShots.forEach(shot => {
               if (shot.type === 'discovery' || shot.shotType === 'discovery') {
                 this._optimizeDiscoverySceneDialogue(shot, shot.scene);
+                optimizedCount++;
               }
-            });
-            const optimizedCount = scShots.filter(s => s._dangerLevel).length;
-            if (optimizedCount > 0) {
-              this.log('STAGE-7', `  🎭 S02发现场景优化: ${optimizedCount}镜 | 台词与视觉匹配`);
-            }
-          }
-
-          // v6.2-patch106-3-fix: S02发现场景台词优化
-          if (this.mode === 'nirath') {
-            scShots.forEach(shot => {
-              if (shot.type === 'discovery' || shot.shotType === 'discovery') {
-                this._optimizeDiscoverySceneDialogue(shot, shot.scene);
-              }
-            });
-            const optimizedCount = scShots.filter(s => s._dangerLevel).length;
-            if (optimizedCount > 0) {
-              this.log('STAGE-7', `  🎭 S02发现场景优化: ${optimizedCount}镜 | 台词与视觉匹配`);
-            }
-          }
-
-          // v6.2-patch106-4-fix: S05结尾场景情绪统一 — v6.6.4-root-fix: 教育片禁用
-          if (this.isNirathContent) {
-            scShots.forEach(shot => {
               if (shot.type === 'closing' || shot.shotType === 'closing' || shot.emotionPhase === 'closing') {
                 this._unifyClosingSceneEmotion(shot);
+                unifiedCount++;
               }
             });
-          }
-
-          // v6.2-patch106-3-fix: S02发现场景台词优化
-          if (this.mode === 'nirath') {
-            scShots.forEach(shot => {
-              if (shot.type === 'discovery' || shot.shotType === 'discovery') {
-                this._optimizeDiscoverySceneDialogue(shot, shot.scene);
-              }
-            });
-            const optimizedCount = scShots.filter(s => s._dangerLevel).length;
             if (optimizedCount > 0) {
               this.log('STAGE-7', `  🎭 S02发现场景优化: ${optimizedCount}镜 | 台词与视觉匹配`);
             }
-          }
-
-          // v6.2-patch106-4-fix: S05结尾场景情绪统一
-          if (this.mode === 'nirath') {
-            scShots.forEach(shot => {
-              if (shot.type === 'closing' || shot.shotType === 'closing' || shot.emotionPhase === 'closing') {
-                this._unifyClosingSceneEmotion(shot);
-              }
-            });
+            if (unifiedCount > 0) {
+              this.log('STAGE-7', `  🎭 S05结尾场景情绪统一: ${unifiedCount}镜`);
+            }
           }
 
           // v6.2-patch106-5-fix: S03对峙场景台词视觉化 — v6.6.4-root-fix: 教育片禁用
@@ -5589,7 +5564,9 @@ ${isNirath
     const completedShotMap = new Map();
     if (saved11 && Array.isArray(saved11.shots) && saved11.shots.length > 0) {
       for (const s of saved11.shots) {
-        completedShotMap.set(s.id, s);
+        // P1-fix: 记录 id + 该 shot 的内容指纹（场景+时长+类型）
+        const fingerprint = `${s.id}::${s.scene || ''}::${s.duration || 0}::${s.type || ''}`;
+        completedShotMap.set(fingerprint, s);
       }
       this.log('STAGE-11', `🔄 发现断点: 已完成 ${saved11.shots.length}/${storyboard.shots.length} 个shot`);
     }
@@ -5597,9 +5574,10 @@ ${isNirath
     for (let i = 0; i < storyboard.shots.length; i++) {
       const shot = storyboard.shots[i];
       
-      // 断点恢复：跳过已完成的shot
-      if (completedShotMap.has(shot.id)) {
-        const savedShot = completedShotMap.get(shot.id);
+      // P1-fix: 用内容指纹匹配，而非仅 id。内容变更则指纹不匹配，强制重新生成
+      const fingerprint = `${shot.id}::${shot.scene || ''}::${shot.duration || 0}::${shot.type || ''}`;
+      if (completedShotMap.has(fingerprint)) {
+        const savedShot = completedShotMap.get(fingerprint);
         if (savedShot && savedShot.prompt) {
           prompts.push({
             ...savedShot,

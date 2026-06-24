@@ -93,6 +93,31 @@ StormaxeAIVideoSystem-v6.6.5-full-source.md
 *.rar
 *.7z
 
+# === 运行时记忆与状态（运行时自动生成）===
+USER.md
+memory_consolidation/
+
+# === 运行时分析文档与脚本（按需生成，不纳入版本）===
+EXPERT-FIX-*.md
+OOM-Analysis-*.md
+Prompt-Field-Analysis-*.md
+TECH-REPORT-*.md
+USER-REQUIREMENT-CHECKLIST.md
+Stormaxe-ALL-Modules-*.txt
+Stormaxe-Full-Code-*.txt
+Stormaxe-Full-Source-*.md
+Stormaxe-Full-Source-*.txt
+Stormaxe-Main-Modules-*.txt
+convert-md-to-txt.js
+run-*.sh
+run-ep*.sh
+submit-render-*.js
+
 # === 备份文件 ===
 *.backup.*
 *.bak.*
+*.backup
+*.bak
+*.v*-backup
+*.v*-bak
+

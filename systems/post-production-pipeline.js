@@ -13,7 +13,7 @@
 const fs = require('fs').promises;
 const fss = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 
 class PostProductionPipeline {
   constructor(projectConfig) {
@@ -86,9 +86,15 @@ class PostProductionPipeline {
       }
 
       try {
-        // 使用ffprobe获取实际时长
-        const cmd = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
-        const result = execSync(cmd, { encoding: 'utf8', timeout: 10000 }).trim();
+        // P1-fix: 用 spawnSync 数组传参替代 execSync 字符串拼接，杜绝命令注入
+        const ffprobeResult = spawnSync('ffprobe', [
+          '-v', 'error',
+          '-show_entries', 'format=duration',
+          '-of', 'default=noprint_wrappers=1:nokey=1',
+          videoPath
+        ], { encoding: 'utf8', timeout: 10000 });
+        if (ffprobeResult.status !== 0) throw new Error(`ffprobe 失败: ${ffprobeResult.stderr?.slice(0, 200)}`);
+        const result = ffprobeResult.stdout.trim();
         const actualDuration = parseFloat(result);
 
         durations.push({
@@ -262,7 +268,15 @@ class PostProductionPipeline {
     const cleanStats = fss.statSync(cleanPath);
 
     try {
-      const durationStr = execSync(`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${cleanPath}"`, { encoding: 'utf8' }).trim();
+      // P1-fix: 用 spawnSync 数组传参替代 execSync 字符串拼接
+      const ffprobeResult = spawnSync('ffprobe', [
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        cleanPath
+      ], { encoding: 'utf8' });
+      if (ffprobeResult.status !== 0) throw new Error(`ffprobe 失败: ${ffprobeResult.stderr?.slice(0, 200)}`);
+      const durationStr = ffprobeResult.stdout.trim();
       const totalDuration = parseFloat(durationStr);
 
       console.log('\n🎉 后期制作完成！');
