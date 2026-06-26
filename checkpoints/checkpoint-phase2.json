@@ -7,24 +7,24 @@
       "sceneFunction": "establish",
       "timing": {
         "start": 0,
-        "duration": 12,
-        "end": 12
+        "duration": 13,
+        "end": 13
       },
-      "duration": 12,
-      "scene": "医院健康宣教室，白色荧光灯均匀照明，白墙面贴有纯图形骨骼肌解剖挂图与运动损伤图形海报，木质讲台表面带有细微使用划痕，地面铺设浅灰色防滑PVC地胶。",
-      "mood": "由好奇渐入沉重，明亮空间反衬疾病科普的严肃",
+      "duration": 13,
+      "scene": "医院健康宣教室，白色荧光灯均匀照明，白墙面张贴无文字骨骼肌解剖图与纯图形运动损伤海报，木质讲台表面带有细微使用划痕，地面铺设浅灰色防滑PVC地板",
+      "mood": "亲和开场转入严肃科普，沉稳专注引人深思",
       "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "NONE",
-      "action": "陈卓站在讲台侧前方，双手自然张开，微微前倾身体，目光直视镜头进行讲解。",
-      "dialogue": "陈卓|独白|curious|知道横纹肌溶解吗？过度运动可能引发它。|LIP_SYNC:YES || 陈卓|独白|serious|简单说，就是肌肉细胞坏死，内容物漏进血。|LIP_SYNC:YES",
+      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
+      "action": "双手自然撑于讲台两侧，身体微前倾，正视镜头，随后直身抬手示意墙面解剖图",
+      "dialogue": "陈卓|独白|亲和|今天我们不讲案子，讲你的身体。|LIP_SYNC:YES || 陈卓|独白|严肃|横纹肌溶解，就是肌肉细胞坏掉了。|LIP_SYNC:YES || 陈卓|独白|严肃|肌细胞里的东西，全跑到血液里。|LIP_SYNC:YES || 陈卓|独白|警示|这病很凶险，但很多人不知道。|LIP_SYNC:YES",
       "characters": [
         "chenzhuo"
       ],
       "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "知道横纹肌溶解吗？过度运动可能引发它。;简单说，就是肌肉细胞坏死，内容物漏进血。",
+      "dialogueText": "今天我们不讲案子，讲你的身体。;横纹肌溶解，就是肌肉细胞坏掉了。;肌细胞里的东西，全跑到血液里。;这病很凶险，但很多人不知道。",
       "emotionalTarget": {
-        "valence": 0.5,
-        "arousal": 0.6,
+        "valence": 0.3,
+        "arousal": 0.7,
         "dominance": 0.6
       },
       "visualDirection": {
@@ -33,144 +33,78 @@
         "lighting": "自然光+环境光",
         "color_temperature": "neutral"
       },
-      "promptBase": "电影级镜头，超写实，警务医务室，冷蓝调背景，陈卓直面镜头，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），wide，缓慢推进，台词：「知道横纹肌溶解吗？过度运动可能引发它。」",
-      "worldId": "medical_edu_default",
+      "promptBase": "电影级镜头，超写实，警务系统医疗室，陈卓面对镜头，打破第四面墙，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），wide，缓慢推进，台词：「今天我们不讲案子，讲你的身体。」",
+      "worldId": "default",
       "status": "pending",
       "timeline": {
         "object": {
           "start": "T00:00",
-          "end": "T00:12",
-          "duration": 12,
+          "end": "T00:13",
+          "duration": 13,
           "type": "opening",
           "mood": "epic, mysterious, awe-inspiring"
         },
-        "string": "T00:00-T00:12 / duration: 12s / type: opening / mood: epic, mysterious, awe-inspiring"
-      },
-      "allocation": {
-        "baseDuration": 12,
-        "dialogueFactor": 1.5,
-        "typeWeight": 1.2,
-        "preserved": true
-      },
-      "emotional_target": "好奇",
-      "title": "未命名",
-      "subtitle": "第零章",
-      "titleOverlay": {
-        "main_title": "未命名",
-        "sub_title": "第零章",
-        "style": "粗体无衬线，金属质感，字间距拉宽，轻微故障闪烁效果"
-      },
-      "audioLayer": {
-        "bgm": "低频合成器铺底，伴随不和谐弦乐急速攀升",
-        "sound_effects": "空间碎裂声、低频轰鸣、时间扭曲的电流声"
-      },
-      "lightingString": "单一硬质激光光源撕裂黑暗，高对比度明暗切割，碎片边缘折射出冷冽高光，空气中悬浮微粒在光柱中闪烁。",
-      "cameraString": "以微距POV视角从绝对黑暗中急速前推，高速穿越炸裂的时空碎片隧道，最终猛停在发光图腾前的微距特写。",
-      "lighting": {
-        "key_light": "柔和顶光",
-        "fill_light": "自然补光",
-        "time_of_day": "白天",
-        "atmosphere": "自然明亮"
-      },
-      "audio": "医院空调稳定嗡鸣，远处模糊人语与纸张轻翻",
-      "backgroundSound": {
-        "environment": "hospital",
-        "description": "医院空调稳定嗡鸣，远处模糊人语与纸张轻翻",
-        "intensity": "low"
-      },
-      "backgroundSoundString": "医院空调稳定嗡鸣，远处模糊人语与纸张轻翻"
-    },
-    {
-      "shotId": "SC01",
-      "sceneType": "establishing",
-      "sceneFunction": "establish",
-      "timing": {
-        "start": 12,
-        "duration": 13,
-        "end": 25
-      },
-      "duration": 13,
-      "scene": "三甲医院检验科走廊，冷白色LED顶灯沿天花板连续排列照射，墙面悬挂无文字方向标识牌，地面浅色抛光瓷砖反射冷光，靠墙放置不锈钢候诊椅。",
-      "mood": "忧虑不安，纵深走廊与冷光强化病因阐述的压抑感",
-      "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "NONE",
-      "action": "陈卓沿走廊中线缓步前行，右手轻抬指向检验窗口方向，眉头微蹙，语速放缓。",
-      "dialogue": "陈卓|独白|concerned|剧烈运动、挤压伤或者某些药物都可能导致。|LIP_SYNC:YES || 陈卓|独白|serious|肌肉破了，肌红蛋白入血，肾脏压力倍增。|LIP_SYNC:YES",
-      "characters": [
-        "chenzhuo"
-      ],
-      "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "剧烈运动、挤压伤或者某些药物都可能导致。;肌肉破了，肌红蛋白入血，肾脏压力倍增。",
-      "emotionalTarget": {
-        "valence": 0.4,
-        "arousal": 0.5,
-        "dominance": 0.5
-      },
-      "visualDirection": {
-        "shot_type": "medium",
-        "camera_movement": "稳定机位",
-        "lighting": "均匀明亮",
-        "color_temperature": "neutral"
-      },
-      "promptBase": "电影级镜头，超写实，抽象全息投影空间，陈卓置身肌肉纤维影像中，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），medium，稳定机位，台词：「剧烈运动、挤压伤或者某些药物都可能导致。」",
-      "worldId": "medical_edu_default",
-      "status": "pending",
-      "timeline": {
-        "object": {
-          "start": "T00:12",
-          "end": "T00:25",
-          "duration": 13,
-          "type": "establishing",
-          "mood": "mysterious, anticipation, wonder"
-        },
-        "string": "T00:12-T00:25 / duration: 13s / type: establishing / mood: mysterious, anticipation, wonder"
+        "string": "T00:00-T00:13 / duration: 13s / type: opening / mood: epic, mysterious, awe-inspiring"
       },
       "allocation": {
         "baseDuration": 13,
         "dialogueFactor": 1.5,
-        "typeWeight": 1,
+        "typeWeight": 1.2,
         "preserved": true
       },
-      "emotional_target": "忧虑",
+      "emotional_target": "严肃",
+      "title": "横纹肌溶解",
+      "subtitle": "症状与实验室检查",
+      "titleOverlay": {
+        "main_title": "横纹肌溶解",
+        "sub_title": "症状与实验室检查",
+        "style": "粗体无衬线白色字体，主标题带微红色光晕，副标题冷蓝色，从画面中央以轻微震动效果切入"
+      },
+      "audioLayer": {
+        "bgm": "低频电子合成器脉冲，伴随渐强的不和谐弦乐",
+        "sound_effects": "细微的肌肉纤维撕裂声、离心机低频嗡鸣、心跳声"
+      },
+      "lightingString": "顶光硬光从上方投射，在肌肉纤维和玻璃器皿上形成锐利高光与深邃阴影；冷蓝色调氛围光弥漫场景，仅在离心机处点缀一抹警示红光",
+      "cameraString": "以极特写镜头呈现肌肉纤维微观断裂纹理，随后高速向后拉轨（Dolly Zoom）穿过悬浮的血细胞与玻璃器皿，最终微仰定格于离心机高速旋转的冷峻全景",
       "lighting": {
-        "key_light": "柔和顶光",
-        "fill_light": "自然补光",
-        "time_of_day": "白天",
-        "atmosphere": "自然明亮"
+        "key_light": "白色荧光灯从顶部均匀洒落，在讲台木质纹理上形成柔和的漫反射",
+        "fill_light": "墙面白色乳胶漆反射环境光，柔和填补面部阴影",
+        "time_of_day": "midday",
+        "atmosphere": "无文字解剖图在冷白基底中透出医学理性，开场略暖的肤色光暗示亲和"
       },
-      "audio": "走廊深处脚步与推车滚轮，医疗设备低频嗡鸣回响",
+      "audio": "荧光灯均匀电流低噪，教室空旷轻混响，远处隐约广播声",
       "backgroundSound": {
-        "environment": "hospital",
-        "description": "走廊深处脚步与推车滚轮，医疗设备低频嗡鸣回响",
-        "intensity": "medium"
+        "environment": "hospital_classroom",
+        "description": "荧光灯均匀电流低噪，教室空旷轻混响，远处隐约广播声",
+        "intensity": "low"
       },
-      "backgroundSoundString": "走廊深处脚步与推车滚轮，医疗设备低频嗡鸣回响"
+      "backgroundSoundString": "荧光灯均匀电流低噪，教室空旷轻混响，远处隐约广播声"
     },
     {
-      "shotId": "SC02",
+      "shotId": "SC01",
       "sceneType": "conflict",
-      "sceneFunction": "conflict",
+      "sceneFunction": "advance",
       "timing": {
-        "start": 25,
-        "duration": 15,
-        "end": 40
+        "start": 13,
+        "duration": 13,
+        "end": 26
       },
-      "duration": 15,
-      "scene": "医生诊室，白色乳胶漆墙面悬挂无文字医学图形挂图，办公桌摆放听诊器与血压计，检查床铺蓝色一次性床单，无影灯悬于上方，窗光透入形成自然侧光。",
-      "mood": "紧迫升级至危急，诊室冷峻光线与器械加剧焦灼气息",
+      "duration": 13,
+      "scene": "三甲医院检验科走廊，冷白色LED顶灯沿顶部连续排列，无文字图形标识牌指向检验窗口，墙面白色乳胶漆，地面浅色抛光瓷砖反射冷光，不锈钢候诊椅贴墙摆放",
+      "mood": "警示紧张压抑不安，走廊冷光强化危机迫近感",
       "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "NONE",
-      "action": "陈卓快步走至检查床旁，双手比划肌肉肿胀位置，突然停下指向下方，神情凝重。",
-      "dialogue": "陈卓|独白|urgent|典型症状是肌肉剧痛、肿胀、浑身无力。|LIP_SYNC:YES || 陈卓|独白|alarmed|尿液变成酱油色或浓茶色，这是最明显的信号！|LIP_SYNC:YES",
+      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
+      "action": "沿走廊缓步前行，驻足抬手虚指检验窗口方向，眉头紧锁，双手在身前交握",
+      "dialogue": "陈卓|独白|警示|运动后肌肉痛？别硬扛。|LIP_SYNC:YES || 陈卓|独白|紧张|尿液变成酱油色，是最危险的信号。|LIP_SYNC:YES || 陈卓|独白|紧张|全身无力、恶心呕吐，也要警惕。|LIP_SYNC:YES || 陈卓|独白|坚定|三招自测：痛、色、乏。|LIP_SYNC:YES",
       "characters": [
         "chenzhuo"
       ],
       "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "典型症状是肌肉剧痛、肿胀、浑身无力。;尿液变成酱油色或浓茶色，这是最明显的信号！",
+      "dialogueText": "运动后肌肉痛？别硬扛。;尿液变成酱油色，是最危险的信号。;全身无力、恶心呕吐，也要警惕。;三招自测：痛、色、乏。",
       "emotionalTarget": {
-        "valence": 0.3,
+        "valence": 0.2,
         "arousal": 0.8,
-        "dominance": 0.4
+        "dominance": 0.5
       },
       "visualDirection": {
         "shot_type": "close_up",
@@ -178,65 +112,131 @@
         "lighting": "戏剧性明暗对比",
         "color_temperature": "neutral"
       },
-      "promptBase": "电影级镜头，超写实，医疗观察室，霓虹警示光源，陈卓居中，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），close_up，手持晃动，台词：「典型症状是肌肉剧痛、肿胀、浑身无力。」",
-      "worldId": "medical_edu_default",
+      "promptBase": "电影级镜头，超写实，陈卓站在数据可视化屏幕前，指向身体部位，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），close_up，手持晃动，台词：「运动后肌肉痛？别硬扛。」",
+      "worldId": "default",
       "status": "pending",
       "timeline": {
         "object": {
-          "start": "T00:25",
-          "end": "T00:40",
-          "duration": 15,
+          "start": "T00:13",
+          "end": "T00:26",
+          "duration": 13,
           "type": "conflict",
           "mood": "neutral, calm, intense, dramatic"
         },
-        "string": "T00:25-T00:40 / duration: 15s / type: conflict / mood: neutral, calm, intense, dramatic"
+        "string": "T00:13-T00:26 / duration: 13s / type: conflict / mood: neutral, calm, intense, dramatic"
       },
       "allocation": {
-        "baseDuration": 15,
+        "baseDuration": 13,
         "dialogueFactor": 1.5,
         "typeWeight": 1.3,
         "preserved": true
       },
-      "emotional_target": "急迫",
+      "emotional_target": "警示",
       "lighting": {
-        "key_light": "柔和顶光",
-        "fill_light": "自然补光",
-        "time_of_day": "白天",
-        "atmosphere": "自然明亮"
+        "key_light": "冷白色LED顶灯沿走廊连续排列，在头顶形成冰冷的高光带",
+        "fill_light": "浅色抛光瓷砖将冷光向上反射，照亮腿部与走廊纵深",
+        "time_of_day": "midday",
+        "atmosphere": "走廊尽头的暗影与冷白光形成强烈透视，危机在纵深处逼近"
       },
-      "audio": "血压计气囊急促充气，金属器械碰撞与空调低频轰鸣",
+      "audio": "走廊LED冷光灯电流声，急促脚步回声，低频设备嗡鸣压迫",
       "backgroundSound": {
-        "environment": "hospital",
-        "description": "血压计气囊急促充气，金属器械碰撞与空调低频轰鸣",
+        "environment": "hospital_corridor",
+        "description": "走廊LED冷光灯电流声，急促脚步回声，低频设备嗡鸣压迫",
         "intensity": "high"
       },
-      "backgroundSoundString": "血压计气囊急促充气，金属器械碰撞与空调低频轰鸣"
+      "backgroundSoundString": "走廊LED冷光灯电流声，急促脚步回声，低频设备嗡鸣压迫"
+    },
+    {
+      "shotId": "SC02",
+      "sceneType": "conflict",
+      "sceneFunction": "advance",
+      "timing": {
+        "start": 26,
+        "duration": 13,
+        "end": 39
+      },
+      "duration": 13,
+      "scene": "医生诊室，白色墙面悬挂无文字医学挂图，实木办公桌摆放听诊器与血压计，检查床配有蓝色一次性床单，无影灯悬于上方，窗光透入形成自然侧光，地面深灰色橡胶地板",
+      "mood": "专业冷静理性权威，诊室环境传递医学可信度",
+      "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
+      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
+      "action": "侧身倚靠办公桌沿，手持空白报告单轻点纸面，随后转身面向检查床，抬手比划高度",
+      "dialogue": "陈卓|独白|专业|去医院查什么？记住三项。|LIP_SYNC:YES || 陈卓|独白|严肃|肌酸激酶，正常几千，爆表几万。|LIP_SYNC:YES || 陈卓|独白|警示|肌红蛋白，尿里也有，肾最怕它。|LIP_SYNC:YES || 陈卓|独白|坚定|还有肝肾功能、电解质，一个都不能少。|LIP_SYNC:YES",
+      "characters": [
+        "chenzhuo"
+      ],
+      "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
+      "dialogueText": "去医院查什么？记住三项。;肌酸激酶，正常几千，爆表几万。;肌红蛋白，尿里也有，肾最怕它。;还有肝肾功能、电解质，一个都不能少。",
+      "emotionalTarget": {
+        "valence": 0.3,
+        "arousal": 0.7,
+        "dominance": 0.6
+      },
+      "visualDirection": {
+        "shot_type": "close_up",
+        "camera_movement": "手持晃动",
+        "lighting": "戏剧性明暗对比",
+        "color_temperature": "neutral"
+      },
+      "promptBase": "电影级镜头，超写实，陈卓手持全息检验单，数据在空中悬浮，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），close_up，手持晃动，台词：「去医院查什么？记住三项。」",
+      "worldId": "default",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:26",
+          "end": "T00:39",
+          "duration": 13,
+          "type": "conflict",
+          "mood": "tense, determined, brave, confrontational"
+        },
+        "string": "T00:26-T00:39 / duration: 13s / type: conflict / mood: tense, determined, brave, confrontational"
+      },
+      "allocation": {
+        "baseDuration": 13,
+        "dialogueFactor": 1.5,
+        "typeWeight": 1.3,
+        "preserved": true
+      },
+      "emotional_target": "专业",
+      "lighting": {
+        "key_light": "窗外自然光从左侧斜射入诊室，在实木桌面上形成柔和的漫射主光",
+        "fill_light": "无影灯与白色墙面共同漫反射，均匀填补面部暗部",
+        "time_of_day": "midday",
+        "atmosphere": "蓝色一次性床单反射微弱冷光，听诊器金属部件点缀理性高光"
+      },
+      "audio": "诊室安静封闭环境，纸张翻动，听诊器微碰撞，沉稳底噪",
+      "backgroundSound": {
+        "environment": "hospital_clinic",
+        "description": "诊室安静封闭环境，纸张翻动，听诊器微碰撞，沉稳底噪",
+        "intensity": "medium"
+      },
+      "backgroundSoundString": "诊室安静封闭环境，纸张翻动，听诊器微碰撞，沉稳底噪"
     },
     {
       "shotId": "SC03",
       "sceneType": "emotional_climax",
       "sceneFunction": "climax",
       "timing": {
-        "start": 40,
+        "start": 39,
         "duration": 13,
-        "end": 53
+        "end": 52
       },
       "duration": 13,
-      "scene": "医院健康管理中心，嵌入式LED灯带洒下柔和暖白光，接待台后方排列无文字健康宣传展板，前方摆放皮质沙发与实木茶几，地面铺设灰色哑光瓷砖。",
-      "mood": "沉稳权威，柔和照明中和医学信息的压迫与紧张感",
+      "scene": "医院健康管理中心，嵌入式LED灯带洒下柔和暖白光，接待台后方排列无文字健康宣传展板，前方棕色皮质沙发与实木茶几，地面灰色哑光瓷砖，墙面米白色墙纸",
+      "mood": "沉重恳切压抑转关怀，暖光下流露真诚担忧",
       "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "NONE",
-      "action": "陈卓立于接待台前，双手交叠后展开，掌心向下轻压，语气坚定地点头示意。",
-      "dialogue": "陈卓|独白|serious|查血看肌酸激酶，能高正常值几十倍。|LIP_SYNC:YES || 陈卓|独白|authoritative|肌红蛋白、钾离子和肾功能指标也都会异常。|LIP_SYNC:YES",
+      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
+      "action": "双手交叠置于身前，缓步绕至沙发侧，俯身轻触茶几表面，抬头正视镜头，手掌微张",
+      "dialogue": "陈卓|独白|沉重|我见过有人练太猛，直接送ICU。|LIP_SYNC:YES || 陈卓|独白|恳切|不是吓你，早发现才能救回来。|LIP_SYNC:YES || 陈卓|独白|紧迫|别等尿变色了，才想到去医院。|LIP_SYNC:YES",
       "characters": [
         "chenzhuo"
       ],
       "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "查血看肌酸激酶，能高正常值几十倍。;肌红蛋白、钾离子和肾功能指标也都会异常。",
+      "dialogueText": "我见过有人练太猛，直接送ICU。;不是吓你，早发现才能救回来。;别等尿变色了，才想到去医院。",
       "emotionalTarget": {
-        "valence": 0.4,
-        "arousal": 0.7,
-        "dominance": 0.5
+        "valence": 0.1,
+        "arousal": 0.9,
+        "dominance": 0.4
       },
       "visualDirection": {
         "shot_type": "extreme_close_up",
@@ -244,18 +244,18 @@
         "lighting": "伦勃朗光",
         "color_temperature": "neutral"
       },
-      "promptBase": "电影级高潮镜头，超写实，数据可视化空间，冷蓝调数据流环绕陈卓，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），extreme_close_up，快速推近，台词：「查血看肌酸激酶，能高正常值几十倍。」",
-      "worldId": "medical_edu_default",
+      "promptBase": "电影级高潮镜头，超写实，陈卓在监护室走廊，身后是流动的光轨，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），extreme_close_up，快速推近，台词：「我见过有人练太猛，直接送ICU。」",
+      "worldId": "default",
       "status": "pending",
       "timeline": {
         "object": {
-          "start": "T00:40",
-          "end": "T00:53",
+          "start": "T00:39",
+          "end": "T00:52",
           "duration": 13,
           "type": "emotional_climax",
-          "mood": "epic, emotional, powerful, cathartic"
+          "mood": "neutral, calm, intense, dramatic"
         },
-        "string": "T00:40-T00:53 / duration: 13s / type: emotional_climax / mood: epic, emotional, powerful, cathartic"
+        "string": "T00:39-T00:52 / duration: 13s / type: emotional_climax / mood: neutral, calm, intense, dramatic"
       },
       "allocation": {
         "baseDuration": 13,
@@ -263,45 +263,45 @@
         "typeWeight": 1.5,
         "preserved": true
       },
-      "emotional_target": "权威",
+      "emotional_target": "恳切",
       "lighting": {
-        "key_light": "柔和顶光",
-        "fill_light": "自然补光",
-        "time_of_day": "白天",
-        "atmosphere": "自然明亮"
+        "key_light": "嵌入式LED灯带从顶部洒下柔和暖白光，在棕色皮沙发上形成温润光晕",
+        "fill_light": "浅灰色地面漫反射柔化阴影，避免沉重话题过度压抑",
+        "time_of_day": "midday",
+        "atmosphere": "宣传展板在柔光中隐约可见，日常健康管理氛围包裹真诚倾诉"
       },
-      "audio": "接待区低声交谈与键盘敲击，柔和空调送风持续运转",
+      "audio": "暖光接待区低声交谈，键盘轻敲，皮质沙发区空调轻送风",
       "backgroundSound": {
-        "environment": "hospital",
-        "description": "接待区低声交谈与键盘敲击，柔和空调送风持续运转",
-        "intensity": "low"
+        "environment": "hospital_lobby",
+        "description": "暖光接待区低声交谈，键盘轻敲，皮质沙发区空调轻送风",
+        "intensity": "medium"
       },
-      "backgroundSoundString": "接待区低声交谈与键盘敲击，柔和空调送风持续运转"
+      "backgroundSoundString": "暖光接待区低声交谈，键盘轻敲，皮质沙发区空调轻送风"
     },
     {
       "shotId": "SC04",
       "sceneType": "resolution",
       "sceneFunction": "resolve",
       "timing": {
-        "start": 53,
-        "duration": 12,
+        "start": 52,
+        "duration": 13,
         "end": 65
       },
-      "duration": 12,
-      "scene": "医院检验科窗口前，冷白色荧光灯维持恒定色温，检验窗口玻璃带有微弱反射，不锈钢台面反光，墙面悬挂无文字科室标识牌，地面铺设浅灰色防滑地砖。",
-      "mood": "平静安抚，恒定光源与整洁台面传递希望与安全感",
+      "duration": 13,
+      "scene": "医院检验科窗口前，冷白色荧光灯维持恒定色温，检验窗口玻璃带微弱反射，不锈钢台面反光，墙面悬挂无文字科室图形标识牌，地面浅灰色水磨石，窗口前设固定高脚凳",
+      "mood": "坚定温和诚恳托付，检验窗口前强化行动号召",
       "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "NONE",
-      "action": "陈卓正面朝向窗口站立，双手自然垂落后缓缓抬起，掌心向上做出安抚姿态，微微颔首。",
-      "dialogue": "陈卓|独白|calm|出现这些症状，赶紧就医做检查。|LIP_SYNC:YES || 陈卓|独白|reassuring|早发现早干预，别把身体拖垮了。|LIP_SYNC:YES",
+      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
+      "action": "正面站立于窗口前，双手自然垂落于身侧，随后抬手轻叩不锈钢台面，缓慢点头，双肩放松下沉",
+      "dialogue": "陈卓|独白|坚定|记住这些症状，关键时刻能保命。|LIP_SYNC:YES || 陈卓|独白|温和|科学运动，定期体检，别赌运气。|LIP_SYNC:YES || 陈卓|独白|希望|健康这件事，永远不是一个人的战斗。|LIP_SYNC:YES",
       "characters": [
         "chenzhuo"
       ],
       "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "出现这些症状，赶紧就医做检查。;早发现早干预，别把身体拖垮了。",
+      "dialogueText": "记住这些症状，关键时刻能保命。;科学运动，定期体检，别赌运气。;健康这件事，永远不是一个人的战斗。",
       "emotionalTarget": {
-        "valence": 0.7,
-        "arousal": 0.6,
+        "valence": 0.6,
+        "arousal": 0.5,
         "dominance": 0.7
       },
       "visualDirection": {
@@ -310,69 +310,69 @@
         "lighting": "温暖柔光",
         "color_temperature": "warm"
       },
-      "promptBase": "电影级镜头，超写实，警务医务室，柔和暖光，陈卓回归镜头前，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），medium，缓慢后拉，台词：「出现这些症状，赶紧就医做检查。」",
-      "worldId": "medical_edu_default",
+      "promptBase": "电影级镜头，超写实，陈卓回到初始位置，光影柔和稳定，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），medium，缓慢后拉，台词：「记住这些症状，关键时刻能保命。」",
+      "worldId": "default",
       "status": "pending",
       "timeline": {
         "object": {
-          "start": "T00:53",
+          "start": "T00:52",
           "end": "T01:05",
-          "duration": 12,
+          "duration": 13,
           "type": "resolution",
           "mood": "peaceful, warm, nostalgic, hopeful"
         },
-        "string": "T00:53-T01:05 / duration: 12s / type: resolution / mood: peaceful, warm, nostalgic, hopeful"
+        "string": "T00:52-T01:05 / duration: 13s / type: resolution / mood: peaceful, warm, nostalgic, hopeful"
       },
       "allocation": {
-        "baseDuration": 12,
+        "baseDuration": 13,
         "dialogueFactor": 1.5,
         "typeWeight": 1,
         "preserved": true
       },
-      "emotional_target": "安抚",
+      "emotional_target": "坚定",
       "lighting": {
-        "key_light": "柔和顶光",
-        "fill_light": "自然补光",
-        "time_of_day": "白天",
-        "atmosphere": "自然明亮"
+        "key_light": "冷白荧光灯从顶部垂直照下，在检验窗口玻璃上形成微弱冷光反射",
+        "fill_light": "不锈钢台面将光线反射至人物轮廓边缘，形成微妙底光",
+        "time_of_day": "midday",
+        "atmosphere": "玻璃后的深邃阴影与前景冷光对比，托付感在冷静中生根"
       },
-      "audio": "检验设备稳定低频运转，窗口叫号与纸张传递声",
+      "audio": "检验窗口设备低频运转，玻璃隔绝走廊喧嚣，温和室内底噪",
       "backgroundSound": {
-        "environment": "hospital",
-        "description": "检验设备稳定低频运转，窗口叫号与纸张传递声",
-        "intensity": "low"
+        "environment": "hospital_laboratory",
+        "description": "检验窗口设备低频运转，玻璃隔绝走廊喧嚣，温和室内底噪",
+        "intensity": "medium"
       },
-      "backgroundSoundString": "检验设备稳定低频运转，窗口叫号与纸张传递声"
+      "backgroundSoundString": "检验窗口设备低频运转，玻璃隔绝走廊喧嚣，温和室内底噪"
     }
   ],
   "opening": {
     "shotId": "S00",
-    "scene": "绝对黑暗中一束炽白激光刺穿空间，黑色玻璃碎片炸裂飞散，镜头极速穿越碎裂隧道，最终定格于重组的未知图腾。",
-    "mood": "神秘、压迫、仪式感",
+    "scene": "显微镜下断裂的肌肉纤维在冷光中崩解，血红细胞弥漫飘散，镜头急速后拉穿过实验室玻璃器皿，最终定格在离心机高速旋转的冷峻轮廓",
+    "mood": "紧张悬疑、科学冷峻、警示性",
     "camera": {
-      "shot_size": "微距特写",
-      "movement": "急速前推穿越",
-      "angle": "主观视角POV"
+      "shot_size": "极特写到全景",
+      "movement": "高速后拉（Dolly Zoom）",
+      "angle": "平视微仰"
     },
-    "cameraString": "以微距POV视角从绝对黑暗中急速前推，高速穿越炸裂的时空碎片隧道，最终猛停在发光图腾前的微距特写。",
+    "cameraString": "以极特写镜头呈现肌肉纤维微观断裂纹理，随后高速向后拉轨（Dolly Zoom）穿过悬浮的血细胞与玻璃器皿，最终微仰定格于离心机高速旋转的冷峻全景",
     "lighting": {
-      "key_light": "单一硬质激光光源",
-      "atmosphere": "高对比度暗调，悬浮微粒与碎片反光"
+      "key_light": "顶光硬光",
+      "atmosphere": "高对比医学冷调"
     },
-    "lightingString": "单一硬质激光光源撕裂黑暗，高对比度明暗切割，碎片边缘折射出冷冽高光，空气中悬浮微粒在光柱中闪烁。",
+    "lightingString": "顶光硬光从上方投射，在肌肉纤维和玻璃器皿上形成锐利高光与深邃阴影；冷蓝色调氛围光弥漫场景，仅在离心机处点缀一抹警示红光",
     "audioLayer": {
-      "bgm": "低频合成器铺底，伴随不和谐弦乐急速攀升",
-      "sound_effects": "空间碎裂声、低频轰鸣、时间扭曲的电流声"
+      "bgm": "低频电子合成器脉冲，伴随渐强的不和谐弦乐",
+      "sound_effects": "细微的肌肉纤维撕裂声、离心机低频嗡鸣、心跳声"
     },
-    "audioLayerString": "低频合成器铺底营造压迫感，不和谐弦乐急速攀升，叠加空间碎裂与低频轰鸣的音效设计。",
+    "audioLayerString": "低频电子合成器脉冲打底，叠加细微的肌肉纤维撕裂音效与离心机低频嗡鸣，心跳声由弱至强与弦乐渐强共同推升紧张感",
     "titleOverlay": {
-      "main_title": "未命名",
-      "sub_title": "第零章",
-      "style": "粗体无衬线，金属质感，字间距拉宽，轻微故障闪烁效果"
+      "main_title": "横纹肌溶解",
+      "sub_title": "症状与实验室检查",
+      "style": "粗体无衬线白色字体，主标题带微红色光晕，副标题冷蓝色，从画面中央以轻微震动效果切入"
     },
-    "titleOverlayString": "主标题“未命名”以粗体金属无衬线字呈现，副标题“第零章”居下，整体带轻微数字故障闪烁效果。",
+    "titleOverlayString": "主标题'横纹肌溶解'以粗体无衬线白色字体呈现，带微红色危险光晕；副标题'症状与实验室检查'以冷蓝色细体字叠印其下，伴随轻微震动效果从画面中央切入",
     "duration": 8
   },
   "llmStats": {},
-  "savedAt": "2026-06-26T04:39:37.742Z"
+  "savedAt": "2026-06-26T06:02:10.849Z"
 }

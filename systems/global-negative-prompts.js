@@ -441,7 +441,6 @@ class GlobalNegativePromptInjector {
     
     return this.generate({ level, maxLength, includeCharacterCount });
   }
-}
 
   /**
    * v6.6.10-fix: 生成片头镜头专用负面提示词
@@ -467,3 +466,5 @@ class GlobalNegativePromptInjector {
     return this.generate({ level: 'L1', maxLength, includeCharacterCount: true });
   }
 }
+
+module.exports = { GlobalNegativePromptInjector };

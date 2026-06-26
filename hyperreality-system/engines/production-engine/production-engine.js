@@ -1533,14 +1533,18 @@ class ProductionEngine {
             searchDir(fullPath);
           } else if (item.isFile() && /\.(png|jpg|jpeg|webp)$/i.test(item.name)) {
             const lowerName = item.name.toLowerCase();
+            // 优先匹配包含角度关键词的文件名
+            let matched = false;
             for (const angle of defaultAngles) {
               if (lowerName.includes(angle.toLowerCase()) || lowerName.includes(angle.replace('-', '').toLowerCase())) {
-                const relativePath = path.relative(baseDir, fullPath);
-                foundPaths.push(`image://characters/${charDir}/${relativePath}`);
-                console.log(`[_buildCharacterRef] 找到定妆照: ${fullPath} (角度: ${angle})`);
-                return;
+                matched = true;
+                break;
               }
             }
+            // 如果文件名不包含角度关键词，也收集（兜底：任何定妆照都可用）
+            const relativePath = path.relative(baseDir, fullPath);
+            foundPaths.push(`image://characters/${charDir}/${relativePath}`);
+            console.log(`[_buildCharacterRef] 找到定妆照: ${fullPath}${matched ? ' (角度匹配)' : ' (通用)'}`);
           }
         }
       }
