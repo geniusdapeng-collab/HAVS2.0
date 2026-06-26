@@ -454,7 +454,19 @@ class HyperrealitySystem {
                 openingShot.title = optimized.title_content || openingShot.title;
                 openingShot.subtitle = optimized.subtitle_content || openingShot.subtitle;
 
-                console.log('   ✅ 片头优化完成');
+              // 【v2.1.5-fix】同步更新 prompts 中对应的片头 shot
+              const promptIdx = productionResult.prompts.findIndex(p => isOpeningShot(p));
+              if (promptIdx >= 0) {
+                const promptShot = productionResult.prompts[promptIdx];
+                promptShot.title_content = openingShot.title_content;
+                promptShot.subtitle_content = openingShot.subtitle_content;
+                promptShot.title_animation = openingShot.title_animation;
+                promptShot.title_font_design = openingShot.title_font_design;
+                promptShot.opening_audio_design = openingShot.opening_audio_design;
+                promptShot.title = openingShot.title;
+                promptShot.subtitle = openingShot.subtitle;
+                console.log('   ✅ prompts 片头字段已同步');
+              }
                 console.log('   主标题:', optimized.title_content);
                 console.log('   副标题:', optimized.subtitle_content);
               } else {
