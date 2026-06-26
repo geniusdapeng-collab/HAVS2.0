@@ -2052,7 +2052,7 @@ const { spawn } = require('child_process');
       maxTokens: options.maxTokens || 4096,
       temperature: options.temperature || 1,
       topP: options.topP || 0.95,
-      timeoutMs: options.timeoutMs || 120000 // v6.7.0-fix10: 默认超时120s，防止无限等待
+      timeoutMs: options.timeoutMs || 300000 // v6.7.0-fix: 延长到300s，防止kimi-k2p6推理超时
     });
   }
 
@@ -6587,7 +6587,23 @@ ${isNirath
       const referenceImages = [];
 
       // v6.5.6-fix: 角色ID映射修复(taotie → tao-tie)
+      // v6.7.0-fix: 通用角色ID标准化——处理 shot.characters 与 stages.characters 键名不一致问题
+      // 根因：UserRequirementParser 可能生成 'main-character'，而 LLM 输出 'chen-zhuo'
       const charIdMap = { 'taotie': 'tao-tie', 'tao-tie': 'tao-tie' };
+      const normalizeCharId = (rawId) => {
+        // 1. 精确匹配
+        if (stages.characters?.[rawId]) return rawId;
+        // 2. charIdMap 映射
+        if (charIdMap[rawId]) return charIdMap[rawId];
+        // 3. 去掉连字符变体 (chen-zhuo → chenzhuo)
+        const noHyphen = rawId.replace(/-/g, '');
+        if (stages.characters?.[noHyphen]) return noHyphen;
+        // 4. 反向查找：stages.characters 中只有一个角色时，直接回退
+        const charKeys = Object.keys(stages.characters || {});
+        if (charKeys.length === 1) return charKeys[0];
+        // 5. 无法匹配，返回原始ID（让后续逻辑决定跳过或报错）
+        return rawId;
+      };
       // v6.7.0-patch: 删除第一段循环，统一由第二段（连字符命名规范）注入，避免双重注入
       // v6.6: 多风格定妆照自动选择 - 根据场景动态选择正确风格
       this._autoSelectPortraits(shot, stages.characters);
@@ -6696,10 +6712,13 @@ ${isNirath
           'tao-tie': ['碳化硅质甲壳', '腋下双眼', '巨口能量涡流']
         };
       }
+      // 判断景别
+      const isCloseup = (shot.type === 'closeup' || shot.size === 'closeup' || shot.cameraAngle === 'closeup');
+      const isWide = (shot.type === 'wide' || shot.size === 'wide' || shot.type === 'extreme_wide');
       // 根据镜头景别选最佳角度(复用上方已声明的isCloseup/isWide/anglePriority)
       // v6.6.5-fix: anglePriority 使用 character-card.json 中的 angle 命名规范（连字符而非驼峰）
       const selectedAngles = [];
-      anglePriority = ['closeup', 'front', 'three-quarter', 'side', 'profile'];
+      const anglePriority = ['closeup', 'front', 'three-quarter', 'side', 'profile'];
       for (const rawCharId of (shot.characters || [])) {
         const charId = charIdMap[rawCharId] || rawCharId;
         const char = stages.characters?.[charId];

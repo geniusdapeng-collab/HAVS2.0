@@ -443,7 +443,27 @@ class GlobalNegativePromptInjector {
   }
 }
 
-module.exports = GlobalNegativePromptInjector;
+  /**
+   * v6.6.10-fix: 生成片头镜头专用负面提示词
+   * @param {Object} options
+   * @param {number} options.maxLength - 最大长度
+   * @returns {string} 负面提示词
+   */
+  generateForOpeningShot(options = {}) {
+    const { maxLength = 250 } = options;
+    // 片头镜头使用L1全局约束 + 更严格的画面文字约束
+    return this.generate({ level: 'L1', maxLength, includeCharacterCount: true });
+  }
 
-// v6.2-patch61-fix: 兼容解构导入
-module.exports.globalNegativePromptInjector = new GlobalNegativePromptInjector();
+  /**
+   * v6.6.10-fix: 生成内容镜头专用负面提示词
+   * @param {Object} options
+   * @param {number} options.maxLength - 最大长度
+   * @returns {string} 负面提示词
+   */
+  generateForContentShot(options = {}) {
+    const { maxLength = 300 } = options;
+    // 内容镜头使用完整L1约束
+    return this.generate({ level: 'L1', maxLength, includeCharacterCount: true });
+  }
+}

@@ -139,20 +139,17 @@ function 关键字段存在(prompt) {
 
   // 所有25字段
   for (const [field, tag] of Object.entries(字段标签映射)) {
-    // v6.7.0-fix: 统一使用前缀匹配，与 FieldGuard / FieldQualityPipeline 保持一致
-    const prefix = tag.replace(/】$/, '');
-    out[field] = new RegExp(prefix).test(prompt);
+    out[field] = prompt.includes(tag);
   }
 
-  // 兼容旧字段名/标签变体
+  // 兼容旧字段名
   out.时间轴 = out.时间轴 || prompt.includes('【镜头时间轴】') || /TIMELINE\s*:/i.test(prompt);
   out.台词 = out.台词 || prompt.includes('【旁白/台词】');
-  out.定妆照 = out.定妆照 || prompt.includes('【绑定定妆照】') || /@image\d+/i.test(prompt);
+  out.定妆照 = out.定妆照 || /@image\d+/i.test(prompt);
   out.角色 = out.角色 || /CHARACTER\s*:/i.test(prompt);
   out.场景 = out.场景 || /SCENE\s*:/i.test(prompt);
   out.动作 = out.动作 || /ACTION\s*:/i.test(prompt);
-  out.灯光 = out.灯光 || prompt.includes('【灯光/照明】') || /LIGHTING\s*:/i.test(prompt);
-  out.色彩 = out.色彩 || prompt.includes('【色彩/色调】') || /COLOR\s*:/i.test(prompt);
+  out.灯光 = out.灯光 || /LIGHTING\s*:/i.test(prompt);
   out.音频 = out.音频 || /AUDIO\s*:/i.test(prompt);
   out.负面约束 = out.负面约束 || /NEGATIVE\s*:/i.test(prompt);
 
@@ -314,7 +311,7 @@ function 最小补洞(prompt, shot = {}) {
   }
 
   if (!状态.时间轴 && shot.duration) {
-    out += ` | 【时间轴】00:00-00:${String(Math.floor(shot.duration)).padStart(2, '0')} / 时长:${shot.duration}s`;
+    out += ` | 【镜头时间轴】00:00-00:${String(Math.floor(shot.duration)).padStart(2, '0')} / 时长:${shot.duration}s`;
   }
 
   if (!状态.场景 && shot.scene) {
@@ -343,7 +340,7 @@ function 最小补洞(prompt, shot = {}) {
   }
 
   if (!状态.色彩 && shot.colorPalette) {
-    out += ` | 【色彩】${shot.colorPalette}`;
+    out += ` | 【色彩/色调】${shot.colorPalette}`;
   }
 
   if (!状态.景深 && shot.depthOfField) {

@@ -1,7 +1,7 @@
 /**
- * FieldGuard v6.7.0
+ * FieldGuard v6.7.1
  * 质量检查模块 - 25字段完整性校验
- * 继承并升级自 RenderPipelineGuard + RenderQAChecker
+ * Phase 1升级：增强灯光五要素/色彩四维度/景深三要素/时间轴分段数/服装详细性/节奏五段式检查
  */
 
 const { 字段优先级, 字段标签映射 } = require('../prompt-stability-guard');
@@ -82,9 +82,24 @@ class FieldGuard {
       errors.push('P0-4: 场景字段缺失空间类型描述');
     }
 
-    // P0-5: 灯光
-    if (!prompt.includes('【灯光') || !/(key light|fill light|色温|color temperature|lighting)/i.test(prompt)) {
-      errors.push('P0-5: 灯光字段缺失五要素（光源/色温/光质/光位/光比）');
+    // P0-5: 灯光 - 五要素检查（光源/色温/光质/光位/光比）
+    const lightingSection = this._extractField(prompt, '【灯光】');
+    if (!lightingSection) {
+      errors.push('P0-5: 灯光字段缺失');
+    } else {
+      const fiveElements = {
+        lightSource: /(key light|fill light|rim light|back light|主光|补光|轮廓光|逆光|主灯|补灯|LED|softbox|柔光箱|聚光灯)/i.test(lightingSection),
+        colorTemp: /(色温|color temperature|kelvin|K\b|2700K|3200K|5600K|6500K|暖色|冷色|warm|cool| daylight|tungsten)/i.test(lightingSection),
+        lightQuality: /(soft|hard|diffused|directional|柔光|硬光|漫射|定向|散射|直射|soft light|hard light|quality)/i.test(lightingSection),
+        lightPosition: /(from left|from right|from above|from below|top|side|back|front|left|right|high|low|高位|低位|左侧|右侧|正面|背面| overhead|underneath)/i.test(lightingSection),
+        lightRatio: /(ratio|contrast|fill|key-to-fill|光比|明暗比|对比度|shadow|highlight|高光|阴影|1:1|1:2|1:4|2:1|4:1|8:1)/i.test(lightingSection)
+      };
+      const missingElements = Object.entries(fiveElements).filter(([_, v]) => !v).map(([k, _]) => k);
+      if (missingElements.length > 2) {
+        errors.push(`P0-5: 灯光字段五要素缺失过多(${missingElements.length}/5)，缺失: ${missingElements.join(', ')}`);
+      } else if (missingElements.length > 0) {
+        warnings.push(`P0-5: 灯光字段五要素部分缺失(${5 - missingElements.length}/5)，缺失: ${missingElements.join(', ')}`);
+      }
     }
 
     // P0-6: 运镜
@@ -138,19 +153,54 @@ class FieldGuard {
       warnings.push('P1-1: 构图字段缺失景别等级或主体位置');
     }
 
-    // P1-2: 色彩
-    if (!prompt.includes('【色彩') || !/(dominant|accent|saturation|contrast)/i.test(prompt)) {
-      warnings.push('P1-2: 色彩字段缺失四维度描述');
+    // P1-2: 色彩 - 四维度检查（主色调/辅助色/饱和度/对比度）
+    const colorSection = this._extractField(prompt, '【色彩】') || this._extractField(prompt, '【色调】');
+    if (!colorSection) {
+      warnings.push('P1-2: 色彩字段缺失');
+    } else {
+      const fourDimensions = {
+        dominantColor: /(dominant|primary|main color|主色调|主色|基调|base tone|overall)/i.test(colorSection),
+        accentColor: /(accent|secondary|complementary|辅助色|点缀色|accent color|pop of color|highlight color)/i.test(colorSection),
+        saturation: /(saturation|vivid|muted|desaturated|高饱和|低饱和|saturation level|color intensity|色彩浓度)/i.test(colorSection),
+        contrast: /(contrast|high contrast|low contrast|对比度|明暗对比|color contrast|tone contrast|反差)/i.test(colorSection)
+      };
+      const missingDims = Object.entries(fourDimensions).filter(([_, v]) => !v).map(([k, _]) => k);
+      if (missingDims.length > 2) {
+        warnings.push(`P1-2: 色彩字段四维度缺失过多(${missingDims.length}/4)，缺失: ${missingDims.join(', ')}`);
+      } else if (missingDims.length > 0) {
+        warnings.push(`P1-2: 色彩字段四维度部分缺失(${4 - missingDims.length}/4)，缺失: ${missingDims.join(', ')}`);
+      }
     }
 
-    // P1-3: 景深
-    if (!prompt.includes('【景深】') || !/(shallow depth of field|deep depth of field|focus|bokeh)/i.test(prompt)) {
-      warnings.push('P1-3: 景深字段缺失焦点位置或虚化程度');
+    // P1-3: 景深 - 三要素检查（焦点位置/虚化程度/清晰范围）
+    const dofSection = this._extractField(prompt, '【景深】');
+    if (!dofSection) {
+      warnings.push('P1-3: 景深字段缺失');
+    } else {
+      const threeElements = {
+        focusPoint: /(focus|focused on|focal point|焦点|聚焦|focal length|对焦|in focus|sharp at)/i.test(dofSection),
+        blurLevel: /(bokeh|blur|shallow|deep|out of focus|defocus|虚化|浅景深|深景深|背景虚化|前景虚化|f\/\d+\.?\d*|f-stop|aperture)/i.test(dofSection),
+        clarityRange: /(depth of field|dof|清晰范围|景深范围|sharp range|清晰区域|in-focus area|field|区域清晰)/i.test(dofSection)
+      };
+      const missingElements = Object.entries(threeElements).filter(([_, v]) => !v).map(([k, _]) => k);
+      if (missingElements.length > 1) {
+        warnings.push(`P1-3: 景深字段三要素缺失过多(${missingElements.length}/3)，缺失: ${missingElements.join(', ')}`);
+      } else if (missingElements.length > 0) {
+        warnings.push(`P1-3: 景深字段三要素部分缺失(${3 - missingElements.length}/3)，缺失: ${missingElements.join(', ')}`);
+      }
     }
 
-    // P1-4: 时间轴
-    if (!prompt.includes('【时间轴】') && !prompt.includes('【全局时间定位】') && !/TIMELINE\s*:/i.test(prompt)) {
+    // P1-4: 时间轴 - 分段数检查（≥3段）
+    const timelineSection = this._extractField(prompt, '【时间轴】') || this._extractField(prompt, '【全局时间定位】');
+    if (!timelineSection) {
       warnings.push('P1-4: 时间轴字段缺失');
+    } else {
+      // 检查时间戳格式和分段数
+      const timeSegments = timelineSection.match(/(\d{2}:\d{2}|T\d{2}:\d{2}|\d{2}s|\d{2}秒|\d+\.\d+s)/g) || [];
+      const actionSegments = timelineSection.split(/[。;；\n]/).filter(s => s.trim().length > 10);
+      if (timeSegments.length < 3 && actionSegments.length < 3) {
+        warnings.push(`P1-4: 时间轴分段数不足(${timeSegments.length}个时间戳/${actionSegments.length}个动作段)，建议≥3段`);
+      }
     }
 
     // P1-5: 情绪
@@ -174,9 +224,21 @@ class FieldGuard {
   _checkP2(prompt, shot) {
     const warnings = [];
 
-    // P2-1: 服装
-    if (!prompt.includes('【服装】')) {
+    // P2-1: 服装 - 详细性检查（外套/内搭/下装/鞋履至少三项）
+    const costumeSection = this._extractField(prompt, '【服装】');
+    if (!costumeSection) {
       warnings.push('P2-1: 服装字段缺失');
+    } else {
+      const costumeLayers = {
+        outerwear: /(outerwear|jacket|coat|blazer|suit|外套|西装|夹克|上衣|outer layer|top)/i.test(costumeSection),
+        innerwear: /(innerwear|shirt|blouse|undershirt|内搭|衬衫|内衣|内衬|t-shirt|sweater)/i.test(costumeSection),
+        bottomwear: /(bottomwear|pants|trousers|skirt|shorts|下装|裤子|裙子|裙|裤|bottom)/i.test(costumeSection),
+        footwear: /(footwear|shoes|boots|heels|sneakers|鞋履|鞋子|鞋|foot|sandal|boot)/i.test(costumeSection)
+      };
+      const presentLayers = Object.values(costumeLayers).filter(v => v).length;
+      if (presentLayers < 3) {
+        warnings.push(`P2-1: 服装详细性不足(${presentLayers}/4层)，建议至少包含外套/内搭/下装/鞋履中的3项`);
+      }
     }
 
     // P2-2: 道具
@@ -184,9 +246,22 @@ class FieldGuard {
       warnings.push('P2-2: 道具字段缺失');
     }
 
-    // P2-3: 节奏
-    if (!prompt.includes('【节奏】')) {
+    // P2-3: 节奏 - 完整性检查（五段式结构）
+    const pacingSection = this._extractField(prompt, '【节奏】');
+    if (!pacingSection) {
       warnings.push('P2-3: 节奏字段缺失');
+    } else {
+      const fiveSegments = {
+        opening: /(opening|beginning|start|开头|起始|起)/i.test(pacingSection),
+        rising: /(rising|build|accelerate|上升|加速|推进|渐强|build-up|develop)/i.test(pacingSection),
+        climax: /(climax|peak|highlight|高潮|顶点|峰值|最强烈|最高点)/i.test(pacingSection),
+        falling: /(falling|decelerate|slow|下降|减速|回落|渐弱|缓和|decline)/i.test(pacingSection),
+        ending: /(ending|conclusion|resolve|结尾|结束|收尾|终止|fade|收尾)/i.test(pacingSection)
+      };
+      const presentSegments = Object.values(fiveSegments).filter(v => v).length;
+      if (presentSegments < 3) {
+        warnings.push(`P2-3: 节奏五段式结构不完整(${presentSegments}/5)，建议包含开头-上升-高潮-下降-结尾`);
+      }
     }
 
     // P2-4: 音频
@@ -217,9 +292,11 @@ class FieldGuard {
     const errors = [];
     const warnings = [];
 
-    // 1. 字符数检查
+    // 1. 字符数检查 - 2500预警线 + 3000上限
     if (prompt.length > this.maxChars) {
       errors.push(`GEN-1: 提示词字符数超限(${prompt.length} > ${this.maxChars})`);
+    } else if (prompt.length > 2500) {
+      warnings.push(`GEN-1-WARN: 提示词字符数超过2500预警线(${prompt.length})，建议检查字段冗余或启用截断策略`);
     }
 
     // 2. 跨字段一致性
@@ -253,6 +330,12 @@ class FieldGuard {
     }
 
     return { passed: errors.length === 0, errors, warnings };
+  }
+
+  _extractField(prompt, tag) {
+    const regex = new RegExp(tag + '([^【】]*(?:【[^【】]*】[^【】]*)*)');
+    const match = prompt.match(regex);
+    return match ? match[1].trim() : null;
   }
 }
 

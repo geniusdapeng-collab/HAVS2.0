@@ -252,7 +252,7 @@ class UserRequirementParser {
       characters: this._buildCharacters(data.characters),
       
       // 五、场景定义（基础框架，后续Stage填充）
-      scenes: data.scenes || this._buildDefaultScenes(targetDuration, videoType),
+      scenes: data.scenes || this._buildDefaultScenes(targetDuration, videoType, topic),
       
       // 六、结构与分镜
       opening: {
@@ -378,8 +378,8 @@ class UserRequirementParser {
   
   _inferAspectRatio(platform, videoType) {
     if (platform === 'B站') return '16:9';
-    if (videoType === 'DRAMA' || videoType === 'DOC') return '16:9';
-    return '9:16'; // 默认竖屏
+    if (videoType === 'DRAMA' || videoType === 'DOC' || videoType === 'EDU') return '16:9';
+    return '16:9'; // 默认横屏（AGENTS.md 规定）
   }
   
   _inferAudience(videoType, input) {
@@ -468,12 +468,39 @@ class UserRequirementParser {
     return characters;
   }
   
-  _buildDefaultScenes(targetDuration, videoType) {
+  _buildDefaultScenes(targetDuration, videoType, topic) {
     // 根据时长计算默认场景数（每个场景8-12秒）
     const sceneCount = Math.max(3, Math.min(6, Math.ceil(targetDuration / 10)));
     const scenes = [];
     
-    const types = ['intro', 'content', 'content', 'content', 'ending'];
+    // v6.7.0-fix: 根据主题智能分配场景描述，避免LLM自由发挥导致内容重叠
+    const topicStr = topic || '内容';
+    let contentDescriptions = [];
+    
+    // 根据主题关键词推断内容结构
+    if (topicStr.includes('横纹肌溶解')) {
+      contentDescriptions = [
+        '症状概述：肌肉疼痛、肿胀、无力',
+        '实验室检查：肌酸激酶、肌红蛋白检测',
+        '尿液变化：浓茶色/酱油色尿液识别',
+        '就医建议：及时就诊的重要性'
+      ];
+    } else if (topicStr.includes('糖尿病') || topicStr.includes('高血压') || topicStr.includes('健康')) {
+      contentDescriptions = [
+        '疾病概述与危害',
+        '常见症状识别',
+        '诊断方法与标准',
+        '预防与管理建议'
+      ];
+    } else {
+      // 通用科普结构
+      contentDescriptions = [
+        '核心概念讲解',
+        '关键特征分析',
+        '实际案例说明',
+        '注意事项总结'
+      ];
+    }
     
     for (let i = 0; i < sceneCount; i++) {
       const isLast = i === sceneCount - 1;
@@ -481,11 +508,22 @@ class UserRequirementParser {
       const type = isFirst ? 'intro' : (isLast ? 'ending' : 'content');
       const duration = isFirst || isLast ? Math.floor(targetDuration * 0.15) : Math.floor(targetDuration * 0.7 / (sceneCount - 2));
       
+      // v6.7.0-fix: 填充有意义的场景描述，而非"待填充"
+      let description = '待填充';
+      if (type === 'intro') {
+        description = '开场：主讲人自我介绍，引入主题，建立信任感';
+      } else if (type === 'ending') {
+        description = '结尾：总结要点，强调核心信息，呼吁行动';
+      } else {
+        const contentIdx = i - 1;
+        description = contentIdx < contentDescriptions.length ? contentDescriptions[contentIdx] : `内容${contentIdx + 1}`;
+      }
+      
       scenes.push({
         id: `S0${i+1}`,
         name: isFirst ? '开场' : (isLast ? '结尾' : `内容${i}`),
         type: type,
-        description: '待填充',
+        description: description,
         characters: [],
         duration: Math.min(duration, 15),
         visualComplexity: 5,
