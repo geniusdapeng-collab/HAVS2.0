@@ -361,7 +361,7 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
       props: '场景中必要的写实道具，材质真实，无文字标识，符合场景功能',
       portraits: 'image://characters/default/portrait.png',
       dialogue: '',
-      dialogue_block: '',
+      dialogue_block: null, // 【v1.0.2-fix】空值时不输出，避免无意义标签
       timeline: 'T00:00 - 开场构图，环境展示；T00:03 - 主体进入画面；T00:06 - 核心动作或对白；T00:09 - 收尾定格',
       mood: 'calm, professional, natural',
       pacing: '整体：沉稳中等节奏；开头：平缓引入；中段：自然推进；结尾：平稳收尾',
@@ -627,7 +627,7 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
 
     // 【对话指令】⭐ 新增：Seedance 对话标注格式
     const dialogueBlockField = getField('dialogue_block');
-    if (dialogueBlockField) {
+    if (dialogueBlockField && String(dialogueBlockField).trim() && !String(dialogueBlockField).includes('规则兜底')) {
       const dialogueBlockText = dialogueBlockField.startsWith('【对话指令】') ? dialogueBlockField : `【对话指令】${dialogueBlockField}`;
       parts.push(dialogueBlockText);
     }
