@@ -165,43 +165,68 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
   }
 
   async process(shots, blueprint) {
-    console.log(`[PromptFusionAgent] 开始处理 ${shots.length} 个镜头（串行模式，避免并发超时）`);
-
     const ratio = blueprint.config?.aspectRatio || '16:9';
     const characters = blueprint.character_system?.characters || [];
+    const concurrency = Math.min(this.concurrency || 2, shots.length);
+
+    console.log(`[PromptFusionAgent] 开始处理 ${shots.length} 个镜头（并发=${concurrency}）`);
 
     const results = new Array(shots.length);
-    let failed = 0;
+    const errors = [];
 
-    // 【v2.1.4-fix11】串行处理，避免并发导致API超时
-    for (let i = 0; i < shots.length; i++) {
-      const shot = shots[i];
-      console.log(`\n🎬 处理镜头 ${i + 1}/${shots.length}: ${shot.shotId}`);
-      try {
-        const fused = await this._fuseSingleShot(shot, ratio, characters);
-        results[i] = fused;
-        console.log(`  ✅ ${shot.shotId} 完成`);
-      } catch (e) {
-        failed++;
-        console.warn(`  ❌ ${shot.shotId} 融合失败: ${e.message}`);
-        // 尝试用fillMissingFields补全，而不是直接降级
+    // 【P0-2-审计修复】分批并行处理 + 全局截止时间感知 + 逐批 checkpoint
+    for (let batchStart = 0; batchStart < shots.length; batchStart += concurrency) {
+      // 全局截止时间感知：剩余预算不足时提前降级
+      const remaining = this._remainingMs();
+      if (remaining < 30000) {
+        console.warn(`[PromptFusionAgent] ⏰ 剩余预算不足(${remaining}ms)，剩余 ${shots.length - batchStart} 镜头使用规则兜底`);
+        for (let i = batchStart; i < shots.length; i++) {
+          results[i] = this._fallbackSingleShot(shots[i], ratio);
+          results[i].degraded = true;
+          results[i].degradeReason = '全局预算不足，规则兜底';
+        }
+        break;
+      }
+
+      const batchEnd = Math.min(batchStart + concurrency, shots.length);
+      const batchIndices = [];
+      for (let i = batchStart; i < batchEnd; i++) batchIndices.push(i);
+
+      console.log(` 📦 批次 ${Math.floor(batchStart / concurrency) + 1}: 镜头 ${batchStart + 1}-${batchEnd}`);
+
+      // 并行处理当前批次
+      const batchResults = await Promise.allSettled(
+        batchIndices.map(i => this._fuseSingleShot(shots[i], ratio, characters))
+      );
+
+      // 收集结果
+      batchResults.forEach((res, idx) => {
+        const i = batchIndices[idx];
+        if (res.status === 'fulfilled') {
+          results[i] = res.value;
+          console.log(` ✅ ${shots[i].shotId} 完成`);
+        } else {
+          console.warn(` ❌ ${shots[i].shotId} 融合失败: ${res.reason?.message}，规则兜底`);
+          results[i] = this._fallbackSingleShot(shots[i], ratio);
+          results[i].degraded = true;
+          results[i].degradeReason = `LLM融合失败: ${res.reason?.message}`;
+          errors.push({ shotId: shots[i].shotId, error: res.reason?.message });
+        }
+      });
+
+      // 【逐批 checkpoint】每批完成后保存，进程被杀也能续跑
+      if (typeof this._onBatchComplete === 'function') {
         try {
-          console.log(`  🔄 尝试补全缺失字段...`);
-          const filled = await this._fillMissingFieldsWithRetry(shot, ratio, characters);
-          results[i] = filled;
-          console.log(`  ✅ ${shot.shotId} 补全完成`);
-        } catch (fillError) {
-          console.warn(`  ❌ ${shot.shotId} 补全也失败: ${fillError.message}，规则兜底`);
-          results[i] = this._fallbackSingleShot(shot, ratio);
+          await this._onBatchComplete('phase3-partial', results.filter(Boolean));
+        } catch (e) {
+          console.warn(`[PromptFusionAgent] checkpoint保存失败(忽略): ${e.message}`);
         }
       }
     }
 
-    if (failed > 0) {
-      console.warn(`[PromptFusionAgent] ⚠️ ${failed}/${shots.length} 镜头需要补全/兜底`);
-    }
+    const failed = results.filter(r => r && r.degraded).length;
     console.log(`[PromptFusionAgent] 完成 ✓ | 降级: ${failed}/${shots.length}`);
-    return { shots: results, degraded: failed > 0, degradeReason: null };
+    return { shots: results, degraded: failed > 0, degradeReason: null, errors };
   }
 
   /**
@@ -225,8 +250,11 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
 
   async _fuseSingleShot(shot, ratio, characters) {
     const prompt = this._buildBatchPrompt([shot], ratio, characters);
-    // 【v2.1.4-fix10-P25-fix3】把空 schema 换成带 25 字段键名的完整模板
-    const schema = { shots: [buildFullSchema(shot.shotId)] };
+    // 【P0-7-审计修复】schema 添加 required 字段，让校验生效
+    const schema = {
+      required: ['shots'],
+      shots: [buildFullSchema(shot.shotId)],
+    };
 
     const llmResult = await this._callLLM(prompt, schema, () => {
       throw new Error('LLM fallback');

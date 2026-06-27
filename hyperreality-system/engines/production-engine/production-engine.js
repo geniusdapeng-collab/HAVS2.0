@@ -281,12 +281,18 @@ class ProductionEngine {
     
     // v2.0.0-架构升级: 将第一个Agent的LLM引擎注入Gateway
     // (所有Agent共享相同的LLMEngine实例)
-    setTimeout(() => {
-      if (this.agents.sceneDesign && this.agents.sceneDesign.llmEngine) {
-        this.llmGateway.setEngine(this.agents.sceneDesign.llmEngine);
-        console.log('[ProductionEngine] LLM引擎已注入Gateway');
+    // 【P0-5-审计修复】主动触发 LLM 引擎加载并注入 Gateway
+    try {
+      const engine = this.agents.sceneDesign._getLLMEngine(); // 触发懒加载
+      if (engine) {
+        this.llmGateway.setEngine(engine);
+        console.log('[ProductionEngine] LLM引擎已注入Gateway ✓');
+      } else {
+        console.warn('[ProductionEngine] ⚠️ LLM引擎加载失败，Gateway降级模式');
       }
-    }, 0);
+    } catch (e) {
+      console.warn(`[ProductionEngine] LLM引擎注入异常: ${e.message}`);
+    }
   }
 
   _initModules() {
@@ -460,7 +466,7 @@ class ProductionEngine {
         hasCharacter: p.character !== 'NONE' || p.characterRef !== 'NONE',
         hasMood: !!p.mood,
         hasDialogue: p.dialogue !== 'NONE' && p.dialogue !== '',
-        lengthOk: p.promptCharCount > 0 && p.promptCharCount < 2000,
+        lengthOk: p.promptCharCount > 0 && p.promptCharCount <= (this.config.maxPromptLength || 12000),
         passed: false // 后面计算
       };
     });

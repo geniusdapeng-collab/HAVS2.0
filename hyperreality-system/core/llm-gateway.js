@@ -117,13 +117,13 @@ class LLMGateway {
    *   - preferFast: 是否优先使用快速模型
    * @returns {Promise<object>}
    */
-  async call(prompt, options = {}) {
+  async call(prompt, options = {}, _retryCount = 0) {
     this.stats.totalCalls++;
     
     // 1. 检查熔断器
     if (this._isCircuitOpen()) {
       console.warn('[LLMGateway] 熔断器开启，直接降级');
-      return this._ruleTemplateFallback(options.agentType, prompt);
+      return this._ruleTemplateFallback(options.agentType, prompt, options.context);
     }
     
     // 2. 缓存检查
@@ -141,7 +141,7 @@ class LLMGateway {
     const model = options.preferFast ? this.models.fast : this.models.primary;
     const timeout = options.timeout || this.defaultTimeout;
     
-    // 4. 执行LLM调用
+    // 4. 执行 LLM 调用
     const startTime = Date.now();
     try {
       const result = await this._executeWithTimeout(prompt, model, timeout, options);
@@ -164,7 +164,7 @@ class LLMGateway {
       this._recordLatency(latency);
       
       // 5. 错误处理与降级链
-      return this._handleError(err, prompt, options, latency);
+      return this._handleError(err, prompt, options, latency, _retryCount);
     }
   }
   
@@ -197,7 +197,7 @@ class LLMGateway {
   /**
    * 错误处理与降级链
    */
-  async _handleError(err, prompt, options, latency) {
+  async _handleError(err, prompt, options, latency, retryCount = 0) {
     this._recordFailure();
     
     if (err.type === 'TIMEOUT') {
@@ -211,7 +211,7 @@ class LLMGateway {
           const result = await this._executeWithTimeout(
             prompt, 
             this.models.fallback, 
-            Math.floor(options.timeout * 0.7 || this.defaultTimeout * 0.7),
+            Math.floor((options.timeout || this.defaultTimeout) * 0.7),
             options
           );
           this.stats.fallbackUsed++;
@@ -224,56 +224,82 @@ class LLMGateway {
       // 降级链2：规则模板
       console.log('[LLMGateway] 最终降级: 规则模板');
       this.stats.fallbackUsed++;
-      return this._ruleTemplateFallback(options.agentType, prompt);
+      return this._ruleTemplateFallback(options.agentType, prompt, options.context);
       
     } else if (err.type === 'RATE_LIMIT') {
-      console.warn('[LLMGateway] 触发限流，指数退避重试');
-      await this._exponentialBackoff(1);
-      return this.call(prompt, options);
+      // 【P0-3-审计修复】限制最多 3 次退避重试，避免无限递归
+      const MAX_RATE_LIMIT_RETRIES = 3;
+      if (retryCount >= MAX_RATE_LIMIT_RETRIES) {
+        console.warn(`[LLMGateway] 限流重试已达上限(${MAX_RATE_LIMIT_RETRIES}次)，降级到规则模板`);
+        this.stats.fallbackUsed++;
+        return this._ruleTemplateFallback(options.agentType, prompt, options.context);
+      }
+      console.warn(`[LLMGateway] 触发限流，指数退避重试 ${retryCount + 1}/${MAX_RATE_LIMIT_RETRIES}`);
+      await this._exponentialBackoff(retryCount + 1);
+      return this.call(prompt, options, retryCount + 1);
       
     } else {
       this.stats.errors++;
       console.error('[LLMGateway] LLM错误:', err.message);
       
       // 非超时错误也尝试规则兜底
-      return this._ruleTemplateFallback(options.agentType, prompt);
+      return this._ruleTemplateFallback(options.agentType, prompt, options.context);
     }
   }
   
   /**
    * 规则模板兜底（无需LLM）
    */
-  _ruleTemplateFallback(agentType, prompt) {
+  _ruleTemplateFallback(agentType, prompt, context = {}) {
     console.log(`[LLMGateway] 规则模板兜底: ${agentType}`);
-    
+
+    // 【P0-6-审计修复】从 context 动态提取世界设定，不硬编码医院场景
+    const worldDesc = context?.worldSetting?.description || context?.worldSetting?.name || '真实物理环境';
+    const atmosphere = context?.worldSetting?.atmosphere || '';
+    const charName = context?.character?.name || context?.character || '主角';
+    const sceneType = context?.sceneType || 'establishing';
+
+    const typeDesc = {
+      opening: '史诗开场空间，宏大视角',
+      establishing: '核心叙事空间，环境展示',
+      conflict: '紧张对峙地带，戏剧张力',
+      action: '激烈动作场地，高速动态',
+      emotional_climax: '情感高潮场景，张力爆发',
+      resolution: '平静收尾空间，余韵悠长',
+    }[sceneType] || '叙事场景';
+
+    const sceneBase = `${worldDesc}，${typeDesc}${atmosphere ? '，' + atmosphere : ''}`;
+
     const templates = {
       'scene-design': {
-        scene: '医院健康宣教室，白色荧光灯均匀照明，白墙面贴医学海报，木质讲台，浅灰色防滑地胶，角色站立于讲台前。',
-        lighting: '主光：顶部LED面板灯4000K中性白光，均匀漫射；补光：反光板填充阴影；整体光比1:3，明亮清晰。',
-        props: '木质讲台，空白文件夹，医学海报'
+        scene: sceneBase,
+        lighting: '主光：自然光源 5600K 柔光漫射；补光：反光板填充阴影；背景光：轮廓光分离层次；整体明亮清晰',
+        props: '场景中必要的写实道具，材质真实，无文字标识',
+        mood: 'calm, professional, natural',
+        action: `${charName}自然站立或行走，手部自然动作，眼神交流，真实肢体语言`,
       },
       'visual-language': {
         composition: '景别：中景；主体：黄金分割点；纵深层次感；适度留白',
         colorPalette: '主色调：自然偏暖；辅助色：环境本色；肤色自然；饱和度中等；对比度中高',
-        depthOfField: '焦点：主体面部；景深中等f/4；背景适度虚化；前景-中景-背景三层分离'
+        depthOfField: '焦点：主体面部；景深中等f/4；背景适度虚化；前景-中景-背景三层分离',
       },
       'prompt-fusion': {
-        merged: '基于场景和视觉描述，融合为完整提示词',
-        quality: 'standard'
+        merged: `基于「${sceneBase}」生成的导演分镜提示词`,
+        quality: 'standard',
       },
       'audio-design': {
-        audio: '环境音效：医院低频设备嗡鸣；音乐风格：冷色调氛围音乐；音量层级：环境音60%音乐40%'
+        audio: '环境音效：自然环境底噪；音乐风格：氛围配乐；音量层级：环境音60%音乐40%',
       },
       'opening-design': {
-        mainTitleContent: '主题标题',
-        subtitleContent: '副标题内容',
+        mainTitleContent: context?.title || '主题标题',
+        subtitleContent: '',
         titleAnimationDesign: '简洁文字动画，淡入淡出',
         titleFontDesign: '无衬线字体，白色，清晰度优先',
-        openingAudioDesign: '庄重氛围音乐，渐入'
-      }
+        openingAudioDesign: '庄重氛围音乐，渐入',
+      },
     };
-    
-    return templates[agentType] || { error: '无可用模板', fallback: true };
+
+    return templates[agentType] || { error: '无可用模板', fallback: true, scene: sceneBase };
   }
   
   /**
