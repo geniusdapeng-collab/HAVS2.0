@@ -118,8 +118,9 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
 12. 【动作】：角色具体动作（手势、步伐、视线）。格式："右手自然抬起至胸前做强调手势，左手自然下垂，身体微微前倾，目光直视镜头"
 13. 【道具】：关键道具（手持物、桌面物品、背景物件）。格式："手持：空白文件夹（白色，无文字）；背景：木质桌面"
 14. 【定妆照】：角色定妆照引用路径（如：image://characters/xxx/portraits/xxx.jpg）
-15. 【台词】：角色直接说的话，格式：纯台词内容（不要写"画外音""旁白"）
-16. 【时间轴】：镜头内部的微观导演调度时间轴。必须采用分段式描述，时间戳使用相对于镜头起始点的偏移格式 T00:XX（如 T00:00, T00:02, T00:04），每段包含画面内容和角色动作。要求至少分3段，时间戳不得重叠或跳跃中断。
+15. 【对话指令】：角色对话标注（Seedance 官方格式）。当镜头中有台词时必须输出。格式：角色名(动作触发，情绪修饰，面向[对话对象])："台词内容"，LIP_SYNC:true，身体语言：[描述]。每句台词一行，多句分行排列。
+16. 【台词】：角色直接说的话（单句简洁版）。格式：纯台词内容。当存在【对话指令】时，【台词】为其简化版。
+17. 【时间轴】：镜头内部的微观导演调度时间轴。必须采用分段式描述，时间戳使用相对于镜头起始点的偏移格式 T00:XX（如 T00:00, T00:02, T00:04），每段包含画面内容和角色动作。要求至少分3段，时间戳不得重叠或跳跃中断。
    标准格式示例：
    "T00:00 - 中景，主角坐在窗前，阳光从侧面照入；主角缓缓抬起头，目光投向窗外
    T00:02 - 近景过渡，镜头缓慢推进至面部；主角眼神由迷茫转为坚定，嘴角微微抿紧
@@ -429,6 +430,18 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     if (shot.dialogue) {
       const pureDialogue = shot.dialogueText || this._extractPureDialogue(shot.dialogue);
       if (pureDialogue) result.dialogue = `"${pureDialogue}"`;
+      
+      // 【v1.0.3-fix】从 lines 数组构建 dialogue_block（Seedance 对话指令格式）
+      if (shot.dialogue.lines && Array.isArray(shot.dialogue.lines) && shot.dialogue.lines.length > 0) {
+        const dialogueBlocks = shot.dialogue.lines.map(line => {
+          const speaker = line.speaker || '角色';
+          const text = line.text || line.content || '';
+          const emotion = line.emotion || '平静';
+          const action = line.action || '面向镜头说话';
+          return `${speaker}(${action}，${emotion}，面向镜头)："${text}"，LIP_SYNC:true，身体语言：[自然嘴型同步]`;
+        });
+        result.dialogue_block = dialogueBlocks.join('\n');
+      }
     }
     if (shot.dialogueBlock) {
       result.dialogue_block = shot.dialogueBlock;
@@ -824,15 +837,18 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
 
   _countChars(str) {
     if (!str) return 0;
-    let count = 0;
-    for (const char of str) {
-      count += (char.charCodeAt(0) > 127) ? 1.5 : 1;
-    }
-    return Math.ceil(count);
+    // 【v1.0.3-fix】使用实际字符数，避免中文字符加权导致误截断
+    return str.length;
   }
 
   _extractPureDialogue(dialogue) {
-    if (!dialogue || typeof dialogue !== 'string') return dialogue;
+    // 【v1.0.3-fix】支持对象类型 {lines: [...]} 和字符串类型
+    if (!dialogue) return '';
+    if (typeof dialogue === 'object' && dialogue.lines && Array.isArray(dialogue.lines)) {
+      // 从 lines 数组提取纯文本
+      return dialogue.lines.map(l => l.text || l.content || '').filter(Boolean).join('；');
+    }
+    if (typeof dialogue !== 'string') return String(dialogue || '');
     const parts = dialogue.split(/[|;]/);
     if (parts.length >= 5) {
       return parts[3].trim();
