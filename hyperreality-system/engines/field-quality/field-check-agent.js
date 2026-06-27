@@ -594,11 +594,11 @@ class LLMChecker {
 
     try {
       const response = await Promise.race([
-        this.llm.chat(LLM_CHECKER_SYSTEM_PROMPT, userPrompt, 0.2),
+        this.llm.reasonStructured(LLM_CHECKER_SYSTEM_PROMPT + '\n\n' + userPrompt, null, { maxRetries: 1, timeoutMs: this.timeoutMs }),
         timeoutPromise
       ]).finally(() => clearTimeout(timer));
 
-      const data = JSON.parse(response);
+      const data = response.result || response.data || response;
       return (data.issues || []).map(item => new Issue({
         fieldEn: item.field_en || '',
         fieldCn: item.field_cn || '',

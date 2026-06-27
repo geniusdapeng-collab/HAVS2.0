@@ -285,11 +285,11 @@ class LLMRepairer {
 
     try {
       const response = await Promise.race([
-        this.llm.chat(LLM_REPAIRER_SYSTEM_PROMPT, userPrompt, 0.3),
+        this.llm.reasonStructured(LLM_REPAIRER_SYSTEM_PROMPT + '\n\n' + userPrompt, null, { maxRetries: 1, timeoutMs: this.timeoutMs }),
         timeoutPromise
       ]).finally(() => clearTimeout(timer));
 
-      const data = JSON.parse(response);
+      const data = response.result || response.data || response; // 【v2.1.4-fix13】兼容两种返回格式
       const repairedFields = data.repaired_fields || data || {}; // 【v2.1.4-fix13】兼容两种返回格式
 
       const repairedShot = JSON.parse(JSON.stringify(shot));

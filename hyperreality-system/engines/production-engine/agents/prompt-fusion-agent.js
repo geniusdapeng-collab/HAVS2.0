@@ -28,6 +28,7 @@ const STANDARD_FIELDS_SCHEMA = {
   props: '',
   portraits: '',
   dialogue: '',
+  dialogue_block: '',
   timeline: '',
   mood: '',
   pacing: '',
@@ -360,6 +361,7 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
       props: '场景中必要的写实道具，材质真实，无文字标识，符合场景功能',
       portraits: 'image://characters/default/portrait.png',
       dialogue: '',
+      dialogue_block: '',
       timeline: 'T00:00 - 开场构图，环境展示；T00:03 - 主体进入画面；T00:06 - 核心动作或对白；T00:09 - 收尾定格',
       mood: 'calm, professional, natural',
       pacing: '整体：沉稳中等节奏；开头：平缓引入；中段：自然推进；结尾：平稳收尾',
@@ -427,6 +429,12 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     if (shot.dialogue) {
       const pureDialogue = shot.dialogueText || this._extractPureDialogue(shot.dialogue);
       if (pureDialogue) result.dialogue = `"${pureDialogue}"`;
+    }
+    if (shot.dialogueBlock) {
+      result.dialogue_block = shot.dialogueBlock;
+    }
+    if (shot.dialogue_block) {
+      result.dialogue_block = shot.dialogue_block;
     }
     if (shot.emotionalTarget) {
       const et = shot.emotionalTarget;
@@ -596,9 +604,18 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     const propsField = getField('props');
     if (propsField) parts.push(`【道具】${propsField}`);
 
-    // 【定妆照】
-    const portraitsField = getField('portraits');
-    if (portraitsField) parts.push(`【定妆照】${portraitsField}`);
+    // 【定妆照】路径规范化：统一角色目录名
+    let portraitsField = getField('portraits');
+    if (portraitsField) {
+      // 统一替换各种变体为规范路径
+      portraitsField = portraitsField
+        .replace(/characters[/\\]monkey_king/g, 'characters/wukong')
+        .replace(/characters[/\\]sunwukong/g, 'characters/wukong')
+        .replace(/characters[/\\]erlang_shen/g, 'characters/erlang-shen')
+        .replace(/characters[/\\]erlangshen/g, 'characters/erlang-shen')
+        .replace(/characters[/\\]erlangsen/g, 'characters/erlang-shen');
+      parts.push(`【定妆照】${portraitsField}`);
+    }
 
     // 台词
     const dialogueField = getField('dialogue');
@@ -606,6 +623,13 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
       // 【v2.1.4-fix13】确保台词有【台词】前缀
       const dialogueText = dialogueField.startsWith('【台词】') ? dialogueField : `【台词】${dialogueField}`;
       parts.push(dialogueText);
+    }
+
+    // 【对话指令】⭐ 新增：Seedance 对话标注格式
+    const dialogueBlockField = getField('dialogue_block');
+    if (dialogueBlockField) {
+      const dialogueBlockText = dialogueBlockField.startsWith('【对话指令】') ? dialogueBlockField : `【对话指令】${dialogueBlockField}`;
+      parts.push(dialogueBlockText);
     }
 
     // 【时间轴】镜头内部微观导演调度（T00:XX相对时间戳格式）
