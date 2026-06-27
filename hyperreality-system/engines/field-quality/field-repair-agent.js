@@ -285,7 +285,7 @@ class LLMRepairer {
 
     try {
       const response = await Promise.race([
-        this.llm.reasonStructured(LLM_REPAIRER_SYSTEM_PROMPT + '\n\n' + userPrompt, null, { maxRetries: 1, timeoutMs: this.timeoutMs }),
+        this.llm.reasonStructured(LLM_REPAIRER_SYSTEM_PROMPT + '\n\n' + userPrompt, {}, { maxRetries: 1, timeoutMs: this.timeoutMs }),
         timeoutPromise
       ]).finally(() => clearTimeout(timer));
 

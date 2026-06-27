@@ -6,6 +6,7 @@
  */
 const { BaseAgent } = require('./base-agent');
 const { normalizeFields, makeGetter } = require('../../field-standardizer');
+const PromptLengthConfig = require('../../../config/prompt-length.js');
 
 // 【v2.1.4-fix10-P25-fix3】外部专家建议：填满 schema 解决 LLM 字段缺失问题
 // 25 个标准字段的 schema 模板：键名 + 类型提示
@@ -88,9 +89,6 @@ function buildFullSchema(shotId) {
 class PromptFusionAgent extends BaseAgent {
   constructor(options = {}) {
     super({ name: 'PromptFusionAgent', enabled: true, llmTimeout: 300000, ...options });
-const PromptLengthConfig = require('../../../config/prompt-length.js');
-// ...
-    // 【审计修复】从配置文件读取，不再硬编码
     this.maxPromptLength = options.maxPromptLength || PromptLengthConfig.HARD_MAX || 12000;
     this.concurrency = options.concurrency || 2;
     this.llmTimeout = 300000; // 5 分钟单次（结构化输出需要更长时间）
@@ -151,7 +149,7 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
    - 【音频】≥100字符（须含环境音效+音乐风格+音量层级+BPM）
    - 如果某字段内容不足，请补充更多细节使其达标
 2. 【对话指令】字段必须独立，包含角色名+动作触发+情绪修饰+面向对象+台词内容+LIP_SYNC+身体语言，不要写"画外音""旁白"
-3. 场景要具体真实（门诊室、宣教室、检查室），必须是写实环境，禁止科幻/抽象元素
+3. 场景要具体真实，必须是写实环境，禁止科幻/抽象元素
 3. 【动作】必须是真实物理动作和镜头运动：推近、跟拍、手持、站立、行走、手势、转身、注视镜头。严禁使用：全息投影、空间扭曲、时间残影、霓虹色、数据流、抽象构图、梦境流动性、湿版摄影、光即角色、AI瑕疵、宏大比例、微观世界
 4. 禁止词汇（全字段通用）：全息、虚拟、投影、抽象、光影场域、数据空间、元宇宙、时间操控、霓虹、微观世界、宏观、抽象几何、流动光影、交织光影、色彩对冲、空间扭曲、时间残影、数据流、光即角色、梦境流动性、湿版摄影、AI瑕疵
 5. 【场景】中不得出现含文字的物品描述：如"有文字的报告单"、"标牌上的文字"、"商标"、"有字的海报"等。可以描述"空白报告单"、"无文字标识牌"、"图形海报"等不含文字的物品
@@ -312,10 +310,30 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
 
     if (missing.length === 0) return fields; // 全齐，无需补
 
-    // 【v2.1.4-fix15-超时优化】跳过第二次 LLM 补齐，直接用规则兜底
-    // 第二次 LLM 补齐经常失败（content为空）且耗时 60-180s，浪费大量时间
-    // 规则兜底已足够覆盖缺失字段，且质量可控
-    console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → 规则兜底（跳过 LLM 补齐以节省超时预算）`);
+    // 【P1-13-审计修复】自适应补齐：预算充足用LLM，不足用规则兜底
+    const remaining = this._remainingMs();
+    const budgetPerField = 30000; // 每字段约30s
+    if (remaining >= missing.length * budgetPerField && this.llmModel) {
+      console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → LLM补齐（预算充足: ${remaining}ms）`);
+      try {
+        const patch = await this.llmModel.call({
+          prompt: `为镜头 ${shot.shotId} 补齐以下字段: ${missing.join(',')}。按标准格式输出每个字段内容。`,
+          timeout: Math.min(remaining - 5000, 120000)
+        });
+        if (patch && typeof patch === 'object') {
+          for (const f of missing) {
+            if (patch[f] && String(patch[f]).trim() !== '') {
+              fields[f] = patch[f];
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`[PromptFusion] LLM补齐失败: ${e.message} → 规则兜底`);
+      }
+    } else {
+      console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → 规则兜底（预算不足: ${remaining}ms 或 LLM不可用）`);
+    }
+    // 兜底：LLM补齐后仍缺失的字段用规则兜底
     for (const f of missing) {
       if (!fields[f] || String(fields[f]).trim() === '') {
         fields[f] = this._defaultFieldValue(f, shot);
@@ -454,37 +472,13 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     if (shot.cameraString) result.camera_movement = shot.cameraString;
     if (shot.lightingString) result.lighting = shot.lightingString;
     if (shot.backgroundSoundString) result.audio = shot.backgroundSoundString;
+    // 【P1-14-审计修复】统一 dialogue_block 构建
     if (shot.dialogue) {
-      const pureDialogue = shot.dialogueText || this._extractPureDialogue(shot.dialogue);
-      if (pureDialogue) result.dialogue = `"${pureDialogue}"`;
-      
-      // 【v1.0.5-fix】从 lines 数组或 pipe-delimited 字符串构建 dialogue_block
-      if (shot.dialogue.lines && Array.isArray(shot.dialogue.lines) && shot.dialogue.lines.length > 0) {
-        // 对象格式 {lines: [...]}
-        const dialogueBlocks = shot.dialogue.lines.map(line => {
-          const speaker = line.speaker || '角色';
-          const text = line.text || line.content || '';
-          const emotion = line.emotion || '平静';
-          const action = line.action || '面向镜头说话';
-          return `${speaker}(${action}，${emotion}，面向镜头)："${text}"，LIP_SYNC:true，身体语言：[自然嘴型同步]`;
-        });
-        result.dialogue_block = dialogueBlocks.join('\n');
-      } else if (typeof shot.dialogue === 'string' && shot.dialogue.includes('|')) {
-        // Pipe-delimited 字符串格式: 角色名|台词|情绪|内容|LIP_SYNC:YES
-        const parts = shot.dialogue.split('|');
-        if (parts.length >= 4) {
-          const speaker = parts[0] || '角色';
-          const emotion = parts[2] || '平静';
-          const text = parts[3] || '';
-          result.dialogue_block = `${speaker}(面向镜头说话，${emotion}，面向[画外])："${text}"，LIP_SYNC:true，身体语言：[自然嘴型同步]`;
-        }
-      }
+      const block = this._buildDialogueBlock(shot.dialogue, shot);
+      if (block) result.dialogue_block = block;
     }
-    if (shot.dialogueBlock) {
-      result.dialogue_block = shot.dialogueBlock;
-    }
-    if (shot.dialogue_block) {
-      result.dialogue_block = shot.dialogue_block;
+    if (shot.dialogueBlock || shot.dialogue_block) {
+      result.dialogue_block = shot.dialogueBlock || shot.dialogue_block;
     }
     if (shot.emotionalTarget) {
       const et = shot.emotionalTarget;
@@ -598,22 +592,19 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     const cameraMovement = getField('camera_movement', 'cameraMovement');
     if (cameraMovement) parts.push(`【运镜】${cameraMovement}`);
 
-    // 【角色】
-    // 【v2.1.4-fix9-P4】角色服装锁定：强制使用原始角色设定中的服装
+    // 【P1-17-审计修复】通用化角色服装锁定：支持任意关键词服装
     let characterDesc = fields.character || '';
     if (characterDesc && shot.character) {
-      // 如果LLM输出的角色描述中没有"警"字，但原始角色设定有，则强制替换
-      const originalChar = shot.character || '';
-      if (originalChar.includes('警') && !characterDesc.includes('警')) {
-        // LLM擅自改了服装，从原始角色描述中提取姓名+服装
-        const nameMatch = originalChar.match(/([^,，]+警[^,，]+)/);
-        if (nameMatch) {
-          characterDesc = characterDesc.replace(/(身着|穿着|身穿|着)[^，]+/, nameMatch[1]);
-          // 如果没替换成功，直接在描述开头插入正确服装
-          if (!characterDesc.includes('警')) {
-            characterDesc = originalChar + '，' + characterDesc;
-          }
-        }
+      const originalChar = typeof shot.character === 'string' ? shot.character : '';
+      const costumeKeywords = [
+        '警服', '白大褂', '西装', '铠甲', '战甲', '法袍', '道袍',
+        '军装', '制服', '汉服', '长袍', '盔甲', '披风',
+        'uniform', 'armor', 'robe', 'suit', 'coat'
+      ];
+      const originalCostume = costumeKeywords.find(k => originalChar.includes(k));
+      if (originalCostume && !characterDesc.includes(originalCostume)) {
+        console.warn(`[PromptFusion] ${shot.shotId} 角色服装被LLM修改，强制还原为: ${originalCostume}`);
+        characterDesc = `${originalChar}，${characterDesc}`;
       }
     }
     if (characterDesc) parts.push(`【角色】${characterDesc}`);
@@ -877,6 +868,40 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     return str.length;
   }
 
+  /**
+   * 【P1-14-审计修复】统一 dialogue_block 构建（单入口）
+   */
+  _buildDialogueBlock(dialogue, shot) {
+    if (!dialogue) return null;
+    const speaker = shot.character?.name || '角色';
+    const charDesc = typeof shot.character === 'string' ? shot.character : '';
+    
+    // 对象格式 {lines: [...]}
+    if (typeof dialogue === 'object' && dialogue.lines && Array.isArray(dialogue.lines)) {
+      const dialogueBlocks = dialogue.lines.map(line => {
+        const spk = line.speaker || speaker;
+        const text = line.text || line.content || '';
+        const emotion = line.emotion || '平静';
+        const action = line.action || '面向镜头说话';
+        return `${spk}(${action}，${emotion}，面向镜头)："${text}"，LIP_SYNC:true，身体语言：[自然嘴型同步]`;
+      });
+      return dialogueBlocks.join('\n');
+    }
+    
+    // Pipe-delimited 字符串格式
+    if (typeof dialogue === 'string' && dialogue.includes('|')) {
+      const parts = dialogue.split('|');
+      if (parts.length >= 4) {
+        const spk = parts[0] || speaker;
+        const emotion = parts[2] || '平静';
+        const text = parts[3] || '';
+        return `${spk}(面向镜头说话，${emotion}，面向[画外])："${text}"，LIP_SYNC:true，身体语言：[自然嘴型同步]`;
+      }
+    }
+    
+    return null;
+  }
+
   _extractPureDialogue(dialogue) {
     // 【v1.0.3-fix】支持对象类型 {lines: [...]} 和字符串类型
     if (!dialogue) return '';
@@ -939,7 +964,7 @@ ${sufficiency}
 要求：
 1. 按标准字段输出：【约束】【基础】【场景】【灯光/照明】【构图】【色彩/色调】【景深】【运镜】【角色】【服装】【化妆】【动作】【道具】【定妆照】【对话指令】【时间轴】【情绪】【节奏】【转场】【音频】【负面约束】【明亮约束】【角色约束】【导演指令】【角色一致性】
 2. 【对话指令】字段必须独立，包含角色名+动作触发+情绪修饰+面向对象+台词内容+LIP_SYNC+身体语言，不要写"画外音""旁白"
-3. 场景要具体专业（门诊室、宣教室、检查室），不要写"社区健身区"。场景中不得出现含文字的物品：如"有文字的报告单"、"标牌上的文字"、"商标"、"有字的海报"等。可以描述"空白报告单"、"无文字标识牌"、"图形海报"等不含文字的物品
+3. 场景要具体专业，必须是写实环境，禁止科幻/抽象元素。场景中不得出现含文字的物品：如"有文字的报告单"、"标牌上的文字"、"商标"、"有字的海报"等。可以描述"空白报告单"、"无文字标识牌"、"图形海报"等不含文字的物品
 4. 负面约束要完整，包含10+条排除项，必须包含全局禁止文字：no text anywhere in frame, no readable characters, no alphabets, no Chinese characters, no text on walls objects documents signs labels screens clothing packaging, no handwritten text, no printed text, no signage text, no text overlays, no UI elements with text
 5. 只输出JSON，不要解释
 

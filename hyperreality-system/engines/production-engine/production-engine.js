@@ -67,6 +67,9 @@ class ProductionEngine {
       maxPromptLength: this.config.maxPromptLength
     };
 
+    // 【P1-9-审计修复】显式绑定 this.llmModel
+    this.llmModel = this.agentConfig.llmModel;
+
     // v2.0.0-LLM-Agent: 初始化Agents
     this._initAgents();
 
@@ -1249,6 +1252,10 @@ class ProductionEngine {
       Promise.resolve(tasks[k]).then(v => {
         this.log(k.toUpperCase(), `完成 (${Date.now() - starts[i]}ms)`);
         return v;
+      }).catch(e => {
+        // 【P3-26-审计修复】挂 catch 防止 promise 悬空
+        this.log(k.toUpperCase() + '-FAIL', `失败: ${e.message}`);
+        return null;
       })
     );
 

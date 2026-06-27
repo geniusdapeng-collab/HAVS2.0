@@ -20,8 +20,19 @@ function install() {
   });
 
   process.on('uncaughtException', (err) => {
-    console.error(`[ProcessGuard] 未捕获异常(已吸收，进程继续): ${err.message}`);
-    // 不 process.exit，让流程继续；真正致命的错误由各阶段 try/catch 处理
+    const msg = err.message || '';
+    // 【P2-24-审计修复】区分可恢复错误和致命错误
+    const recoverable = msg.includes('超时') || msg.includes('timeout') ||
+                        msg.includes('JSON') || msg.includes('ECONNRESET') ||
+                        msg.includes('ETIMEDOUT') || msg.includes('socket');
+
+    if (recoverable) {
+      console.warn(`[ProcessGuard] 可恢复异常(已吸收): ${msg}`);
+    } else {
+      console.error(`[ProcessGuard] ⚠️ 致命未捕获异常: ${msg}`);
+      console.error(err.stack);
+      setTimeout(() => process.exit(1), 3000);
+    }
   });
 }
 

@@ -256,11 +256,11 @@ const CRITICAL_FIELDS = {
     'character',             // 人物层
     'action',                // 人物层
     'portraits',             // 质量层
-    'dialogue',              // 叙事层
+    // 【P1-12-审计修复】dialogue 移出 P0 —— 无台词镜头不应判为致命缺失
     'negative',              // 约束层
     'consistency'            // 质量层
   ],
-  // P1 核心级（7个字段）- 缺失会导致质量显著降低
+  // P1 核心级（8个字段，dialogue 移入此级）- 缺失会导致质量显著降低
   p1: [
     'composition',           // 镜头语言层
     'color_palette',          // 镜头语言层
@@ -268,7 +268,8 @@ const CRITICAL_FIELDS = {
     'timeline',              // 调度层
     'mood',                  // 渲染层
     'bright_constraint',      // 约束层
-    'character_constraint'    // 约束层
+    'character_constraint',    // 约束层
+    'dialogue'               // 【P1-12-审计修复】移入 P1，允许无台词镜头为空
   ],
   // P2 增强级（4个字段）- 缺失不影响主体表达
   p2: [
@@ -309,7 +310,7 @@ function normalizeDialogue(value) {
       if (item && typeof item === 'object') {
         return {
           speaker: item.speaker || item.说话人 || item.role || '',
-          text: item.text || item.内容 || item.line || item.text || ''
+          text: item.text || item.内容 || item.line || ''
         };
       }
       return { speaker: '', text: String(item || '') };
@@ -522,6 +523,44 @@ function standardizeShot(rawInput = {}) {
     standard.sceneType = 'opening';
   }
 
+  // 【P1-8-审计修复】统一 snake_case 为主键，camelCase 自动同步
+  const SYNC_PAIRS = [
+    ['camera_movement', 'cameraMovement'],
+    ['color_palette', 'colorPalette'],
+    ['depth_of_field', 'depthOfField'],
+    ['bright_constraint', 'brightConstraint'],
+    ['character_constraint', 'characterConstraint'],
+    ['character_ref', 'characterRef'],
+    ['character_cards', 'characterCards'],
+    ['emotion_phase', 'emotionPhase'],
+    ['quality_score', 'qualityScore'],
+    ['scene_type', 'sceneType'],
+    ['degrade_reason', 'degradeReason'],
+    ['emotional_target', 'emotionalTarget'],
+    ['visual_direction', 'visualDirection'],
+    ['world_id', 'worldId'],
+    ['audio_layer', 'audioLayer'],
+    ['title_overlay', 'titleOverlay'],
+    ['beast_voice', 'beastVoice'],
+    ['opening_hook', 'openingHook'],
+    ['mouth_action', 'mouthAction'],
+    ['title_content', 'titleContent'],
+    ['subtitle_content', 'subtitleContent'],
+    ['title_animation', 'titleAnimation'],
+    ['title_font_design', 'titleFontDesign'],
+    ['opening_audio_design', 'openingAudioDesign'],
+  ];
+  for (const [snake, camel] of SYNC_PAIRS) {
+    let val = standard[snake];
+    if (val === undefined || val === null || val === '') {
+      val = standard[camel];
+    }
+    if (val !== undefined && val !== null) {
+      standard[snake] = val;
+      standard[camel] = val;
+    }
+  }
+
   return standard;
 }
 
@@ -603,8 +642,9 @@ function validateShot(shot) {
       }
     }
   }
+  // 【P1-18-审计修复】'no text' 检查降为 warning，不再强制阻断
   if (!shot.negative || !shot.negative.includes('no text')) {
-    errors.push(`Missing critical negative constraint: no text`);
+    warnings.push(`Recommended negative constraint: add 'no text' to negative field`);
   }
 
   // 【v2.1.4-fix11-F】最终导出前严格检查：所有25字段必须有非空内容

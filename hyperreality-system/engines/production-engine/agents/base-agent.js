@@ -12,10 +12,24 @@ const DEFAULT_FAST_MODEL = process.env.STORMAXE_LLM_FAST_MODEL || DEFAULT_MODEL;
 
 function loadLLMEngine(model, maxTokens) {
   try {
-    const SYSTEMS_PATH = path.join(__dirname, '../../../../systems');
-    const LLMClass = require(path.join(SYSTEMS_PATH, 'llm-reasoning-engine.js'))?.LLMEngine;
+    // 【P1-10-审计修复】尝试多个路径查找 llm-reasoning-engine.js
+    const candidatePaths = [
+      path.join(__dirname, '../../../../systems', 'llm-reasoning-engine.js'),
+      path.join(__dirname, '../../../systems', 'llm-reasoning-engine.js'),
+      path.join(__dirname, '../../systems', 'llm-reasoning-engine.js'),
+      path.join(process.cwd(), 'systems', 'llm-reasoning-engine.js'),
+    ];
+    let LLMClass = null;
+    for (const p of candidatePaths) {
+      try {
+        LLMClass = require(p)?.LLMEngine;
+        if (LLMClass) break;
+      } catch (e) {
+        // 继续尝试下一个路径
+      }
+    }
     if (!LLMClass) {
-      console.warn('[BaseAgent] LLMEngine类加载失败');
+      console.warn('[BaseAgent] LLMEngine类加载失败，尝试的所有路径均不可用');
       return null;
     }
     return new LLMClass({ model: model || DEFAULT_MODEL, maxTokens: maxTokens || 16000 });

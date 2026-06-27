@@ -78,7 +78,7 @@ ${shotsInfo}
 
 ## 任务
 为每个镜头设计环境音效:
-1. environment: 环境音类型（outdoor_urban/indoor_office/hospital/park等）
+1. environment: 环境音类型（outdoor_urban/indoor_office/park等），根据场景动态选择
 2. description: 音效描述（15-30字）
 3. intensity: 强度（low/medium/high，与情绪匹配）
 

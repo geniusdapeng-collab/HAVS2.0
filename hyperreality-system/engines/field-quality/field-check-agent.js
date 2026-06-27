@@ -369,40 +369,38 @@ class RuleChecker {
       }
     }
 
-    // 定妆照路径格式
+    // 【P2-22-审计修复】放宽定妆照路径校验，兼容多种格式
     const pt = shot.portraits || '';
-    if (pt && !/\/characters\/[\w_]+\/portrait_v\d+\.(png|jpg)/.test(pt)) {
-      issues.push(new Issue({
-        fieldEn: 'portraits', fieldCn: '定妆照',
-        severity: Severity.FATAL, issueType: IssueType.FORMAT_ERROR,
-        description: `定妆照路径格式不规范：${safeSlice(pt, 0, 40)}`,
-        suggestion: '路径格式应为：/characters/{角色英文名}/portrait_v{版本号}.{png|jpg}，示例：/characters/chen_zhuo/portrait_v1.png',
-        currentValue: safeSlice(pt, 0, 40)
-      }));
+    if (pt) {
+      const validPathPattern = /(characters[\/\\][\w_-]+[\/\\]?[\w._-]*\.(png|jpg|jpeg|webp))|(image:\/\/characters\/[\w_-]+)/i;
+      if (!validPathPattern.test(String(pt))) {
+        issues.push(new Issue({
+          fieldEn: 'portraits', fieldCn: '定妆照',
+          severity: Severity.MINOR, // 从 FATAL 降为 MINOR
+          issueType: IssueType.FORMAT_ERROR,
+          description: `定妆照路径格式可能不规范：${safeSlice(pt, 0, 40)}`,
+          suggestion: '建议路径包含 characters/ 目录，示例：characters/wukong/portrait.png',
+          currentValue: safeSlice(pt, 0, 40)
+        }));
+      }
     }
 
-    // 台词：句末标点+标点规范
+    // 【P2-23-审计修复】台词标点检查分级处理
     const dl = shot.dialogue || '';
-    if (dl) {
-      if (!/[。！？…]$/.test(dl)) {
+    if (dl && typeof dl === 'string') {
+      // 仅对中文台词检查句末标点，英文台词跳过
+      const isChinese = /[\u4e00-\u9fff]/.test(dl);
+      if (isChinese && !/[。！？…]$/.test(dl.trim())) {
         issues.push(new Issue({
           fieldEn: 'dialogue', fieldCn: '台词',
-          severity: Severity.FATAL, issueType: IssueType.FORMAT_ERROR,
-          description: '台词缺少句末标点（须以 。！？… 结尾）',
-          suggestion: `句末标点是口型闭合的信号标记，不可省略。建议在台词末尾添加 '。'：'${dl}。'`,
+          severity: Severity.MINOR, // 从 FATAL 降为 MINOR
+          issueType: IssueType.FORMAT_ERROR,
+          description: '中文台词缺少句末标点',
+          suggestion: `建议在台词末尾添加 '。'`,
           currentValue: (typeof dl === "string" ? dl.slice(0, 60) : String(dl).slice(0, 60))
         }));
       }
-      const forbidden = dl.match(/[；;：:""''"'\[\]【】]/g);
-      if (forbidden) {
-        issues.push(new Issue({
-          fieldEn: 'dialogue', fieldCn: '台词',
-          severity: Severity.MAJOR, issueType: IssueType.FORMAT_ERROR,
-          description: `台词含禁止标点：${[...new Set(forbidden)].join('')}（仅允许 ，。！？…）`,
-          suggestion: '移除分号、冒号、引号等复杂标点，仅保留 ，。！？… 五种，以免干扰口型同步引擎的断句解析',
-          currentValue: (typeof dl === "string" ? dl.slice(0, 60) : String(dl).slice(0, 60))
-        }));
-      }
+      // 【修复】dialogue_block 格式包含引号是正常的，不再检查禁止标点
     }
 
     // 转场：须含明确类型
@@ -594,7 +592,7 @@ class LLMChecker {
 
     try {
       const response = await Promise.race([
-        this.llm.reasonStructured(LLM_CHECKER_SYSTEM_PROMPT + '\n\n' + userPrompt, null, { maxRetries: 1, timeoutMs: this.timeoutMs }),
+        this.llm.reasonStructured(LLM_CHECKER_SYSTEM_PROMPT + '\n\n' + userPrompt, {}, { maxRetries: 1, timeoutMs: this.timeoutMs }),
         timeoutPromise
       ]).finally(() => clearTimeout(timer));
 

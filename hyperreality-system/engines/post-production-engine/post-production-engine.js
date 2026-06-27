@@ -444,10 +444,11 @@ class PostProductionEngine {
     }
     
     // 从设定提取关键词弹幕
-    if (setting.includes('虚构星球')) danmakuPool.push('虚构星球 星球！');
-    if (setting.includes('晶体')) danmakuPool.push('晶体森林！');
-    if (setting.includes('双月')) danmakuPool.push('双月当空！');
-    if (chars.includes('示例神兽') || chars.includes('示例神兽')) danmakuPool.push('示例神兽！');
+    // 【P2-21-审计修复】删除硬编码弹幕，仅从台词和场景类型动态生成
+    // if (setting.includes('虚构星球')) danmakuPool.push('虚构星球 星球！');
+    // if (setting.includes('晶体')) danmakuPool.push('晶体森林！');
+    // if (setting.includes('双月')) danmakuPool.push('双月当空！');
+    // if (chars.includes('示例神兽')) danmakuPool.push('示例神兽！');
     
     // 随机选择 3-5 条
     const count = 3 + Math.floor(Math.random() * 3);
