@@ -375,7 +375,7 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
     };
     
     const value = defaults[field];
-    if (!value) {
+    if (value === undefined) {
       console.warn(`[PromptFusionAgent] 未知字段的默认值: ${field}`);
       return `[规则兜底] ${field} 默认值`;
     }
