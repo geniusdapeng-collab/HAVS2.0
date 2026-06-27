@@ -431,8 +431,9 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
       const pureDialogue = shot.dialogueText || this._extractPureDialogue(shot.dialogue);
       if (pureDialogue) result.dialogue = `"${pureDialogue}"`;
       
-      // 【v1.0.3-fix】从 lines 数组构建 dialogue_block（Seedance 对话指令格式）
+      // 【v1.0.5-fix】从 lines 数组或 pipe-delimited 字符串构建 dialogue_block
       if (shot.dialogue.lines && Array.isArray(shot.dialogue.lines) && shot.dialogue.lines.length > 0) {
+        // 对象格式 {lines: [...]}
         const dialogueBlocks = shot.dialogue.lines.map(line => {
           const speaker = line.speaker || '角色';
           const text = line.text || line.content || '';
@@ -441,6 +442,15 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
           return `${speaker}(${action}，${emotion}，面向镜头)："${text}"，LIP_SYNC:true，身体语言：[自然嘴型同步]`;
         });
         result.dialogue_block = dialogueBlocks.join('\n');
+      } else if (typeof shot.dialogue === 'string' && shot.dialogue.includes('|')) {
+        // Pipe-delimited 字符串格式: 角色名|台词|情绪|内容|LIP_SYNC:YES
+        const parts = shot.dialogue.split('|');
+        if (parts.length >= 4) {
+          const speaker = parts[0] || '角色';
+          const emotion = parts[2] || '平静';
+          const text = parts[3] || '';
+          result.dialogue_block = `${speaker}(面向镜头说话，${emotion}，面向[画外])："${text}"，LIP_SYNC:true，身体语言：[自然嘴型同步]`;
+        }
       }
     }
     if (shot.dialogueBlock) {
