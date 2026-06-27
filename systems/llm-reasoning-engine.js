@@ -46,11 +46,12 @@ class LLMEngine {
     let heartbeatTicks = 0;
     const heartbeat = setInterval(() => {
       heartbeatTicks++;
-      process.stdout.write('.');
-      // 每 12 次心跳（约 60 秒）输出一次带内存信息的完整心跳行
+      // 【fix】每5秒输出带换行符的心跳，确保OpenClaw exec检测到进程活性
+      process.stdout.write(`[llm-heartbeat] tick ${heartbeatTicks}\n`);
+      // 每12次（约60秒）额外输出内存信息
       if (heartbeatTicks % 12 === 0) {
         const m = process.memoryUsage();
-        process.stdout.write(` [llm-heartbeat ${heartbeatTicks * 5}s | rss=${(m.rss / 1048576).toFixed(0)}MB | heap=${(m.heapUsed / 1048576).toFixed(0)}MB]\n`);
+        process.stdout.write(`[llm-heartbeat ${heartbeatTicks * 5}s] rss=${(m.rss / 1048576).toFixed(0)}MB heap=${(m.heapUsed / 1048576).toFixed(0)}MB\n`);
       }
     }, 5000);
 

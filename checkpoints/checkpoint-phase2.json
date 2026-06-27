@@ -2,377 +2,522 @@
   "phase": "phase2",
   "shots": [
     {
-      "shotId": "SC00",
-      "sceneType": "opening",
+      "shotId": "SC01",
+      "sceneType": "establishing",
       "sceneFunction": "establish",
       "timing": {
         "start": 0,
-        "duration": 13,
-        "end": 13
+        "duration": 8,
+        "end": 8
       },
-      "duration": 13,
-      "scene": "医院健康宣教室，白色荧光灯均匀照明，白墙面张贴无文字骨骼肌解剖图与纯图形运动损伤海报，木质讲台表面带有细微使用划痕，地面铺设浅灰色防滑PVC地板",
-      "mood": "亲和开场转入严肃科普，沉稳专注引人深思",
-      "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
-      "action": "双手自然撑于讲台两侧，身体微前倾，正视镜头，随后直身抬手示意墙面解剖图",
-      "dialogue": "陈卓|独白|亲和|今天我们不讲案子，讲你的身体。|LIP_SYNC:YES || 陈卓|独白|严肃|横纹肌溶解，就是肌肉细胞坏掉了。|LIP_SYNC:YES || 陈卓|独白|严肃|肌细胞里的东西，全跑到血液里。|LIP_SYNC:YES || 陈卓|独白|警示|这病很凶险，但很多人不知道。|LIP_SYNC:YES",
+      "duration": 8,
+      "scene": "云端天庭战场，雷电交加，孙悟空金甲横空与二郎神银甲对峙",
+      "mood": "肃杀对峙，雷霆万钧，战意紧绷如弦",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg, 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "孙悟空单手持金箍棒斜指地面，侧身跨步，另一手向前挑衅勾指，头部微仰，眼神锐利逼视前方二郎神",
+      "dialogue": "孙悟空|台词|挑衅|二郎神，今日定要分出高下！|LIP_SYNC:YES",
       "characters": [
-        "chenzhuo"
+        "wukong",
+        "erlang-shen"
       ],
-      "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "今天我们不讲案子，讲你的身体。;横纹肌溶解，就是肌肉细胞坏掉了。;肌细胞里的东西，全跑到血液里。;这病很凶险，但很多人不知道。",
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "二郎神，今日定要分出高下！",
       "emotionalTarget": {
-        "valence": 0.3,
-        "arousal": 0.7,
-        "dominance": 0.6
+        "valence": 0.4,
+        "arousal": 0.8
       },
-      "visualDirection": {
-        "shot_type": "wide",
-        "camera_movement": "缓慢推进",
-        "lighting": "自然光+环境光",
-        "color_temperature": "neutral"
-      },
-      "promptBase": "电影级镜头，超写实，警务系统医疗室，陈卓面对镜头，打破第四面墙，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），wide，缓慢推进，台词：「今天我们不讲案子，讲你的身体。」",
-      "worldId": "default",
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
       "status": "pending",
       "timeline": {
         "object": {
           "start": "T00:00",
-          "end": "T00:13",
-          "duration": 13,
-          "type": "opening",
-          "mood": "epic, mysterious, awe-inspiring"
-        },
-        "string": "T00:00-T00:13 / duration: 13s / type: opening / mood: epic, mysterious, awe-inspiring"
-      },
-      "allocation": {
-        "baseDuration": 13,
-        "dialogueFactor": 1.5,
-        "typeWeight": 1.2,
-        "preserved": true
-      },
-      "emotional_target": "严肃",
-      "title": "横纹肌溶解",
-      "subtitle": "症状与实验室检查",
-      "titleOverlay": {
-        "main_title": "横纹肌溶解",
-        "sub_title": "症状与实验室检查",
-        "style": "粗体无衬线白色字体，主标题带微红色光晕，副标题冷蓝色，从画面中央以轻微震动效果切入"
-      },
-      "audioLayer": {
-        "bgm": "低频电子合成器脉冲，伴随渐强的不和谐弦乐",
-        "sound_effects": "细微的肌肉纤维撕裂声、离心机低频嗡鸣、心跳声"
-      },
-      "lightingString": "顶光硬光从上方投射，在肌肉纤维和玻璃器皿上形成锐利高光与深邃阴影；冷蓝色调氛围光弥漫场景，仅在离心机处点缀一抹警示红光",
-      "cameraString": "以极特写镜头呈现肌肉纤维微观断裂纹理，随后高速向后拉轨（Dolly Zoom）穿过悬浮的血细胞与玻璃器皿，最终微仰定格于离心机高速旋转的冷峻全景",
-      "lighting": {
-        "key_light": "白色荧光灯从顶部均匀洒落，在讲台木质纹理上形成柔和的漫反射",
-        "fill_light": "墙面白色乳胶漆反射环境光，柔和填补面部阴影",
-        "time_of_day": "midday",
-        "atmosphere": "无文字解剖图在冷白基底中透出医学理性，开场略暖的肤色光暗示亲和"
-      },
-      "audio": "荧光灯均匀电流低噪，教室空旷轻混响，远处隐约广播声",
-      "backgroundSound": {
-        "environment": "hospital_classroom",
-        "description": "荧光灯均匀电流低噪，教室空旷轻混响，远处隐约广播声",
-        "intensity": "low"
-      },
-      "backgroundSoundString": "荧光灯均匀电流低噪，教室空旷轻混响，远处隐约广播声"
-    },
-    {
-      "shotId": "SC01",
-      "sceneType": "conflict",
-      "sceneFunction": "advance",
-      "timing": {
-        "start": 13,
-        "duration": 13,
-        "end": 26
-      },
-      "duration": 13,
-      "scene": "三甲医院检验科走廊，冷白色LED顶灯沿顶部连续排列，无文字图形标识牌指向检验窗口，墙面白色乳胶漆，地面浅色抛光瓷砖反射冷光，不锈钢候诊椅贴墙摆放",
-      "mood": "警示紧张压抑不安，走廊冷光强化危机迫近感",
-      "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
-      "action": "沿走廊缓步前行，驻足抬手虚指检验窗口方向，眉头紧锁，双手在身前交握",
-      "dialogue": "陈卓|独白|警示|运动后肌肉痛？别硬扛。|LIP_SYNC:YES || 陈卓|独白|紧张|尿液变成酱油色，是最危险的信号。|LIP_SYNC:YES || 陈卓|独白|紧张|全身无力、恶心呕吐，也要警惕。|LIP_SYNC:YES || 陈卓|独白|坚定|三招自测：痛、色、乏。|LIP_SYNC:YES",
-      "characters": [
-        "chenzhuo"
-      ],
-      "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "运动后肌肉痛？别硬扛。;尿液变成酱油色，是最危险的信号。;全身无力、恶心呕吐，也要警惕。;三招自测：痛、色、乏。",
-      "emotionalTarget": {
-        "valence": 0.2,
-        "arousal": 0.8,
-        "dominance": 0.5
-      },
-      "visualDirection": {
-        "shot_type": "close_up",
-        "camera_movement": "手持晃动",
-        "lighting": "戏剧性明暗对比",
-        "color_temperature": "neutral"
-      },
-      "promptBase": "电影级镜头，超写实，陈卓站在数据可视化屏幕前，指向身体部位，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），close_up，手持晃动，台词：「运动后肌肉痛？别硬扛。」",
-      "worldId": "default",
-      "status": "pending",
-      "timeline": {
-        "object": {
-          "start": "T00:13",
-          "end": "T00:26",
-          "duration": 13,
-          "type": "conflict",
+          "end": "T00:08",
+          "duration": 8,
+          "type": "establishing",
           "mood": "neutral, calm, intense, dramatic"
         },
-        "string": "T00:13-T00:26 / duration: 13s / type: conflict / mood: neutral, calm, intense, dramatic"
+        "string": "T00:00-T00:08 / duration: 8s / type: establishing / mood: neutral, calm, intense, dramatic"
       },
       "allocation": {
-        "baseDuration": 13,
-        "dialogueFactor": 1.5,
-        "typeWeight": 1.3,
+        "baseDuration": 8,
+        "dialogueFactor": 1.2,
+        "typeWeight": 1,
         "preserved": true
       },
-      "emotional_target": "警示",
+      "emotional_target": "挑衅",
       "lighting": {
-        "key_light": "冷白色LED顶灯沿走廊连续排列，在头顶形成冰冷的高光带",
-        "fill_light": "浅色抛光瓷砖将冷光向上反射，照亮腿部与走廊纵深",
-        "time_of_day": "midday",
-        "atmosphere": "走廊尽头的暗影与冷白光形成强烈透视，危机在纵深处逼近"
+        "key_light": "惨白的闪电间歇劈开云层，照亮孙悟空金甲与二郎神银甲的轮廓",
+        "fill_light": "雷云反射的微冷天光勾勒出战甲暗部",
+        "time_of_day": "night",
+        "atmosphere": "电光在乌云中游走，战场弥漫青紫色的电离微光"
       },
-      "audio": "走廊LED冷光灯电流声，急促脚步回声，低频设备嗡鸣压迫",
+      "audio": "雷霆轰鸣，天风怒号，云层翻涌，远处神兵列阵低语",
       "backgroundSound": {
-        "environment": "hospital_corridor",
-        "description": "走廊LED冷光灯电流声，急促脚步回声，低频设备嗡鸣压迫",
+        "environment": "outdoor_mythical_battlefield",
+        "description": "雷霆轰鸣，天风怒号，云层翻涌，远处神兵列阵低语",
         "intensity": "high"
       },
-      "backgroundSoundString": "走廊LED冷光灯电流声，急促脚步回声，低频设备嗡鸣压迫"
+      "backgroundSoundString": "雷霆轰鸣，天风怒号，云层翻涌，远处神兵列阵低语"
     },
     {
       "shotId": "SC02",
       "sceneType": "conflict",
-      "sceneFunction": "advance",
+      "sceneFunction": "confront",
       "timing": {
-        "start": 26,
-        "duration": 13,
-        "end": 39
+        "start": 8,
+        "duration": 7,
+        "end": 15
       },
-      "duration": 13,
-      "scene": "医生诊室，白色墙面悬挂无文字医学挂图，实木办公桌摆放听诊器与血压计，检查床配有蓝色一次性床单，无影灯悬于上方，窗光透入形成自然侧光，地面深灰色橡胶地板",
-      "mood": "专业冷静理性权威，诊室环境传递医学可信度",
-      "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
-      "action": "侧身倚靠办公桌沿，手持空白报告单轻点纸面，随后转身面向检查床，抬手比划高度",
-      "dialogue": "陈卓|独白|专业|去医院查什么？记住三项。|LIP_SYNC:YES || 陈卓|独白|严肃|肌酸激酶，正常几千，爆表几万。|LIP_SYNC:YES || 陈卓|独白|警示|肌红蛋白，尿里也有，肾最怕它。|LIP_SYNC:YES || 陈卓|独白|坚定|还有肝肾功能、电解质，一个都不能少。|LIP_SYNC:YES",
+      "duration": 7,
+      "scene": "金箍棒与三尖两刃刀首次碰撞，火花四溅，冲击波震碎云层",
+      "mood": "金铁交鸣，杀气骤然爆发，震耳欲聋",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg, 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "金箍棒与三尖两刃刀交击瞬间，两人双臂发力前压，身体前倾角力，火星迸射照亮面部，脚下云层被气浪炸开环形空洞",
+      "dialogue": "二郎神|台词|冷峻|妖猴，休得猖狂！|LIP_SYNC:YES",
       "characters": [
-        "chenzhuo"
+        "wukong",
+        "erlang-shen"
       ],
-      "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "去医院查什么？记住三项。;肌酸激酶，正常几千，爆表几万。;肌红蛋白，尿里也有，肾最怕它。;还有肝肾功能、电解质，一个都不能少。",
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "妖猴，休得猖狂！",
       "emotionalTarget": {
         "valence": 0.3,
-        "arousal": 0.7,
-        "dominance": 0.6
+        "arousal": 0.9
       },
-      "visualDirection": {
-        "shot_type": "close_up",
-        "camera_movement": "手持晃动",
-        "lighting": "戏剧性明暗对比",
-        "color_temperature": "neutral"
-      },
-      "promptBase": "电影级镜头，超写实，陈卓手持全息检验单，数据在空中悬浮，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），close_up，手持晃动，台词：「去医院查什么？记住三项。」",
-      "worldId": "default",
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
       "status": "pending",
       "timeline": {
         "object": {
-          "start": "T00:26",
-          "end": "T00:39",
-          "duration": 13,
+          "start": "T00:08",
+          "end": "T00:15",
+          "duration": 7,
           "type": "conflict",
-          "mood": "tense, determined, brave, confrontational"
+          "mood": "neutral, calm, intense, dramatic"
         },
-        "string": "T00:26-T00:39 / duration: 13s / type: conflict / mood: tense, determined, brave, confrontational"
+        "string": "T00:08-T00:15 / duration: 7s / type: conflict / mood: neutral, calm, intense, dramatic"
       },
       "allocation": {
-        "baseDuration": 13,
-        "dialogueFactor": 1.5,
+        "baseDuration": 7,
+        "dialogueFactor": 1.0333333333333334,
         "typeWeight": 1.3,
         "preserved": true
       },
-      "emotional_target": "专业",
+      "emotional_target": "冷峻",
       "lighting": {
-        "key_light": "窗外自然光从左侧斜射入诊室，在实木桌面上形成柔和的漫射主光",
-        "fill_light": "无影灯与白色墙面共同漫反射，均匀填补面部暗部",
-        "time_of_day": "midday",
-        "atmosphere": "蓝色一次性床单反射微弱冷光，听诊器金属部件点缀理性高光"
+        "key_light": "兵器碰撞迸发的炽白火花瞬间照亮两人面容",
+        "fill_light": "电光余烬在云气中散射成冷蓝色底光",
+        "time_of_day": "night",
+        "atmosphere": "冲击波裹挟金色与银色战甲碎片，在暗云中燃烧"
       },
-      "audio": "诊室安静封闭环境，纸张翻动，听诊器微碰撞，沉稳底噪",
+      "audio": "金铁炸裂轰鸣，冲击波撕裂云气，碎石尖啸飞散",
       "backgroundSound": {
-        "environment": "hospital_clinic",
-        "description": "诊室安静封闭环境，纸张翻动，听诊器微碰撞，沉稳底噪",
-        "intensity": "medium"
+        "environment": "outdoor_mythical_battlefield",
+        "description": "金铁炸裂轰鸣，冲击波撕裂云气，碎石尖啸飞散",
+        "intensity": "high"
       },
-      "backgroundSoundString": "诊室安静封闭环境，纸张翻动，听诊器微碰撞，沉稳底噪"
+      "backgroundSoundString": "金铁炸裂轰鸣，冲击波撕裂云气，碎石尖啸飞散"
     },
     {
       "shotId": "SC03",
-      "sceneType": "emotional_climax",
-      "sceneFunction": "climax",
+      "sceneType": "action",
+      "sceneFunction": "escalate",
       "timing": {
-        "start": 39,
-        "duration": 13,
-        "end": 52
+        "start": 15,
+        "duration": 8,
+        "end": 23
       },
-      "duration": 13,
-      "scene": "医院健康管理中心，嵌入式LED灯带洒下柔和暖白光，接待台后方排列无文字健康宣传展板，前方棕色皮质沙发与实木茶几，地面灰色哑光瓷砖，墙面米白色墙纸",
-      "mood": "沉重恳切压抑转关怀，暖光下流露真诚担忧",
-      "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
-      "action": "双手交叠置于身前，缓步绕至沙发侧，俯身轻触茶几表面，抬头正视镜头，手掌微张",
-      "dialogue": "陈卓|独白|沉重|我见过有人练太猛，直接送ICU。|LIP_SYNC:YES || 陈卓|独白|恳切|不是吓你，早发现才能救回来。|LIP_SYNC:YES || 陈卓|独白|紧迫|别等尿变色了，才想到去医院。|LIP_SYNC:YES",
+      "duration": 8,
+      "scene": "云端高速追逐，孙悟空化作金光飞射，二郎神天眼追踪",
+      "mood": "疾风追电，狂傲不羁，云涛惊心动魄",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg, 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "孙悟空化作金光贴云疾掠，回头狂笑招手挑衅，二郎神驾云紧追不舍，三尖两刃刀横于身侧，天眼额睁金光锁敌身形",
+      "dialogue": "孙悟空|台词|狂傲|追上我再说！|LIP_SYNC:YES",
       "characters": [
-        "chenzhuo"
+        "wukong",
+        "erlang-shen"
       ],
-      "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "我见过有人练太猛，直接送ICU。;不是吓你，早发现才能救回来。;别等尿变色了，才想到去医院。",
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "追上我再说！",
       "emotionalTarget": {
-        "valence": 0.1,
-        "arousal": 0.9,
-        "dominance": 0.4
+        "valence": 0.5,
+        "arousal": 0.95
       },
-      "visualDirection": {
-        "shot_type": "extreme_close_up",
-        "camera_movement": "快速推近",
-        "lighting": "伦勃朗光",
-        "color_temperature": "neutral"
-      },
-      "promptBase": "电影级高潮镜头，超写实，陈卓在监护室走廊，身后是流动的光轨，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），extreme_close_up，快速推近，台词：「我见过有人练太猛，直接送ICU。」",
-      "worldId": "default",
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
       "status": "pending",
       "timeline": {
         "object": {
-          "start": "T00:39",
-          "end": "T00:52",
-          "duration": 13,
-          "type": "emotional_climax",
+          "start": "T00:15",
+          "end": "T00:23",
+          "duration": 8,
+          "type": "action",
           "mood": "neutral, calm, intense, dramatic"
         },
-        "string": "T00:39-T00:52 / duration: 13s / type: emotional_climax / mood: neutral, calm, intense, dramatic"
+        "string": "T00:15-T00:23 / duration: 8s / type: action / mood: neutral, calm, intense, dramatic"
       },
       "allocation": {
-        "baseDuration": 13,
-        "dialogueFactor": 1.5,
-        "typeWeight": 1.5,
-        "preserved": true
-      },
-      "emotional_target": "恳切",
-      "lighting": {
-        "key_light": "嵌入式LED灯带从顶部洒下柔和暖白光，在棕色皮沙发上形成温润光晕",
-        "fill_light": "浅灰色地面漫反射柔化阴影，避免沉重话题过度压抑",
-        "time_of_day": "midday",
-        "atmosphere": "宣传展板在柔光中隐约可见，日常健康管理氛围包裹真诚倾诉"
-      },
-      "audio": "暖光接待区低声交谈，键盘轻敲，皮质沙发区空调轻送风",
-      "backgroundSound": {
-        "environment": "hospital_lobby",
-        "description": "暖光接待区低声交谈，键盘轻敲，皮质沙发区空调轻送风",
-        "intensity": "medium"
-      },
-      "backgroundSoundString": "暖光接待区低声交谈，键盘轻敲，皮质沙发区空调轻送风"
-    },
-    {
-      "shotId": "SC04",
-      "sceneType": "resolution",
-      "sceneFunction": "resolve",
-      "timing": {
-        "start": 52,
-        "duration": 13,
-        "end": 65
-      },
-      "duration": 13,
-      "scene": "医院检验科窗口前，冷白色荧光灯维持恒定色温，检验窗口玻璃带微弱反射，不锈钢台面反光，墙面悬挂无文字科室图形标识牌，地面浅灰色水磨石，窗口前设固定高脚凳",
-      "mood": "坚定温和诚恳托付，检验窗口前强化行动号召",
-      "character": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "characterRef": "陈卓: image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-01.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-02.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-03.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-04.jpg, image://characters/chenzhuo/portraits/cartoon-uniform/portrait-cartoon-uniform-05.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-01.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-02.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-03.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-04.jpg, image://characters/chenzhuo/portraits/casual/portrait-casual-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-01.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-02.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-03.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-04.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-05.jpg, image://characters/chenzhuo/portraits/uniform/portrait-uniform-06.jpg",
-      "action": "正面站立于窗口前，双手自然垂落于身侧，随后抬手轻叩不锈钢台面，缓慢点头，双肩放松下沉",
-      "dialogue": "陈卓|独白|坚定|记住这些症状，关键时刻能保命。|LIP_SYNC:YES || 陈卓|独白|温和|科学运动，定期体检，别赌运气。|LIP_SYNC:YES || 陈卓|独白|希望|健康这件事，永远不是一个人的战斗。|LIP_SYNC:YES",
-      "characters": [
-        "chenzhuo"
-      ],
-      "characterDescs": "陈卓: human, 警务系统护士, 35岁, 穿藏蓝色警服, 形象亲和专业",
-      "dialogueText": "记住这些症状，关键时刻能保命。;科学运动，定期体检，别赌运气。;健康这件事，永远不是一个人的战斗。",
-      "emotionalTarget": {
-        "valence": 0.6,
-        "arousal": 0.5,
-        "dominance": 0.7
-      },
-      "visualDirection": {
-        "shot_type": "medium",
-        "camera_movement": "缓慢后拉",
-        "lighting": "温暖柔光",
-        "color_temperature": "warm"
-      },
-      "promptBase": "电影级镜头，超写实，陈卓回到初始位置，光影柔和稳定，陈卓（警务系统护士、35岁、穿藏蓝色警服、形象亲和专业），medium，缓慢后拉，台词：「记住这些症状，关键时刻能保命。」",
-      "worldId": "default",
-      "status": "pending",
-      "timeline": {
-        "object": {
-          "start": "T00:52",
-          "end": "T01:05",
-          "duration": 13,
-          "type": "resolution",
-          "mood": "peaceful, warm, nostalgic, hopeful"
-        },
-        "string": "T00:52-T01:05 / duration: 13s / type: resolution / mood: peaceful, warm, nostalgic, hopeful"
-      },
-      "allocation": {
-        "baseDuration": 13,
-        "dialogueFactor": 1.5,
+        "baseDuration": 8,
+        "dialogueFactor": 0.9666666666666667,
         "typeWeight": 1,
         "preserved": true
       },
-      "emotional_target": "坚定",
+      "emotional_target": "狂傲",
       "lighting": {
-        "key_light": "冷白荧光灯从顶部垂直照下，在检验窗口玻璃上形成微弱冷光反射",
-        "fill_light": "不锈钢台面将光线反射至人物轮廓边缘，形成微妙底光",
-        "time_of_day": "midday",
-        "atmosphere": "玻璃后的深邃阴影与前景冷光对比，托付感在冷静中生根"
+        "key_light": "孙悟空金光拖曳的炽烈尾焰划破暗云",
+        "fill_light": "二郎神天眼射出的冷冽蓝光追踪金光轨迹",
+        "time_of_day": "night",
+        "atmosphere": "云涛被金光与神光撕扯成明暗交错的漩涡"
       },
-      "audio": "检验窗口设备低频运转，玻璃隔绝走廊喧嚣，温和室内底噪",
+      "audio": "狂风撕裂云涛，金光破空尖啸，天眼锁定嗡鸣渐紧",
       "backgroundSound": {
-        "environment": "hospital_laboratory",
-        "description": "检验窗口设备低频运转，玻璃隔绝走廊喧嚣，温和室内底噪",
+        "environment": "outdoor_mythical_sky",
+        "description": "狂风撕裂云涛，金光破空尖啸，天眼锁定嗡鸣渐紧",
+        "intensity": "high"
+      },
+      "backgroundSoundString": "狂风撕裂云涛，金光破空尖啸，天眼锁定嗡鸣渐紧"
+    },
+    {
+      "shotId": "SC04",
+      "sceneType": "action",
+      "sceneFunction": "climax",
+      "timing": {
+        "start": 23,
+        "duration": 7,
+        "end": 30
+      },
+      "duration": 7,
+      "scene": "七十二变对决，孙悟空化巨鹰俯冲，二郎神变银龙腾空缠斗",
+      "mood": "鹰龙缠斗，幻化惊变，神鬼莫测",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg, 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "巨鹰自云端俯冲爪击，银龙盘绕古松昂首反击，鹰爪与龙角狠狠交击，罡风削断崖边老松，羽毛与银鳞随狂风飞散",
+      "dialogue": "二郎神|台词|怒喝|变化之术，班门弄斧！|LIP_SYNC:YES",
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "变化之术，班门弄斧！",
+      "emotionalTarget": {
+        "valence": 0.5,
+        "arousal": 0.9
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:23",
+          "end": "T00:30",
+          "duration": 7,
+          "type": "action",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:23-T00:30 / duration: 7s / type: action / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 7,
+        "dialogueFactor": 1.1,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "怒喝",
+      "lighting": {
+        "key_light": "巨鹰羽翼边缘反射的冷月微光",
+        "fill_light": "银龙鳞甲上流转的幽蓝电光",
+        "time_of_day": "night",
+        "atmosphere": "变化迷雾中忽明忽暗的灵光与龙息"
+      },
+      "audio": "鹰唳龙吟交织，风云倒卷，幻化能量扭曲空气嘶鸣",
+      "backgroundSound": {
+        "environment": "outdoor_mythical_sky",
+        "description": "鹰唳龙吟交织，风云倒卷，幻化能量扭曲空气嘶鸣",
         "intensity": "medium"
       },
-      "backgroundSoundString": "检验窗口设备低频运转，玻璃隔绝走廊喧嚣，温和室内底噪"
+      "backgroundSoundString": "鹰唳龙吟交织，风云倒卷，幻化能量扭曲空气嘶鸣"
+    },
+    {
+      "shotId": "SC05",
+      "sceneType": "climax",
+      "sceneFunction": "peak",
+      "timing": {
+        "start": 30,
+        "duration": 8,
+        "end": 38
+      },
+      "duration": 8,
+      "scene": "山巅决战，武器交击碎石飞溅，能量波纹扩散山体崩裂",
+      "mood": "暴怒如焚，山河震动，不死不休",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg, 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "孙悟空双手抡起金箍棒跃起劈砸，二郎神横刀架挡，双腿深陷石面三寸，碎石飞溅，双方咬牙角力，肌肉紧绷颤抖不已",
+      "dialogue": "孙悟空|台词|暴怒|吃我一棒！|LIP_SYNC:YES",
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "吃我一棒！",
+      "emotionalTarget": {
+        "valence": 0.3,
+        "arousal": 1
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:30",
+          "end": "T00:38",
+          "duration": 8,
+          "type": "climax",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:30-T00:38 / duration: 8s / type: climax / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 8,
+        "dialogueFactor": 0.9333333333333333,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "暴怒",
+      "lighting": {
+        "key_light": "能量波纹炸裂的炽红与金黄光芒",
+        "fill_light": "崩裂山体内部迸发的熔岩暗红",
+        "time_of_day": "night",
+        "atmosphere": "碎石飞溅时被强光照亮的烟尘与火星"
+      },
+      "audio": "山崩地裂轰鸣，岩浆暗涌，能量波纹震荡低频嗡鸣",
+      "backgroundSound": {
+        "environment": "outdoor_mythical_mountain",
+        "description": "山崩地裂轰鸣，岩浆暗涌，能量波纹震荡低频嗡鸣",
+        "intensity": "high"
+      },
+      "backgroundSoundString": "山崩地裂轰鸣，岩浆暗涌，能量波纹震荡低频嗡鸣"
+    },
+    {
+      "shotId": "SC06",
+      "sceneType": "action",
+      "sceneFunction": "peak",
+      "timing": {
+        "start": 38,
+        "duration": 7,
+        "end": 45
+      },
+      "duration": 7,
+      "scene": "法力对轰，金箍棒横扫千军，天眼金光格挡，天地变色",
+      "mood": "天眼威压，雷霆震怒，天地失色",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg, 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "二郎神额头天眼怒睁，金光迸射而出直击前方，孙悟空横棒格挡，双臂后撤呈弓步，金箍棒被冲击推得向后滑动，地面犁出深沟",
+      "dialogue": "二郎神|台词|威严|天眼，开！|LIP_SYNC:YES",
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "天眼，开！",
+      "emotionalTarget": {
+        "valence": 0.4,
+        "arousal": 0.95
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:38",
+          "end": "T00:45",
+          "duration": 7,
+          "type": "action",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:38-T00:45 / duration: 7s / type: action / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 7,
+        "dialogueFactor": 0.9333333333333333,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "威严",
+      "lighting": {
+        "key_light": "天眼睁开的刺目白金光柱",
+        "fill_light": "金箍棒横扫带起的烈焰余晖",
+        "time_of_day": "night",
+        "atmosphere": "两股能量对冲形成的紫黑色闪电风暴"
+      },
+      "audio": "金光对轰撕裂大气，雷霆万钧压顶，天地变色低鸣",
+      "backgroundSound": {
+        "environment": "outdoor_mythical_battlefield",
+        "description": "金光对轰撕裂大气，雷霆万钧压顶，天地变色低鸣",
+        "intensity": "high"
+      },
+      "backgroundSoundString": "金光对轰撕裂大气，雷霆万钧压顶，天地变色低鸣"
+    },
+    {
+      "shotId": "SC07",
+      "sceneType": "action",
+      "sceneFunction": "climax",
+      "timing": {
+        "start": 45,
+        "duration": 8,
+        "end": 53
+      },
+      "duration": 8,
+      "scene": "腾空跃起最高点碰撞，武器定格于能量爆发瞬间",
+      "mood": "战意沸腾，生死悬于一线，巅峰对决",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg, 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "两人腾空至云海最高点，金箍棒与三尖两刃刀交叉定格，身体后仰蓄力，眼神死锁对方，兵器相接处能量迸发，气浪掀动战袍作响",
+      "dialogue": "孙悟空|台词|战意|再来！|LIP_SYNC:YES",
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "再来！",
+      "emotionalTarget": {
+        "valence": 0.5,
+        "arousal": 1
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:45",
+          "end": "T00:53",
+          "duration": 8,
+          "type": "action",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:45-T00:53 / duration: 8s / type: action / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 8,
+        "dialogueFactor": 0.8666666666666667,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "战意",
+      "lighting": {
+        "key_light": "两人武器交汇点爆发的纯白热核",
+        "fill_light": "战甲被强光照亮的极端明暗",
+        "time_of_day": "night",
+        "atmosphere": "定格瞬间凝固的闪电与能量弧光"
+      },
+      "audio": "万籁骤寂，唯余能量临界尖啸，时间凝滞高频震颤",
+      "backgroundSound": {
+        "environment": "outdoor_mythical_sky",
+        "description": "万籁骤寂，唯余能量临界尖啸，时间凝滞高频震颤",
+        "intensity": "high"
+      },
+      "backgroundSoundString": "万籁骤寂，唯余能量临界尖啸，时间凝滞高频震颤"
+    },
+    {
+      "shotId": "SC08",
+      "sceneType": "resolution",
+      "sceneFunction": "resolve",
+      "timing": {
+        "start": 53,
+        "duration": 7,
+        "end": 60
+      },
+      "duration": 7,
+      "scene": "各自后撤落地对峙喘息，眼神交锋，势均力敌，余波未平",
+      "mood": "凝重沉寂，势均力敌，余波震荡未平",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg, 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "两人各自后撤三步落地，单膝跪地喘息，兵器拄地支撑身体，抬头眼神交锋，嘴角带血胸膛起伏，缓缓站起收势对峙",
+      "dialogue": "二郎神|台词|凝重|今日暂且作罢。|LIP_SYNC:YES",
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "今日暂且作罢。",
+      "emotionalTarget": {
+        "valence": 0.5,
+        "arousal": 0.7
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:53",
+          "end": "T01:00",
+          "duration": 7,
+          "type": "resolution",
+          "mood": "peaceful, warm, nostalgic, hopeful"
+        },
+        "string": "T00:53-T01:00 / duration: 7s / type: resolution / mood: peaceful, warm, nostalgic, hopeful"
+      },
+      "allocation": {
+        "baseDuration": 7,
+        "dialogueFactor": 1,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "凝重",
+      "lighting": {
+        "key_light": "远处尚未熄灭的战场余烬映出的暗红",
+        "fill_light": "云层裂隙中漏下的清冷月光",
+        "time_of_day": "night",
+        "atmosphere": "喘息间甲胄热气与尘土混合的朦胧暗调"
+      },
+      "audio": "余波低频回荡，碎石滚落，喘息间风过裂隙呜咽",
+      "backgroundSound": {
+        "environment": "outdoor_mythical_battlefield",
+        "description": "余波低频回荡，碎石滚落，喘息间风过裂隙呜咽",
+        "intensity": "medium"
+      },
+      "backgroundSoundString": "余波低频回荡，碎石滚落，喘息间风过裂隙呜咽"
     }
   ],
   "opening": {
     "shotId": "S00",
-    "scene": "显微镜下断裂的肌肉纤维在冷光中崩解，血红细胞弥漫飘散，镜头急速后拉穿过实验室玻璃器皿，最终定格在离心机高速旋转的冷峻轮廓",
-    "mood": "紧张悬疑、科学冷峻、警示性",
+    "scene": "苍穹骤裂，金箍棒与三尖两刃刀轰然相撞，灼目火星撕裂翻涌雷云，猴王与二郎神的战意化作金红银蓝两道神光贯穿天地。",
+    "mood": "史诗对抗、神性肃杀、雷霆万钧",
     "camera": {
-      "shot_size": "极特写到全景",
-      "movement": "高速后拉（Dolly Zoom）",
-      "angle": "平视微仰"
+      "shot_size": "极广角至特写",
+      "movement": "急速前推环绕",
+      "angle": "仰拍接平视"
     },
-    "cameraString": "以极特写镜头呈现肌肉纤维微观断裂纹理，随后高速向后拉轨（Dolly Zoom）穿过悬浮的血细胞与玻璃器皿，最终微仰定格于离心机高速旋转的冷峻全景",
+    "cameraString": "从极广角仰拍云层裂缝中的双色神光开始，急速前推穿越雷电云层，环绕交击的神兵做360度高速环绕，最终定格在武器碰撞的灼目火星特写上。",
     "lighting": {
-      "key_light": "顶光硬光",
-      "atmosphere": "高对比医学冷调"
+      "key_light": "顶光与双侧逆光",
+      "atmosphere": "史诗体积雾与高对比爆闪"
     },
-    "lightingString": "顶光硬光从上方投射，在肌肉纤维和玻璃器皿上形成锐利高光与深邃阴影；冷蓝色调氛围光弥漫场景，仅在离心机处点缀一抹警示红光",
+    "lightingString": "顶光撕裂天穹形成神性光束，金红与银蓝双色侧逆光勾勒战神轮廓，碰撞点爆发高对比度白光，四周弥漫着带电的金色尘埃粒子。",
     "audioLayer": {
-      "bgm": "低频电子合成器脉冲，伴随渐强的不和谐弦乐",
-      "sound_effects": "细微的肌肉纤维撕裂声、离心机低频嗡鸣、心跳声"
+      "bgm": "电子交响融合中国大鼓与战鼓",
+      "sound_effects": "滚雷、神兵碰撞锐响、战吼与鹰啸"
     },
-    "audioLayerString": "低频电子合成器脉冲打底，叠加细微的肌肉纤维撕裂音效与离心机低频嗡鸣，心跳声由弱至强与弦乐渐强共同推升紧张感",
+    "audioLayerString": "低频战鼓与电子合成器铺底营造神性空间，滚雷从远方逼近，神兵碰撞的金属锐响刺穿耳膜，伴随孙悟空的战吼与裂空鹰啸。",
     "titleOverlay": {
-      "main_title": "横纹肌溶解",
-      "sub_title": "症状与实验室检查",
-      "style": "粗体无衬线白色字体，主标题带微红色光晕，副标题冷蓝色，从画面中央以轻微震动效果切入"
+      "main_title": "孙悟空大战二郎神",
+      "sub_title": "THE MONKEY KING VS ERLANG SHEN",
+      "style": "烫金战损金属炸裂字"
     },
-    "titleOverlayString": "主标题'横纹肌溶解'以粗体无衬线白色字体呈现，带微红色危险光晕；副标题'症状与实验室检查'以冷蓝色细体字叠印其下，伴随轻微震动效果从画面中央切入",
+    "titleOverlayString": "主标题「孙悟空大战二郎神」以烫金战损金属字从碰撞火星中炸裂而出，副标题以冷银色紧随其后，字体带有刀刻纹理与粒子崩散效果。",
     "duration": 8
   },
   "llmStats": {},
-  "savedAt": "2026-06-26T06:02:10.849Z"
+  "savedAt": "2026-06-26T13:47:28.929Z"
 }

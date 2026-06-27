@@ -14,7 +14,7 @@ function 是非空字符串(v) {
 
 // === v6.7.0: 25字段优先级映射 ===
 const 字段优先级 = {
-  P0: ['导演指令', '约束', '基础', '场景', '灯光', '运镜', '角色', '动作', '台词', '负面约束', '定妆照', '角色一致性'],
+  P0: ['导演指令', '约束', '基础', '场景', '灯光', '运镜', '角色', '动作', '台词', '对话指令', '负面约束', '定妆照', '角色一致性'],
   P1: ['构图', '色彩', '景深', '时间轴', '情绪', '明亮约束', '角色约束'],
   P2: ['服装', '道具', '节奏', '音频'],
   P3: ['化妆', '转场']
@@ -30,6 +30,7 @@ const 字段标签映射 = {
   角色: '【角色】',
   动作: '【动作】',
   台词: '【台词】',
+  对话指令: '【对话指令】',
   负面约束: '【负面约束】',
   定妆照: '【定妆照】',
   角色一致性: '【角色一致性】',
@@ -144,6 +145,7 @@ function 关键字段存在(prompt) {
 
   // 兼容旧字段名
   out.时间轴 = out.时间轴 || prompt.includes('【镜头时间轴】') || /TIMELINE\s*:/i.test(prompt);
+  out.对话指令 = out.对话指令 || prompt.includes('【对话指令】') || prompt.includes('【旁白/台词】');
   out.台词 = out.台词 || prompt.includes('【旁白/台词】');
   out.定妆照 = out.定妆照 || /@image\d+/i.test(prompt);
   out.角色 = out.角色 || /CHARACTER\s*:/i.test(prompt);
@@ -306,8 +308,9 @@ function 最小补洞(prompt, shot = {}) {
   }
 
   const dialogue = shot.dialogue || shot.narration || '';
-  if (!状态.台词 && dialogue) {
-    out += ` | 【台词】${dialogue}`;
+  const dialogueText = shot.dialogueBlock?.text || shot.dialogue || shot.narration || '';
+  if (!状态.对话指令 && !状态.台词 && dialogueText) {
+    out += ` | 【对话指令】${dialogueText}`;
   }
 
   if (!状态.时间轴 && shot.duration) {

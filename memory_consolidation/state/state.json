@@ -1,29 +1,29 @@
 {
   "stm": {
-    "count": 62,
-    "last_ts": "2026-06-24T11:24:23.036754",
-    "last_sessions": 196,
-    "last_messages": 2749,
-    "last_chars": 19581
+    "count": 65,
+    "last_ts": "2026-06-27T00:12:07.009435",
+    "last_sessions": 224,
+    "last_messages": 3138,
+    "last_chars": 22213
   },
   "diary": {
-    "count": 54,
-    "last_ts": "2026-06-26T03:41:34.177432",
-    "last_day": 26,
-    "last_sessions": 12,
-    "last_messages": 218,
-    "last_filename": "day26-2026-06-25-fourteen_minutes_forty_three_seconds.md",
-    "last_latency_s": 69.0,
+    "count": 55,
+    "last_ts": "2026-06-27T03:38:16.913266",
+    "last_day": 28,
+    "last_sessions": 25,
+    "last_messages": 1836,
+    "last_filename": "day28-2026-06-27-killed_by_sigterm_three_times.md",
+    "last_latency_s": 21.9,
     "last_skip": "no_sessions_today",
     "last_error": "The read operation timed out"
   },
   "compact": {
-    "count": 54,
-    "last_ts": "2026-06-26T03:41:52.028782",
-    "last_invoke": 16,
-    "last_sessions": 200,
-    "last_messages": 2791,
-    "last_latency_s": 9.4,
+    "count": 55,
+    "last_ts": "2026-06-27T03:38:46.121802",
+    "last_invoke": 17,
+    "last_sessions": 225,
+    "last_messages": 3141,
+    "last_latency_s": 19.5,
     "last_model": "k2p6",
     "last_skip": "stm_hash_unchanged"
   }

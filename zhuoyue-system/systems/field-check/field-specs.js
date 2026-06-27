@@ -54,6 +54,7 @@ const FIELD_SPECS = [
   new FieldSpec('角色', 'character', Priority.P0, 50, 80),
   new FieldSpec('动作', 'action', Priority.P0, 100, 150),
   new FieldSpec('台词', 'dialogue', Priority.P0, 0, 9999),
+  new FieldSpec('对话指令', 'dialogue_instruction', Priority.P0, 0, 9999),
   new FieldSpec('负面约束', 'negative', Priority.P0, 200, 300),
   new FieldSpec('定妆照', 'portraits', Priority.P0, 0, 9999),
   new FieldSpec('角色一致性', 'consistency', Priority.P0, 50, 80),

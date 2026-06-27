@@ -30,6 +30,7 @@ const 字段标签映射 = {
   角色: '【角色】',
   动作: '【动作】',
   台词: '【台词】',
+  对话指令: '【对话指令】',
   负面约束: '【负面约束】',
   定妆照: '【定妆照】',
   角色一致性: '【角色一致性】',
@@ -145,6 +146,7 @@ function 关键字段存在(prompt) {
   // 兼容旧字段名
   out.时间轴 = out.时间轴 || prompt.includes('【镜头时间轴】') || /TIMELINE\s*:/i.test(prompt);
   out.台词 = out.台词 || prompt.includes('【旁白/台词】');
+  out.对话指令 = out.对话指令 || prompt.includes('【旁白/台词】');
   out.定妆照 = out.定妆照 || /@image\d+/i.test(prompt);
   out.角色 = out.角色 || /CHARACTER\s*:/i.test(prompt);
   out.场景 = out.场景 || /SCENE\s*:/i.test(prompt);
@@ -305,9 +307,9 @@ function 最小补洞(prompt, shot = {}) {
     out += ` | 【动作】${shot.action}`;
   }
 
-  const dialogue = shot.dialogue || shot.narration || '';
-  if (!状态.台词 && dialogue) {
-    out += ` | 【台词】${dialogue}`;
+  const dialogueText = shot.dialogueBlock?.text || shot.dialogue || shot.narration || '';
+  if (!状态.对话指令 && !状态.台词 && dialogueText) {
+    out += ` | 【对话指令】${dialogueText}`;
   }
 
   if (!状态.时间轴 && shot.duration) {

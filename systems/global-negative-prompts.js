@@ -467,4 +467,4 @@ class GlobalNegativePromptInjector {
   }
 }
 
-module.exports = { GlobalNegativePromptInjector };
+module.exports = { GlobalNegativePromptInjector, globalNegativePromptInjector: new GlobalNegativePromptInjector() };

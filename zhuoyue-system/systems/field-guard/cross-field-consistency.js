@@ -100,8 +100,8 @@ class CrossFieldConsistencyChecker {
       }
     }
 
-    // 检查5: 台词长度与时长匹配
-    const dialogueMatch = prompt.match(/【台词】([^【|]*)/);
+    // 检查5: 台词长度与时长匹配 (v6.7.0-dialogue-patch: 支持【对话指令】和【台词】)
+    const dialogueMatch = prompt.match(/【对话指令】([^【|]*)/) || prompt.match(/【台词】([^【|]*)/);
     const dialogueText = dialogueMatch ? dialogueMatch[1].trim() : '';
     if (dialogueText && duration > 0) {
       const charCount = dialogueText.length;
@@ -110,8 +110,8 @@ class CrossFieldConsistencyChecker {
         issues.push({
           type: 'dialogue_too_long',
           severity: 'error',
-          fields: ['台词', '时间轴'],
-          description: `台词${charCount}字 > 时长允许上限${Math.floor(maxChars)}字（${duration}s × 3.5），口型同步将不匹配`,
+          fields: ['对话指令', '时间轴'],
+          description: `对话指令${charCount}字 > 时长允许上限${Math.floor(maxChars)}字（${duration}s × 3.5），口型同步将不匹配`,
           suggestion: '缩短台词或延长镜头时长'
         });
       }

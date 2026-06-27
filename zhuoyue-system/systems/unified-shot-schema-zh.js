@@ -445,9 +445,9 @@ function 校验镜头字段(shotZh) {
   if (shotZh.镜头类型 === '片头') {
     if (!是非空字符串(shotZh.主标题)) errors.push('片头缺少【主标题】');
     if (!('副标题' in shotZh)) errors.push('片头缺少【副标题】字段');
-    if (!('台词' in shotZh)) errors.push('片头缺少【台词】字段');
+    if (!('台词' in shotZh) && !('对话指令' in shotZh)) errors.push('片头缺少【对话指令】或【台词】字段');
   } else {
-    if (!('台词' in shotZh)) errors.push('内容镜头缺少【台词】字段');
+    if (!('台词' in shotZh) && !('对话指令' in shotZh)) errors.push('内容镜头缺少【对话指令】或【台词】字段');
     if (!('动作' in shotZh)) errors.push('内容镜头缺少【动作】字段');
     if (!('嘴部动作' in shotZh)) warnings.push('内容镜头缺少【嘴部动作】');
   }

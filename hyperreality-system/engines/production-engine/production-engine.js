@@ -13,6 +13,12 @@ const { PromptFusionAgent } = require('./agents/prompt-fusion-agent');
 const { OpeningDesignAgent } = require('./agents/opening-design-agent');
 const { ContinuityReviewAgent } = require('./agents/continuity-review-agent');
 
+// v2.0.0-架构升级: 稳定性基础设施
+const { BaselineTemplateRegistry } = require('../../core/baseline-template-registry');
+const { LLMGateway } = require('../../core/llm-gateway');
+const { PipelineStateMachine } = require('../../core/pipeline-state-machine');
+const { EventBus } = require('../../core/event-bus');
+
 // v6.6.10-fix: 全局负面提示词注入器
 const { globalNegativePromptInjector } = require('../../../systems/global-negative-prompts.js');
 
@@ -64,7 +70,20 @@ class ProductionEngine {
     // v2.0.0-LLM-Agent: 初始化Agents
     this._initAgents();
 
-    this.modules = {};
+    // v2.0.0-架构升级: 初始化稳定性基础设施
+    this.baselineRegistry = new BaselineTemplateRegistry();
+    this.llmGateway = new LLMGateway({
+      primaryModel: this.agentConfig.llmModel,
+      fallbackModel: this.agentConfig.fastModel,
+      timeout: this.agentConfig.llmTimeout
+    });
+    this.eventBus = new EventBus();
+    this.stateMachine = null; // 项目启动时初始化
+    
+    console.log('[ProductionEngine] v2.0 稳定性基础设施已加载:');
+    console.log('  - 基线模板库:', this.baselineRegistry.list().length, '个');
+    console.log('  - LLM Gateway: 主模型=' + this.agentConfig.llmModel + ', 降级模型=' + this.agentConfig.fastModel);
+    console.log('  - 事件总线: 已就绪');
     this.logs = [];
     this._initResourceGuard();
     this._initModules();
@@ -259,6 +278,15 @@ class ProductionEngine {
     };
 
     console.log(`[ProductionEngine v2.0] LLM Agents ${this.agentConfig.enableLLMAgents ? '已启用' : '已禁用'} | deep=${deepModel} fast=${fastModel}`);
+    
+    // v2.0.0-架构升级: 将第一个Agent的LLM引擎注入Gateway
+    // (所有Agent共享相同的LLMEngine实例)
+    setTimeout(() => {
+      if (this.agents.sceneDesign && this.agents.sceneDesign.llmEngine) {
+        this.llmGateway.setEngine(this.agents.sceneDesign.llmEngine);
+        console.log('[ProductionEngine] LLM引擎已注入Gateway');
+      }
+    }, 0);
   }
 
   _initModules() {
@@ -461,7 +489,23 @@ class ProductionEngine {
       this.updateAgentConfig(runtimeAgentConfig);
     }
 
-    // === 全局时间预算 ===
+    // 【v2.1.4-fix15】初始化 checkpoint 系统（断点续跑）
+    this._initCheckpoint();
+
+    // v2.0.0-架构升级: 状态机初始化(真·断点续跑)
+    const projectId = adaptedBlueprint.config?._metadata?.projectId || 
+                      `project-${Date.now()}`;
+    this.stateMachine = new PipelineStateMachine(projectId, {
+      checkpointDir: path.join(this.config.outputDir, 'checkpoints')
+    });
+    
+    // 发布项目启动事件
+    this.eventBus.emit('Project:Started', {
+      projectId,
+      timestamp: Date.now(),
+      filmType: adaptedBlueprint.config?._metadata?.filmType || 'EDU',
+      visualStyle: adaptedBlueprint.config?._metadata?.visualStyle || 'REAL'
+    });
     // 【v2.1.4-fix11】增加总预算，确保Phase 3串行处理有足够时间
     // 原预算：540s (9min) → 新预算：1200s (20min)
     // Phase 1: ~90s | Phase 2: ~300s | Phase 3: ~570s (串行6镜头 × 90s)
@@ -480,6 +524,23 @@ class ProductionEngine {
     };
 
     try {
+      // v2.0.0-架构升级: 基线模板加载与合并
+      const filmType = adaptedBlueprint.config?._metadata?.filmType || 'EDU';
+      const visualStyle = adaptedBlueprint.config?._metadata?.visualStyle || 'REAL';
+      const baselineKey = `${filmType}_${visualStyle}`;
+      
+      // 检查基线兼容性
+      const hasBaseline = this.baselineRegistry.isCompatible(baselineKey, {
+        filmType, visualStyle
+      });
+      
+      if (hasBaseline) {
+        console.log(`[ProductionEngine] 基线模板命中: ${baselineKey}`);
+        this.eventBus.emit('Baseline:Loaded', { type: baselineKey, source: 'registry' });
+      } else {
+        console.log(`[ProductionEngine] 无基线模板: ${baselineKey}，使用全LLM生成`);
+      }
+      
       // ===== Stage 1-2:规则阶段(快)=====
       result.stages.sceneExtraction = await this._runStage('scene-extraction', () => this._extractScenes(adaptedBlueprint));
       result.stages.durationAllocation = await this._runStage('duration-allocation', () => this._allocateDuration(result.stages.sceneExtraction.shots));
@@ -553,6 +614,15 @@ class ProductionEngine {
         result.llmStats.sceneDesign = sdResult.timing;
         result.llmStats.openingDesign = odResult?.timing;
         this.log('PHASE-1', `完成 (${Date.now() - phase1Start}ms)`);
+        
+        // v2.0.0-架构升级: Phase 1完成后合并基线模板
+        const filmType = adaptedBlueprint.config?._metadata?.filmType || 'EDU';
+        const visualStyle = adaptedBlueprint.config?._metadata?.visualStyle || 'REAL';
+        currentShots = this._mergeWithBaseline(currentShots, filmType, visualStyle);
+        if (currentShots.some(s => s._baselineMerged)) {
+          this.log('BASELINE', `基线模板已合并: ${currentShots.filter(s => s._baselineMerged).length}/${currentShots.length} 镜头`);
+        }
+        
         await this._saveCheckpoint('phase1', currentShots, { opening: result.opening, llmStats: result.llmStats });
         this._checkMemory('phase1');
       } catch (e) {
@@ -755,12 +825,30 @@ class ProductionEngine {
       result.timing.total = Date.now() - startTime;
       this.log('PRODUCE', `✅ LLM 制作完成${result.resumed ? '(断点续跑)' : ''} | ${currentShots.length} 镜头 | ${result.timing.total}ms`);
       this._clearCheckpoints(); // 成功完成,清理 checkpoint
+      
+      // v2.0.0-架构升级: 发布完成事件 + 状态机清理
+      this.eventBus.emit('Project:Completed', {
+        projectId,
+        timestamp: Date.now(),
+        duration: result.timing.total,
+        shotCount: currentShots.length,
+        success: true
+      });
+      this.stateMachine?.cleanup();
 
     } catch (error) {
       result.success = false;
       result.errors.push({ stage: 'production', message: error.message });
       this.log('ERROR', `❌ ${error.message}`);
       this.log('ERROR', `💡 若为预算不足,直接重跑同一命令即可从 checkpoint 续跑,LLM 产出不会丢`);
+      
+      // v2.0.0-架构升级: 发布失败事件
+      this.eventBus.emit('Project:Failed', {
+        projectId,
+        timestamp: Date.now(),
+        error: error.message,
+        currentState: this.stateMachine?.getStatus()?.currentState || 'UNKNOWN'
+      });
 
       // 【新增】最后兜底:用规则引擎抢救产出
       try {
@@ -929,8 +1017,67 @@ class ProductionEngine {
   }
 
   /**
-   * 运行单个 Stage 并计时
+   * 【v2.0.0-架构升级】基线模板合并
+   * 将基线模板的稳定字段与LLM生成的字段合并
    */
+  _mergeWithBaseline(shots, filmType, visualStyle) {
+    const baselineKey = `${filmType}_${visualStyle}`;
+    const baseline = this.baselineRegistry.get(baselineKey);
+    
+    if (!baseline) {
+      console.log(`[Baseline] 无基线模板: ${baselineKey}`);
+      return shots;
+    }
+    
+    console.log(`[Baseline] 合并基线模板: ${baselineKey} v${baseline._meta?.version}`);
+    
+    return shots.map(shot => {
+      // 提取基线中的稳定字段（排除元数据和可变字段标记）
+      const stableFields = {};
+      for (const [key, value] of Object.entries(baseline)) {
+        if (key.startsWith('_')) continue; // 跳过元数据
+        stableFields[key] = value;
+      }
+      
+      // 基线字段优先，LLM字段补充（不覆盖基线锁定的字段）
+      const merged = { ...stableFields };
+      
+      // 复制LLM生成的字段（场景、动作、台词等可变字段）
+      const llmFields = baseline._llmFields || [];
+      for (const field of llmFields) {
+        if (shot[field] !== undefined && shot[field] !== null && shot[field] !== '') {
+          merged[field] = shot[field];
+        }
+      }
+      
+      // 保留shot的固有属性
+      merged.shotId = shot.shotId;
+      merged.duration = shot.duration;
+      merged.sceneType = shot.sceneType;
+      merged.sceneTitle = shot.sceneTitle;
+      merged.timeline = shot.timeline;
+      
+      merged._baselineMerged = true;
+      merged._baselineVersion = baseline._meta?.version;
+      
+      return merged;
+    });
+  }
+
+  /**
+   * 【v2.0.0-架构升级】获取Gateway统计
+   */
+  getGatewayStats() {
+    return this.llmGateway.getStats();
+  }
+
+  /**
+   * 【v2.0.0-架构升级】获取事件总线统计
+   */
+  getEventBusStats() {
+    return this.eventBus.getStats();
+  }
+
   async _runStage(stageName, stageFn) {
     const start = Date.now();
     this.log(stageName.toUpperCase(), `开始...`);
@@ -1388,22 +1535,48 @@ class ProductionEngine {
 
   /**
    * v6.37-P0: 构建五维空间描述
-   * 【v2.1.4-fix9-P7】强制写实场景：根据内容主题返回真实医院场景
+   * 【v2.1.4-fix15】彻底修复：完全信任传入的场景描述，LLM只丰富细节
+   * 原则：
+   * 1. 传入的 scene.description 是客户/编剧指定的场景，必须完全保留
+   * 2. LLM 的职责是丰富光线、材质、氛围等细节，不是替换场景
+   * 3. 无 description 时基于 worldSetting 动态生成，不使用硬编码场景池
+   * 4. 删除所有硬编码场景池（医院、神话等），这些会强行把客户场景掰弯
    */
   _buildFiveDimensionScene(scene, worldSetting) {
-    // 强制写实场景池 - 医院环境
-    const realisticScenes = [
-      '医院健康宣教室，白色荧光灯均匀照明，白墙面贴有骨骼肌解剖图与运动损伤海报，木质讲台表面带有细微使用划痕，地面浅灰色防滑PVC地胶，金属边框海报挂架反射冷光',
-      '三甲医院检验科走廊，冷白色LED光源从走廊顶部连续排列向下照射，指示牌清晰指向尿液检验窗口，地面浅色抛光瓷砖反射冷光，墙面白色医用抗菌涂层，空间纵深长达20米',
-      '医生诊室，白色墙面悬挂医学挂图，办公桌摆放听诊器与血压计，检查床铺有蓝色一次性床单，无影灯悬于上方，窗光透入形成自然侧光',
-      '医院健康管理中心，嵌入式LED灯带洒下柔和暖白光，接待台后方排列健康宣传展板，前方皮质沙发与实木茶几，地面灰色哑光瓷砖，墙面浅米色乳胶漆',
-      '医院检验科窗口前，冷白色荧光灯维持恒定色温，检验窗口玻璃带有微弱反射，不锈钢台面反光，墙面悬挂清晰的科室标识指示牌，地面浅灰色防滑PVC地板',
-      '医院走廊，双管荧光灯从天花板均匀投下冷白光，白墙面贴有健康知识海报，地面浅灰色防滑地胶，远处可见护士站与推车'
-    ];
+    // 第一优先级：完全信任传入的场景描述
+    if (scene.description && scene.description.length > 5) {
+      // 返回原始描述，让 SceneDesignAgent/LLM 在此基础上丰富细节
+      return scene.description;
+    }
     
-    // 根据场景索引选择（循环使用）
-    const sceneIndex = parseInt(scene.scene_id?.replace(/\D/g, '') || '0');
-    return realisticScenes[sceneIndex % realisticScenes.length];
+    // 第二优先级：基于世界设定动态生成兜底描述
+    const worldDesc = worldSetting?.description || worldSetting?.name || '';
+    const atmosphere = worldSetting?.atmosphere || '';
+    const sceneType = scene.scene_type || 'establishing';
+    
+    if (worldDesc) {
+      return `${worldDesc}，${this._getSceneTypeDescriptor(sceneType)}${atmosphere ? '，' + atmosphere : ''}`;
+    }
+    
+    // 最终兜底：只提供类型描述，不硬编码具体场景
+    return this._getSceneTypeDescriptor(sceneType);
+  }
+  
+  /**
+   * 根据场景类型返回基础描述符（不含具体场景内容）
+   */
+  _getSceneTypeDescriptor(sceneType) {
+    const descriptors = {
+      'opening': '史诗开场场景，宏大视角，强烈视觉冲击',
+      'establishing': '全景 establishing shot，展示空间关系与环境氛围',
+      'conflict': '紧张对峙场景，充满戏剧张力与冲突感',
+      'action': '激烈动作场景，高速动态，强烈视觉冲击',
+      'emotional_climax': '情感高潮场景，张力爆发，情绪浓烈',
+      'resolution': '平静收尾场景，余韵悠长，情绪释放',
+      'discovery': '探索发现场景，充满惊奇与未知感',
+      'transition': '过渡转场场景，时空转换，流畅衔接'
+    };
+    return descriptors[sceneType] || '标准叙事场景';
   }
 
   /**

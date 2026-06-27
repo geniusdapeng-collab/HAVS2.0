@@ -65,33 +65,34 @@ ${sceneOptions}
   /**
    * 【v2.1.4-fix13-审计修复】根据 blueprint 动态生成场景选项
    */
+  /**
+   * 【v2.1.4-fix15】动态生成场景选项，基于 worldSetting，不使用硬编码场景池
+   * 原则：
+   * 1. 优先从 worldSetting 提取世界描述生成选项
+   * 2. 无 worldSetting 时返回场景类型指导，不硬编码具体场景
+   * 3. 绝不使用医院/神话/科幻等固定场景模板
+   */
   _generateSceneOptions(blueprint = {}) {
     const meta = blueprint._metadata || blueprint.config?._metadata || {};
-    const genre = blueprint.genre || meta.genre || '';
-    const title = blueprint.title || meta.title || '';
-    const settingHint = blueprint.setting || meta.setting || '';
+    const worldSetting = blueprint.worldSetting || {};
     
-    // 健康/医疗主题
-    if (genre.includes('健康') || genre.includes('医疗') || title.includes('健康') || title.includes('医院') || settingHint.includes('医院')) {
-      return `   - 场景A：医院健康宣教室（荧光灯、白墙面、健康知识海报、木质讲台）
-   - 场景B：三甲医院检验科走廊（冷白色光源、指示牌、检验窗口、排队座椅）
-   - 场景C：医生诊室（听诊器、血压计、检查床、医学挂图、办公桌）
-   - 场景D：医院健康管理中心（柔和顶灯、接待台、健康宣传展板、沙发座椅）`;
+    // 优先从世界设定提取
+    if (worldSetting.description || worldSetting.name) {
+      const worldDesc = worldSetting.description || worldSetting.name;
+      const atmosphere = worldSetting.atmosphere || '';
+      return `   基于世界设定「${worldDesc}」生成场景，可选方向：
+   - 方向A：${worldDesc}核心区域${atmosphere ? '，' + atmosphere : ''}
+   - 方向B：${worldDesc}边缘/过渡地带${atmosphere ? '，' + atmosphere : ''}
+   - 方向C：${worldDesc}特殊地貌/标志性地点${atmosphere ? '，' + atmosphere : ''}
+   - 方向D：${worldDesc}战斗/冲突发生地${atmosphere ? '，' + atmosphere : ''}`;
     }
     
-    // 教育/科普主题
-    if (genre.includes('科普') || genre.includes('教育') || title.includes('科普') || title.includes('知识')) {
-      return `   - 场景A：现代化教室/演播室（LED顶灯、白板/投影幕、讲台、座椅）
-   - 场景B：实验室/检验室（冷白色光源、实验台、仪器、储物柜）
-   - 场景C：办公室/会议室（自然窗光、办公桌、文件柜、会议桌椅）
-   - 场景D：公共空间/大厅（柔和顶灯、接待区、展示墙、沙发座椅）`;
-    }
-    
-    // 默认通用场景
-    return `   - 场景A：室内主场景（自然光/顶灯、墙面材质、核心家具、地面）
-   - 场景B：过渡空间（走廊/通道、指示牌、功能性家具）
-   - 场景C：专业场景（设备/仪器、工作台、专业工具）
-   - 场景D：公共空间（接待区、展示墙、座椅、柔和照明）`;
+    // 无世界设定时返回类型指导（不含具体场景）
+    return `   根据视频主题和已有场景描述生成写实场景，可选方向：
+   - 方向A：核心叙事空间（主要事件发生地）
+   - 方向B：过渡/连接空间（场景转换、移动过程）
+   - 方向C：对峙/冲突空间（紧张感、对抗发生地）
+   - 方向D：情绪释放空间（高潮、转折、收尾）`;
   }
 
   async process(shots, blueprint) {
@@ -120,27 +121,41 @@ ${sceneOptions}
     
     const designedShots = shots.map((shot, index) => {
       const designed = llmResult.result?.shots?.find(s => s.shotId === shot.shotId) || {};
-      let scene = designed.scene || shot.scene || '';
       
-      // 【v2.1.4-fix9-P5】场景校验：包含禁止词汇则使用兜底场景
+      // 【v2.1.4-fix15】优先保留传入的已有场景描述（只要有非空描述就保留）
+      const hasExistingScene = shot.scene && shot.scene.length > 5 && 
+        !shot.scene.includes('室内主场景') && !shot.scene.includes('过渡空间') && 
+        !shot.scene.includes('专业场景') && !shot.scene.includes('公共空间');
+      let scene = hasExistingScene ? shot.scene : (designed.scene || shot.scene || '');
+      
+      // 【v2.1.4-fix15】优先保留传入的已有动作描述（只要有非空描述就保留）
+      const hasExistingAction = shot.action && shot.action.length > 5 && 
+        !shot.action.includes('speaking to camera');
+      let action = hasExistingAction ? shot.action : (designed.action || shot.action || '');
+      
+      // 【v2.1.4-fix15】场景校验：包含禁止词汇则使用动态兜底
+      const forbiddenWords = ['全息', '虚拟', '投影', '抽象', '光影场域', '数据空间', '元宇宙', '时间操控', '霓虹', '微观世界', '宏观', '抽象几何', '流动光影', '交织光影', '色彩对冲'];
       const hasForbidden = forbiddenWords.some(w => scene.includes(w));
       if (hasForbidden) {
-        console.warn(`[SceneDesignAgent] ⚠️ 镜头 ${shot.shotId} 包含禁止词汇: "${scene}"，使用兜底场景`);
-        // 根据镜头索引分配兜底场景
-        const fallbackScenes = [
-          '场景A: 室内主场景，自然光/顶灯照明，墙面材质真实，核心家具摆放有序，地面材质清晰可见',
-          '场景B: 过渡空间走廊/通道，功能性指示牌，辅助照明，地面反光自然',
-          '场景C: 专业场景/工作室，设备/仪器排列，工作台整洁，专业工具可见',
-          '场景D: 公共空间/大厅，接待区布置，展示墙/展板，柔和照明，座椅舒适'
-        ];
-        scene = fallbackScenes[index % fallbackScenes.length];
+        console.warn(`[SceneDesignAgent] ⚠️ 镜头 ${shot.shotId} 包含禁止词汇: "${scene}"，使用动态兜底`);
+        // 【v2.1.4-fix15】基于世界设定动态生成兜底，不使用硬编码场景池
+        const worldSetting = blueprint.worldSetting || {};
+        const worldDesc = worldSetting.description || worldSetting.name || '';
+        const atmosphere = worldSetting.atmosphere || '';
+        const sceneType = shot.sceneType || shot.scene_type || 'establishing';
+        
+        if (worldDesc) {
+          scene = `${worldDesc}，${this._getSceneTypeBase(sceneType)}${atmosphere ? '，' + atmosphere : ''}`;
+        } else {
+          scene = this._getSceneTypeBase(sceneType);
+        }
       }
       
       return {
         ...shot,
         scene: scene,
         mood: designed.mood || shot.mood || '',
-        action: designed.action || shot.action || '',
+        action: action,
         emotional_target: designed.emotional_target || ''
       };
     });
@@ -158,12 +173,31 @@ ${sceneOptions}
     const shotsInfo = shots.map((s, idx) => {
       const dialogue = s.dialogue?.lines?.map(l => `"${l.content}"`).join('; ') || s.dialogue || '';
       const existingScene = s.scene || '';
-      return `镜头 ${s.shotId}: ${s.duration || '?'}s; 现有场景: ${existingScene.substring(0, 60)}; 台词: ${dialogue.substring(0, 80)}`;
+      const existingAction = s.action || '';
+      return `镜头 ${s.shotId}: ${s.duration || '?'}s; 现有场景: ${existingScene.substring(0, 80)}; 现有动作: ${existingAction.substring(0, 60)}; 台词: ${dialogue.substring(0, 80)}`;
     }).join('\n');
     
     // 【v2.1.4-fix13-审计修复】动态生成场景选项，避免硬编码
     const sceneOptions = this._generateSceneOptions(blueprint);
     const directorContext = this._buildDirectorContext(blueprint);
+    
+    // 【v2.1.4-fix14】根据类型动态调整约束
+    const meta = blueprint._metadata || blueprint.config?._metadata || {};
+    const filmType = meta.filmType || blueprint.filmType || '';
+    const isMythFantasy = filmType === 'FANTASY' || filmType === 'ACTION' || filmType === 'MYTHOLOGY';
+    
+    const constraints = isMythFantasy 
+      ? `【强制约束 - 违反则输出无效】
+- 场景描述必须包含具体物理细节：地形材质、自然光源、环境元素、天气氛围
+- 禁止使用以下任何词汇：全息、虚拟、投影、抽象、概念、光影场域、数据空间、数字、元宇宙、时间操控、霓虹、微观世界、宏观、抽象几何、流动光影、交织光影、色彩对冲
+- 光线必须是自然/物理光源：天光、雷电、火焰、日光、月光、环境反射光
+- 场景必须是真实物理环境（岩石、云层、水面、森林等），但可以是神话世界中的真实环境
+- 角色动作必须是真实物理动作（打斗、奔跑、跳跃、格挡），可伴随神话能量特效`
+      : `【强制约束 - 违反则输出无效】
+- 场景描述必须包含具体物理细节：墙面材质、灯光类型、家具/设备、地面材质
+- 禁止使用以下任何词汇：全息、虚拟、投影、抽象、概念、光影场域、数据空间、数字、元宇宙、时间操控、霓虹、微观世界、宏观、抽象几何、流动光影、交织光影、色彩对冲
+- 光线必须是真实光源：荧光灯、LED顶灯、窗光、无影灯、自然光
+- 角色必须在真实地面站立，背景必须是真实墙面`;
 
     return `${directorContext}
 
@@ -176,22 +210,24 @@ ${shotsInfo}
 ## 任务
 为每个镜头设计场景、情绪和动作。
 
-【重要】每个镜头已有写实场景基础，你的任务是：
-1. 如果现有场景已写实，保留并细化细节
-2. 如果现有场景不写实，必须从以下选项中强制选择一个替换：
+【核心原则 - 不可违反】
+1. 每个镜头已提供「现有场景」，这是客户指定的场景，必须完全保留作为基础
+2. 你的职责是丰富细节（增加材质、光影、氛围、环境元素），绝不能替换或改变核心场景
+3. 只有「现有场景」为空或过于抽象（少于5个字）时，才从以下方向中选择生成
+
 ${sceneOptions}
 
 【设计要求】
-1. scene: 输出最终场景描述（必须是写实环境，50-80字）
+1. scene: 基于现有场景丰富细节后的最终描述（50-80字，必须是写实环境）
 2. mood: 情绪氛围（15-25字）
-3. action: 角色动作（肢体语言、走位、手势，30-50字）
+3. action: 角色动作（肢体语言、走位、打斗动作，30-50字）
 4. emotional_target: 情绪目标（1个词）
 
-【强制约束 - 违反则输出无效】
-- 场景描述必须包含具体物理细节：墙面材质、灯光类型、家具/设备、地面材质
-- 禁止使用以下任何词汇：全息、虚拟、投影、抽象、概念、光影场域、数据空间、数字、元宇宙、时间操控、霓虹、微观世界、宏观、抽象几何、流动光影、交织光影、色彩对冲
-- 光线必须是真实光源：荧光灯、LED顶灯、窗光、无影灯、自然光
-- 角色必须在真实地面站立，背景必须是真实墙面
+【强制约束】
+- 场景描述必须包含具体物理细节：地形/墙面材质、光源类型、环境元素
+- 禁止：全息、虚拟、投影、抽象、光影场域、数据空间、元宇宙、霓虹等
+- 光线必须是真实物理光源（自然光/灯光/火焰/雷电等）
+- 场景必须是真实物理环境，允许神话/奇幻世界的真实环境
 
 输出JSON: {"shots": [{"shotId":"SC01","scene":"具体场景描述，50-80字","mood":"...","action":"...","emotional_target":"..."}]}`;
   }
@@ -241,6 +277,24 @@ ${sceneOptions}
         emotional_target: ''
       }))
     };
+  }
+
+  /**
+   * 【v2.1.4-fix15】基于场景类型返回基础描述符（不含具体场景内容）
+   * 用于兜底生成，避免硬编码场景池
+   */
+  _getSceneTypeBase(sceneType) {
+    const descriptors = {
+      'opening': '史诗开场场景，宏大视角',
+      'establishing': '全景 establishing shot，展示空间关系',
+      'conflict': '紧张对峙场景，充满戏剧张力',
+      'action': '激烈动作场景，高速动态',
+      'emotional_climax': '情感高潮场景，张力爆发',
+      'resolution': '平静收尾场景，余韵悠长',
+      'discovery': '探索发现场景，充满惊奇',
+      'transition': '过渡转场场景，时空转换'
+    };
+    return descriptors[sceneType] || '标准叙事场景';
   }
 }
 

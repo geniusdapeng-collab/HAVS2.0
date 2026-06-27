@@ -117,13 +117,13 @@ class FieldGuard {
       errors.push('P0-8: 动作字段缺失');
     }
 
-    // P0-9: 台词
-    if (!prompt.includes('【台词】') && !prompt.includes('【旁白/台词】') && !/DIALOGUE\s*:/i.test(prompt)) {
-      // 如果shot有dialogue则报错，否则仅警告
-      if (shot.dialogue || shot.narration) {
-        errors.push('P0-9: 有配音需求但台词字段缺失');
+    // v6.7.0-dialogue-patch: P0-9 检查【对话指令】，向后兼容【台词】
+    if (!prompt.includes('【对话指令】') && !prompt.includes('【台词】') && !prompt.includes('【旁白/台词】') && !/DIALOGUE\s*:/i.test(prompt)) {
+      // 如果shot有dialogue或dialogueBlock则报错，否则仅警告
+      if (shot.dialogue || shot.narration || (shot.dialogueBlock?.text)) {
+        errors.push('P0-9: 有配音需求但对话指令字段缺失');
       } else {
-        warnings.push('P0-9: 台词字段缺失（无配音需求）');
+        warnings.push('P0-9: 对话指令字段缺失（无配音需求）');
       }
     }
 
