@@ -118,9 +118,8 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
 12. 【动作】：角色具体动作（手势、步伐、视线）。格式："右手自然抬起至胸前做强调手势，左手自然下垂，身体微微前倾，目光直视镜头"
 13. 【道具】：关键道具（手持物、桌面物品、背景物件）。格式："手持：空白文件夹（白色，无文字）；背景：木质桌面"
 14. 【定妆照】：角色定妆照引用路径（如：image://characters/xxx/portraits/xxx.jpg）
-15. 【对话指令】：角色对话标注（Seedance 官方格式）。当镜头中有台词时必须输出。格式：角色名(动作触发，情绪修饰，面向[对话对象])："台词内容"，LIP_SYNC:true，身体语言：[描述]。每句台词一行，多句分行排列。
-16. 【台词】：角色直接说的话（单句简洁版）。格式：纯台词内容。当存在【对话指令】时，【台词】为其简化版。
-17. 【时间轴】：镜头内部的微观导演调度时间轴。必须采用分段式描述，时间戳使用相对于镜头起始点的偏移格式 T00:XX（如 T00:00, T00:02, T00:04），每段包含画面内容和角色动作。要求至少分3段，时间戳不得重叠或跳跃中断。
+15. 【对话指令】：角色对话标注（Seedance 官方格式）。当镜头中有台词时必须输出。格式：角色名(动作触发，情绪修饰，面向[对话对象])："台词内容"，LIP_SYNC:true，身体语言：[描述]。每句台词一行，多句分行排列。包含完整台词内容，无需单独输出【台词】。
+16. 【时间轴】：镜头内部的微观导演调度时间轴。必须采用分段式描述，时间戳使用相对于镜头起始点的偏移格式 T00:XX（如 T00:00, T00:02, T00:04），每段包含画面内容和角色动作。要求至少分3段，时间戳不得重叠或跳跃中断。
    标准格式示例：
    "T00:00 - 中景，主角坐在窗前，阳光从侧面照入；主角缓缓抬起头，目光投向窗外
    T00:02 - 近景过渡，镜头缓慢推进至面部；主角眼神由迷茫转为坚定，嘴角微微抿紧
@@ -151,7 +150,7 @@ const PromptLengthConfig = require('../../../config/prompt-length.js');
    - 【景深】≥80字符（须含焦点位置+光圈值+前景/背景虚化+层次分离）
    - 【音频】≥100字符（须含环境音效+音乐风格+音量层级+BPM）
    - 如果某字段内容不足，请补充更多细节使其达标
-2. 【台词】字段必须独立，角色直接对镜头说话，不要写"画外音""旁白"
+2. 【对话指令】字段必须独立，包含角色名+动作触发+情绪修饰+面向对象+台词内容+LIP_SYNC+身体语言，不要写"画外音""旁白"
 3. 场景要具体真实（门诊室、宣教室、检查室），必须是写实环境，禁止科幻/抽象元素
 3. 【动作】必须是真实物理动作和镜头运动：推近、跟拍、手持、站立、行走、手势、转身、注视镜头。严禁使用：全息投影、空间扭曲、时间残影、霓虹色、数据流、抽象构图、梦境流动性、湿版摄影、光即角色、AI瑕疵、宏大比例、微观世界
 4. 禁止词汇（全字段通用）：全息、虚拟、投影、抽象、光影场域、数据空间、元宇宙、时间操控、霓虹、微观世界、宏观、抽象几何、流动光影、交织光影、色彩对冲、空间扭曲、时间残影、数据流、光即角色、梦境流动性、湿版摄影、AI瑕疵
@@ -640,19 +639,18 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
       parts.push(`【定妆照】${portraitsField}`);
     }
 
-    // 台词
+    // 台词 - 当存在【对话指令】时不再单独输出【台词】，避免重复
     const dialogueField = getField('dialogue');
-    if (dialogueField) {
-      // 【v2.1.4-fix13】确保台词有【台词】前缀
-      const dialogueText = dialogueField.startsWith('【台词】') ? dialogueField : `【台词】${dialogueField}`;
-      parts.push(dialogueText);
-    }
-
-    // 【对话指令】⭐ 新增：Seedance 对话标注格式
     const dialogueBlockField = getField('dialogue_block');
+    
     if (dialogueBlockField && String(dialogueBlockField).trim() && !String(dialogueBlockField).includes('规则兜底')) {
+      // 【对话指令】包含完整台词+角色属性+LIP_SYNC，优先使用
       const dialogueBlockText = dialogueBlockField.startsWith('【对话指令】') ? dialogueBlockField : `【对话指令】${dialogueBlockField}`;
       parts.push(dialogueBlockText);
+    } else if (dialogueField) {
+      // 无【对话指令】时才输出【台词】作为降级
+      const dialogueText = dialogueField.startsWith('【台词】') ? dialogueField : `【台词】${dialogueField}`;
+      parts.push(dialogueText);
     }
 
     // 【时间轴】镜头内部微观导演调度（T00:XX相对时间戳格式）
@@ -870,7 +868,8 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     const characterInfo = characters.map(c => `- ${c.name}: ${c.description || ''}`).join('\n');
 
     const shotsInfo = shots.map(s => {
-      const pureDialogue = s.dialogue?.lines?.map(l => l.content).join('; ') || 
+      const pureDialogue = s.dialogue_block || 
+                          s.dialogue?.lines?.map(l => l.content).join('; ') || 
                           (s.dialogue ? this._extractPureDialogue(s.dialogue) : '');
       return `${s.shotId}(${s.duration || '?'}s): ${s.scene || ''} | ${s.mood || ''} | ${pureDialogue} | 运镜:${s.cameraString || ''} | 灯光:${s.lightingString || ''}`;
     }).join('\n');
@@ -910,8 +909,8 @@ ${sufficiency}
 - 错误运镜：无人机穿越微观世界、时间操控慢动作、宏大比例展示
 
 要求：
-1. 按标准字段输出：【约束】【基础】【场景】【灯光/照明】【构图】【色彩/色调】【景深】【运镜】【角色】【服装】【化妆】【动作】【道具】【定妆照】【台词】【时间轴】【情绪】【节奏】【转场】【音频】【负面约束】【明亮约束】【角色约束】【导演指令】【角色一致性】
-2. 【台词】字段必须独立，角色直接对镜头说话，不要写"画外音""旁白"
+1. 按标准字段输出：【约束】【基础】【场景】【灯光/照明】【构图】【色彩/色调】【景深】【运镜】【角色】【服装】【化妆】【动作】【道具】【定妆照】【对话指令】【时间轴】【情绪】【节奏】【转场】【音频】【负面约束】【明亮约束】【角色约束】【导演指令】【角色一致性】
+2. 【对话指令】字段必须独立，包含角色名+动作触发+情绪修饰+面向对象+台词内容+LIP_SYNC+身体语言，不要写"画外音""旁白"
 3. 场景要具体专业（门诊室、宣教室、检查室），不要写"社区健身区"。场景中不得出现含文字的物品：如"有文字的报告单"、"标牌上的文字"、"商标"、"有字的海报"等。可以描述"空白报告单"、"无文字标识牌"、"图形海报"等不含文字的物品
 4. 负面约束要完整，包含10+条排除项，必须包含全局禁止文字：no text anywhere in frame, no readable characters, no alphabets, no Chinese characters, no text on walls objects documents signs labels screens clothing packaging, no handwritten text, no printed text, no signage text, no text overlays, no UI elements with text
 5. 只输出JSON，不要解释
