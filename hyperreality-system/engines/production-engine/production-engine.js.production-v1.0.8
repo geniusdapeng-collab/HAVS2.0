@@ -81,9 +81,7 @@ class ProductionEngine {
       timeout: this.agentConfig.llmTimeout
     });
     this.eventBus = new EventBus();
-    // 【P1-20-审计修复】状态机当前为预留架构，未实际驱动流程
-    // 断点续跑完全依赖 this._saveCheckpoint / _loadLatestCheckpoint
-    this.stateMachine = null;
+    this.stateMachine = null; // 项目启动时初始化
     
     console.log('[ProductionEngine] v2.0 稳定性基础设施已加载:');
     console.log('  - 基线模板库:', this.baselineRegistry.list().length, '个');
@@ -1034,29 +1032,43 @@ class ProductionEngine {
   _mergeWithBaseline(shots, filmType, visualStyle) {
     const baselineKey = `${filmType}_${visualStyle}`;
     const baseline = this.baselineRegistry.get(baselineKey);
-
+    
     if (!baseline) {
       console.log(`[Baseline] 无基线模板: ${baselineKey}`);
       return shots;
     }
-
+    
     console.log(`[Baseline] 合并基线模板: ${baselineKey} v${baseline._meta?.version}`);
-
+    
     return shots.map(shot => {
-      // 【P0-8-审计修复】LLM字段优先，基线只补充缺失字段
-      const merged = { ...shot }; // shot（LLM生成）优先
-
-      // 基线只补充 shot 中没有的字段
+      // 提取基线中的稳定字段（排除元数据和可变字段标记）
+      const stableFields = {};
       for (const [key, value] of Object.entries(baseline)) {
-        if (key.startsWith('_')) continue;
-        if (merged[key] === undefined || merged[key] === null || merged[key] === '') {
-          merged[key] = value;
+        if (key.startsWith('_')) continue; // 跳过元数据
+        stableFields[key] = value;
+      }
+      
+      // 基线字段优先，LLM字段补充（不覆盖基线锁定的字段）
+      const merged = { ...stableFields };
+      
+      // 复制LLM生成的字段（场景、动作、台词等可变字段）
+      const llmFields = baseline._llmFields || [];
+      for (const field of llmFields) {
+        if (shot[field] !== undefined && shot[field] !== null && shot[field] !== '') {
+          merged[field] = shot[field];
         }
       }
-
+      
+      // 保留shot的固有属性
+      merged.shotId = shot.shotId;
+      merged.duration = shot.duration;
+      merged.sceneType = shot.sceneType;
+      merged.sceneTitle = shot.sceneTitle;
+      merged.timeline = shot.timeline;
+      
       merged._baselineMerged = true;
       merged._baselineVersion = baseline._meta?.version;
-
+      
       return merged;
     });
   }

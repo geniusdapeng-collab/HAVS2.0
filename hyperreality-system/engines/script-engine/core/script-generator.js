@@ -405,8 +405,9 @@ ${meta._directorStyle}` : ''}
         }
         throw new Error('LLM返回空内容（success=true但content为空，forceJson模式异常）');
       } catch (error) {
-        console.error('[ScriptGenerator] LLMEngine调用失败:', error.message);
-        throw error;
+        // 【P1-24-审计修复】LLMEngine 失败不直接 throw，降级到 HTTP
+        console.warn(`[ScriptGenerator] LLMEngine调用失败: ${error.message}，降级到HTTP直接调用`);
+        // 继续执行下面的 HTTP 降级路径
       }
     }
     

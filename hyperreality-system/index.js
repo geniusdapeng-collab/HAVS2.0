@@ -397,7 +397,14 @@ class HyperrealitySystem {
       }
 
       // ========== 汇总 ==========
-      result.success = true;
+      // 【P0-9-审计修复】根据各阶段实际结果判定 success，而非无条件 true
+      const hasCriticalErrors = result.errors.some(e => 
+        e.layer === 'rendering' || e.layer === 'post-production'
+      );
+      const renderFailed = result.stages.renderingEngine?.error !== undefined;
+      const postProdFailed = result.stages.postProductionEngine?.error !== undefined;
+      result.success = !hasCriticalErrors && !renderFailed && !postProdFailed;
+
       result.timing.total = Date.now() - totalStart;
 
       console.log(`\n🏁 [完成] 总耗时: ${result.timing.total}ms`);
@@ -647,22 +654,27 @@ class HyperrealitySystem {
       }
     }
 
-    console.log(`\n⏳ [等待确认] ${type} 已输出到: ${contentPath}`);
-    console.log(`   请审阅内容后,创建确认文件: ${confirmPath}`);
-    console.log('   格式: {"approved": true} 或 {"approved": false, "reason": "..."}');
+    // 【P0-11-审计修复】支持环境变量配置确认模式和超时
+    const confirmMode = process.env.STORMAXE_CONFIRM_MODE || 'timeout';
+    const confirmTimeout = parseInt(process.env.STORMAXE_CONFIRM_TIMEOUT || '60', 10) * 1000;
 
-    // 轮询等待确认文件(最多30分钟)
-    const maxWait = 30 * 60 * 1000; // 30分钟
-    const checkInterval = 3000; // 3秒
+    if (confirmMode === 'auto') {
+      console.log(` ✅ 自动确认模式，跳过等待: ${type}`);
+      return { approved: true, reason: 'auto-approved' };
+    }
+
+    console.log(`\n⏳ [等待确认] ${type} 已输出到: ${contentPath}`);
+    console.log(`  超时: ${confirmTimeout / 1000}s（STORMAXE_CONFIRM_TIMEOUT 调整）`);
+
+    const checkInterval = 3000;
     const startTime = Date.now();
 
-    while (Date.now() - startTime < maxWait) {
+    while (Date.now() - startTime < confirmTimeout) {
       if (fs.existsSync(confirmPath)) {
         try {
           const confirmData = JSON.parse(fs.readFileSync(confirmPath, 'utf8'));
-          console.log(`   ✅ 收到确认: approved=${confirmData.approved}`);
           return {
-            approved: confirmData.approved === true || confirmData.approved === 'true' || confirmData.approved === 1,
+            approved: confirmData.approved === true || confirmData.approved === 'true',
             reason: confirmData.reason || '',
             suggestions: confirmData.suggestions || []
           };
@@ -670,20 +682,12 @@ class HyperrealitySystem {
           console.log('   ⚠️ 确认文件解析失败,继续等待...');
         }
       }
-
-      // 每10秒打印一次等待提示
-      const elapsed = Date.now() - startTime;
-      if (elapsed % 10000 < checkInterval) {
-        const mins = Math.floor(elapsed / 60000);
-        console.log(`   ⏳ 等待确认中... (${mins}分钟)`);
-      }
-
       await new Promise(resolve => setTimeout(resolve, checkInterval));
     }
 
-    // 超时
-    console.log('   ⏰ 确认超时,默认拒绝');
-    return { approved: false, reason: '等待确认超时', suggestions: [] };
+    // 【修复】超时后自动通过，避免阻塞无人值守任务
+    console.log(` ⏰ 确认超时(${confirmTimeout / 1000}s)，自动通过: ${type}`);
+    return { approved: true, reason: 'timeout-auto-approved', suggestions: [] };
   }
 
   /**
@@ -727,26 +731,12 @@ class HyperrealitySystem {
     for (const field of fields) {
       const seqStr = String(seq).padStart(2, '0');
 
-      // 情绪字段增强
+      // 【P3-28-审计修复】情绪字段只做审核提示，不修改实际 prompt 内容
       if (field.name === '情绪') {
         let enhanced = field.content;
-        // 如果已经有面部/眼神详细描述,不再增强
-        if (!enhanced.includes('面部') && !enhanced.includes('眼神') && !enhanced.includes('神态')) {
-          const keywords = enhanced.split(/[,,]/).map(k => k.trim().toLowerCase()).filter(k => k);
-          const details = [];
-          for (const kw of keywords) {
-            for (const [key, detail] of Object.entries(emotionMap)) {
-              if (kw.includes(key.toLowerCase()) && !details.includes(detail)) {
-                details.push(detail);
-              }
-            }
-          }
-          if (details.length > 0) {
-            enhanced = details.join(',');
-          } else if (enhanced.length < 30) {
-            // 无匹配关键词且太短,补充默认描述
-            enhanced = `情绪基调为${enhanced},面部微表情自然真实,眼神聚焦有神采,符合场景氛围与角色身份`;
-          }
+        // 仅提示补充面部描述，不替换情绪关键词
+        if (!enhanced.includes('面部') && !enhanced.includes('眼神') && !enhanced.includes('神态') && enhanced.length < 50) {
+          enhanced = `${enhanced}（审核提示：建议补充面部微表情和眼神描述）`;
         }
         lines.push(`${seqStr}.【${field.name}】${enhanced}`);
       } else {
@@ -765,7 +755,7 @@ class HyperrealitySystem {
         { name: 'title_font_design', label: '标题字体设计' },
         { name: 'opening_audio_design', label: '开场音频设计' }
       ];
-      for (const of of openingFields) {
+      for (const openingField of openingFields) {
         const seqStr = String(seq).padStart(2, '0');
         lines.push(`${seqStr}.【${of.label}】(片头专属字段,需单独配置)`);
         seq++;

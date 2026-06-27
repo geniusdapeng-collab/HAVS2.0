@@ -8,39 +8,9 @@ const fs = require('fs');
 
 const BASELINE_DIR = path.join(__dirname, '../../output/baselines');
 
-// 默认基线模板：EDU_health（健康科普）
-const DEFAULT_BASELINES = {
-  'EDU_health_v1.0': {
-    // 元数据
-    _meta: {
-      name: 'EDU_health',
-      version: '1.0.0',
-      description: '健康教育科普视频标准基线',
-      locked: true,
-      approvedBy: 'system',
-      approvedAt: '2026-06-26T00:00:00Z',
-      filmType: 'EDU',
-      visualStyle: 'REAL',
-      targetDuration: '60-65s'
-    },
-    // 稳定字段（技术规格，不随项目变化）
-    directorInstruction: '好莱坞纪录片质感，电影级画面，写实风格，无特效，无科幻元素，无抽象构图，无超现实处理。每一帧都保持高水准的细节、真实的材质质感和自然的物理光影。强调专业医疗氛围与科普影像的严谨调性，严禁任何超现实或艺术化的视觉处理。',
-    constraint: 'Aspect ratio: 16:9, Resolution: 1920x1080, Format: MP4, Frame rate: 24fps, no text anywhere in frame, no subtitle, no caption, no watermark, no logo, no readable characters, no alphabets, no Chinese characters, no text on walls, no text on objects, no text on documents, no text on signs, no text on labels, no text on screens, no text on clothing, no text in background',
-    baseline: '8K resolution, cinematic quality, highly detailed, photorealistic, hyperrealistic, sharp focus, ultra high definition, lifelike textures, professional color grading, realistic skin texture, natural pore detail, accurate anatomical proportions',
-    colorPalette: '主色调：冷白偏青蓝（医院检验科/诊室特有的洁净冷感）；辅助色：环境本色（不锈钢金属银灰、浅灰釉面砖、实木暖棕）；肤色：自然偏暖形成冷暖对比；饱和度：中等偏低，克制而不苍白；对比度：中高，保持清晰层次与严肃临床氛围',
-    depthOfField: '焦点：主体面部或动作中心；景深：中等（f/2.8-f/4），背景适度虚化但仍可辨识空间结构；前景：轻微虚化增加层次；层次：前景-中景-背景三层清晰分离',
-    composition: '景别：中景（膝上/腰上）；主体位置：画面黄金分割点（左1/3或右1/3）；线条引导：纵深层次感与空间汇聚线；画框边缘：适度留白展示环境信息；视觉重心：人物面部与核心动作',
-    negative: 'no text, no subtitle, no caption, no watermark, no blurry, no extra limbs, no deformed, no distorted, no low quality, no cartoon style, no flat lighting, no anime, no 3D render, no plastic look, no text anywhere in frame, no readable characters, no alphabets, no Chinese characters, no text on walls objects documents signs labels screens clothing packaging, no handwritten text, no printed text, no signage text, no text overlays, no UI elements with text, no holographic, no virtual projection, no neon, no abstract, no sci-fi elements, no futuristic, no fantasy, no surreal, no medical horror, no bloody scene, no scary atmosphere, no dark muddy shadows',
-    brightConstraint: 'bright lighting, well-lit scene, clear visibility, no dark shadows on face, adequate illumination, evenly lit, clear facial details, sufficient ambient light, no underexposure',
-    characterConstraint: '只出现主角一人，禁止其他人物入镜，禁止同一角色重复出现，禁止角色分身或克隆，禁止背景中出现其他可辨识人脸',
-    consistency: '保持角色形象一致，短发警服造型不变，面部特征与体型每帧统一，服装细节与肩章位置固定，发型与妆容无镜头间差异',
-    makeup: '短发整齐（黑色，长度及耳，发梢微向内扣），素颜淡妆，眉毛自然修整，唇色淡粉自然，肤色均匀，无夸张眼影或腮红，整体呈现干练公职人员形象',
-    costume: '藏青色警服外套（毛呢质地，肩章完整，金属纽扣有光泽），内搭浅蓝色衬衫（棉质，领口整洁系至第一颗纽扣），黑色西裤（笔挺无褶皱），黑色皮鞋（光亮整洁），佩戴标准警用皮带',
-    // 可变字段标记（这些字段由LLM动态生成）
-    _llmFields: ['scene', 'lighting', 'cameraMovement', 'action', 'dialogue', 'mood', 'pacing', 'props', 'transition', 'audio'],
-    _llmRequired: ['scene', 'action', 'dialogue']
-  }
-};
+// 默认基线模板：【P0-8-审计修复】删除硬编码医院/警察基线，改为空对象
+// 基线只能通过 extractFromProject + 人工审核后注册，不再内置硬编码内容
+const DEFAULT_BASELINES = {};
 
 class BaselineTemplateRegistry {
   constructor() {

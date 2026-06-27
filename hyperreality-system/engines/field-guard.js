@@ -39,23 +39,21 @@ class FieldGuard {
     for (const i of failingIdx) {
       const shot = normalized[i];
       console.warn(`${this.logPrefix} ${context} 镜头 ${shot.shotId} 校验失败，就地修复: ${details[i].errors.join('; ')}`);
-      // 关键 P0 字段补默认值
-      if (!shot.negative || !shot.negative.includes('no text')) {
-        shot.negative = 'no text anywhere in frame, no watermark, no logo, no subtitle, no caption, no blur, no distortion, no extra limbs, no deformed, no cartoon style';
-      }
-      // 其余空 P0 用最小默认值
+      // 【P1-22-审计修复】FieldGuard 默认值从 shot 上下文动态生成
+      const worldDesc = shot.worldSetting?.description || shot.worldSetting?.name || '真实物理环境';
+      const charName = shot.character || '主角';
       const p0Defaults = {
-        director_instruction: '好莱坞电影级质感，写实风格，8K超高清',
+        director_instruction: `电影级质感，写实风格，基于「${worldDesc}」的视觉呈现，8K超高清`,
         constraint: 'Aspect ratio: 16:9, Resolution: 1920x1080, Format: MP4, Frame rate: 24fps, no text, no watermark',
         baseline: '8K resolution, cinematic quality, photorealistic, sharp focus',
-        scene: shot.scene || '写实室内场景，自然光线，真实材质',
-        lighting: shot.lighting || '主光：自然光5600K柔光漫射；补光：反光板填充；整体明亮清晰',
+        scene: shot.scene || `${worldDesc}，写实场景`,
+        lighting: shot.lighting || '主光：自然光源 5600K 柔光漫射；补光：反光板填充；整体明亮清晰',
         camera_movement: shot.camera_movement || '0-3s固定机位；3-6s缓慢推近',
-        character: shot.character || '主角，写实形象，自然姿态',
-        action: shot.action || '自然站立，手部自然动作，眼神交流',
+        character: charName,
+        action: shot.action || `${charName}自然站立，手部自然动作，眼神交流`,
         portraits: shot.portraits && shot.portraits.length ? shot.portraits : ['image://characters/default/portrait.png'],
         dialogue: shot.dialogue && (Array.isArray(shot.dialogue) ? shot.dialogue.length : true) ? shot.dialogue : [{ speaker: '', text: '' }],
-        consistency: shot.consistency || '保持角色形象跨镜头一致'
+        consistency: shot.consistency || `保持${charName}形象跨镜头一致`
       };
       for (const [k, v] of Object.entries(p0Defaults)) {
         if (!shot[k] || (typeof shot[k] === 'string' && !shot[k].trim())) shot[k] = v;

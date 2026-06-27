@@ -27,7 +27,7 @@ const StyleEncoder = {
     'POL': { name: '精致商业', description: '高饱和、精致布光、产品特写', context: { ADV: '精致商业广告质感', default: '精致商业的高品质呈现' }},
     'MINI': { name: '极简现代', description: 'clean背景、大留白、几何构图', context: { default: '极简现代的设计美学' }},
     'RET': { name: '复古怀旧', description: '暖色调、胶片颗粒、年代感', context: { default: '复古怀旧的温暖质感' }},
-    'FUT': { name: '科幻未来', description: '冷色调、霓虹光、科技感UI', context: { default: '科幻未来的科技美学' }},
+    'FUT': { name: '科幻未来', description: '冷色调、科技感光效、未来感UI', context: { default: '科幻未来的科技美学' }},
     'ART': { name: '艺术实验', description: '非常规构图、抽象视觉、强烈色彩', context: { default: '艺术实验的独特美学' }},
     'WARM': { name: '温暖治愈', description: '柔和光线、暖色调、慢节奏', context: { EDU: '温暖治愈的亲和风格,降低知识门槛', default: '温暖治愈的情感氛围' }},
     'STREET': { name: '街头潮流', description: '快速剪辑、涂鸦元素、动感运镜', context: { default: '街头潮流的动感风格' }},
@@ -389,12 +389,14 @@ class RequirementListBuilder {
 
     try {
       if (typeof llmEngine.generate === 'function') {
-        // 方式1: .generate({prompt, maxTokens, temperature}) - 兼容旧接口
+        // 【P1-23-审计修复】统一使用 generate(prompt, options) 签名
         const response = await Promise.race([
-          llmEngine.generate({
-            prompt: prompt,
+          llmEngine.generate(prompt, {
+            systemPrompt: '你是一位专业的视频需求分析师。只输出严格格式的JSON，不要markdown代码块。',
             maxTokens: 2500,
-            temperature: 1
+            temperature: 1,
+            timeoutMs,
+            forceJson: true,
           }),
           timeoutPromise
         ]).finally(() => clearTimeout(timer));

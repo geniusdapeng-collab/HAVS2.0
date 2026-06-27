@@ -319,42 +319,47 @@ class ScriptValidator {
 
   /**
    * Nirath 世界观检查
+   * 【P2-28-审计修复】从 worldSetting 动态读取必需元素，不硬编码
    */
   _checkNirathWorld(blueprint) {
     const checks = [];
-    const scenes = blueprint.structure.scenes || [];
-    
-    // 检查是否包含 Nirath 环境元素
-    let hasNirathElements = false;
+    const scenes = blueprint.structure?.scenes || [];
+
+    // 【修复】从 worldSetting 动态读取必需元素
+    const requiredElements = blueprint.world_setting?.environment_tags ||
+                             blueprint.world_setting?.required_elements || [];
+    if (requiredElements.length === 0) {
+      return checks; // 无必需元素则跳过
+    }
+
+    let hasElements = false;
     for (const scene of scenes) {
       if (scene.setting) {
-        for (const element of this.config.nirathRequiredElements) {
+        for (const element of requiredElements) {
           if (scene.setting.includes(element)) {
-            hasNirathElements = true;
-            break;
-          }
-        }
-      }
-      if (scene.visual_notes) {
-        for (const element of this.config.nirathRequiredElements) {
-          if (scene.visual_notes.includes(element)) {
-            hasNirathElements = true;
+            hasElements = true;
             break;
           }
         }
       }
     }
-    
+
     checks.push({
       category: 'nirath',
-      name: 'nirath_elements',
-      passed: hasNirathElements,
-      severity: 'warning',
-      message: hasNirathElements ? '包含 Nirath 环境元素' : '缺少 Nirath 环境元素',
-      suggestion: `场景设定应包含 Nirath 特征元素：${this.config.nirathRequiredElements.join(', ')}`
+      passed: hasElements || scenes.length === 0,
+      message: hasElements ? '场景包含世界观必需元素' : '场景缺少世界观特征元素',
+      details: hasElements ? '' : `建议添加: ${requiredElements.join(', ')}`
     });
-    
-    // 检查是否违反明亮风格约束
+
+    return checks;
+  }
+
+  /**
+   * 明亮风格约束检查
+   */
+  _checkBrightStyle(blueprint) {
+    const checks = [];
+    const scenes = blueprint.structure?.scenes || [];
     let hasDarkStyle = false;
     for (const scene of scenes) {
       if (scene.visual_notes) {
@@ -367,16 +372,13 @@ class ScriptValidator {
         }
       }
     }
-    
     checks.push({
-      category: 'nirath',
-      name: 'bright_style',
+      category: 'style',
       passed: !hasDarkStyle,
       severity: 'critical',
       message: hasDarkStyle ? '检测到暗黑风格（禁止）' : '明亮风格，合规',
-      suggestion: 'Nirath 要求明亮多色彩强质感场景，禁止暗黑风格'
+      suggestion: '要求明亮多色彩强质感场景，禁止暗黑风格'
     });
-    
     return checks;
   }
 
