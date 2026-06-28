@@ -1,0 +1,40 @@
+{
+  "name": "hyperreality-system",
+  "version": "1.0.0",
+  "description": "Hollywood-grade AI video production system for AI agents — Multi-Agent orchestration, 25-field cinematic shot language, automated filmmaking pipeline",
+  "type": "skill",
+  "command": "hyperreality-system",
+  "keywords": [
+    "ai-video", "ai-cinema", "ai-filmmaking", "multi-agent",
+    "film-production", "cinematic", "hollywood", "video-pipeline",
+    "agent-framework", "ai-agents", "generative-ai", "llm"
+  ],
+  "author": {
+    "name": "GeniusDapeng",
+    "url": "https://github.com/geniusdapeng-collab"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/geniusdapeng-collab/hyperreality-system",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/geniusdapeng-collab/hyperreality-system.git"
+  },
+  "claudeCode": {
+    "type": "skill",
+    "command": "hyperreality-system",
+    "workloadProfiles": ["creative", "production", "research"]
+  },
+  "mcp": {
+    "server": "./mcp-server/index.js"
+  },
+  "skills": [
+    {
+      "name": "film-production",
+      "description": "Automated Hollywood-grade film production pipeline with 25-field shot language"
+    },
+    {
+      "name": "multi-agent-orchestration",
+      "description": "Multi-Agent coordination for complex video production workflows"
+    }
+  ]
+}

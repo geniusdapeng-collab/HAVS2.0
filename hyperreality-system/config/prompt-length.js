@@ -76,7 +76,7 @@ if (require.main === module) {
     catch (err) { console.error(` ❌ ${name} - ${err.message}`); failed++; }
   }
   test('TARGET_MIN = 2470', () => assert.strictEqual(PromptLengthConfig.TARGET_MIN, 2470));
-  test('TARGET_MAX = 12000', () => assert.strictEqual(PromptLengthConfig.TARGET_MAX, 12000));
+  test('TARGET_MAX = 3000', () => assert.strictEqual(PromptLengthConfig.TARGET_MAX, 3000));
   test('validate(2985) = true', () => assert.strictEqual(PromptLengthConfig.validate(2985), true));
   test('validate(3001) = false', () => assert.strictEqual(PromptLengthConfig.validate(3001), false));
   test('getStatus(3001) = overflow', () => assert.strictEqual(PromptLengthConfig.getStatus(3001), 'overflow'));

@@ -75,15 +75,11 @@ const FIELD_ALIAS_MAP = {
   referenceImages: 'portraits',
   绑定定妆照: 'portraits',
   定妆照: 'portraits',
-  // 台词/对话
   dialogue: 'dialogue',
   narration: 'dialogue',
   line: 'dialogue',
   lines: 'dialogue',
   台词: 'dialogue',
-  dialogue_block: 'dialogue_block',
-  对话指令: 'dialogue_block',
-  dialogueBlock: 'dialogue_block',
   timeline: 'timeline',
   _timeline: 'timeline',
   镜头时间轴: 'timeline',
@@ -256,11 +252,11 @@ const CRITICAL_FIELDS = {
     'character',             // 人物层
     'action',                // 人物层
     'portraits',             // 质量层
-    // 【P1-12-审计修复】dialogue 移出 P0 —— 无台词镜头不应判为致命缺失
+    'dialogue',              // 叙事层
     'negative',              // 约束层
     'consistency'            // 质量层
   ],
-  // P1 核心级（8个字段，dialogue 移入此级）- 缺失会导致质量显著降低
+  // P1 核心级（7个字段）- 缺失会导致质量显著降低
   p1: [
     'composition',           // 镜头语言层
     'color_palette',          // 镜头语言层
@@ -268,8 +264,7 @@ const CRITICAL_FIELDS = {
     'timeline',              // 调度层
     'mood',                  // 渲染层
     'bright_constraint',      // 约束层
-    'character_constraint',    // 约束层
-    'dialogue'               // 【P1-12-审计修复】移入 P1，允许无台词镜头为空
+    'character_constraint'    // 约束层
   ],
   // P2 增强级（4个字段）- 缺失不影响主体表达
   p2: [
@@ -292,7 +287,27 @@ const CRITICAL_FIELDS = {
 };
 
 function deepClone(obj) {
-  return JSON.parse(JSON.stringify(obj ?? {}));
+  // v2.1.5-fix: 使用 WeakMap 防止循环引用，支持特殊类型
+  const seen = new WeakMap();
+  const clone = (value) => {
+    if (value === null || typeof value !== 'object') return value;
+    if (value instanceof Date) return new Date(value.getTime());
+    if (value instanceof RegExp) return new RegExp(value.source, value.flags);
+    if (Array.isArray(value)) {
+      const arr = [];
+      seen.set(value, arr);
+      for (const item of value) arr.push(clone(item));
+      return arr;
+    }
+    if (seen.has(value)) return seen.get(value);
+    const result = {};
+    seen.set(value, result);
+    for (const [k, v] of Object.entries(value)) {
+      result[k] = clone(v);
+    }
+    return result;
+  };
+  return clone(obj ?? {});
 }
 
 function toArray(value) {
@@ -523,42 +538,18 @@ function standardizeShot(rawInput = {}) {
     standard.sceneType = 'opening';
   }
 
-  // 【P1-8-审计修复】统一 snake_case 为主键，camelCase 自动同步
-  const SYNC_PAIRS = [
+  // standardizeShot 末尾新增（统一双写，确保两种命名都有值）
+  const syncPairs = [
     ['camera_movement', 'cameraMovement'],
     ['color_palette', 'colorPalette'],
     ['depth_of_field', 'depthOfField'],
+    ['director_instruction', 'directorInstruction'],
     ['bright_constraint', 'brightConstraint'],
-    ['character_constraint', 'characterConstraint'],
-    ['character_ref', 'characterRef'],
-    ['character_cards', 'characterCards'],
-    ['emotion_phase', 'emotionPhase'],
-    ['quality_score', 'qualityScore'],
-    ['scene_type', 'sceneType'],
-    ['degrade_reason', 'degradeReason'],
-    ['emotional_target', 'emotionalTarget'],
-    ['visual_direction', 'visualDirection'],
-    ['world_id', 'worldId'],
-    ['audio_layer', 'audioLayer'],
-    ['title_overlay', 'titleOverlay'],
-    ['beast_voice', 'beastVoice'],
-    ['opening_hook', 'openingHook'],
-    ['mouth_action', 'mouthAction'],
-    ['title_content', 'titleContent'],
-    ['subtitle_content', 'subtitleContent'],
-    ['title_animation', 'titleAnimation'],
-    ['title_font_design', 'titleFontDesign'],
-    ['opening_audio_design', 'openingAudioDesign'],
+    ['character_constraint', 'characterConstraint']
   ];
-  for (const [snake, camel] of SYNC_PAIRS) {
-    let val = standard[snake];
-    if (val === undefined || val === null || val === '') {
-      val = standard[camel];
-    }
-    if (val !== undefined && val !== null) {
-      standard[snake] = val;
-      standard[camel] = val;
-    }
+  for (const [snake, camel] of syncPairs) {
+    if (standard[snake] && !standard[camel]) standard[camel] = standard[snake];
+    if (standard[camel] && !standard[snake]) standard[snake] = standard[camel];
   }
 
   return standard;
@@ -573,20 +564,27 @@ function validateShot(shot) {
   const warnings = [];
   const isOpening = shot.sceneType === 'opening';
 
+  // 【P0-4 修复】空值判断辅助：空对象/空数组也视为缺失
+  const isEmptyValue = (v) =>
+    v === undefined || v === null || v === '' ||
+    (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0) ||
+    (Array.isArray(v) && v.length === 0);
+
   // v2.1.4-fix9-P25: 检查P0致命级字段（12个）
+  // 【P0-4 修复】同时检查 snake_case 与 camelCase 两种命名
   for (const key of CRITICAL_FIELDS.p0) {
-    const value = shot[key];
-    if (value === undefined || value === null || value === '') {
+    const camelKey = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    if (isEmptyValue(shot[key]) && isEmptyValue(shot[camelKey])) {
       errors.push(`P0 Missing: ${key}`);
-    } else if (Array.isArray(value) && value.length === 0) {
+    } else if (Array.isArray(shot[key]) && shot[key].length === 0) {
       warnings.push(`P0 Empty array: ${key}`);
     }
   }
 
   // v2.1.4-fix9-P25: 检查P1核心级字段（7个）
   for (const key of CRITICAL_FIELDS.p1) {
-    const value = shot[key];
-    if (value === undefined || value === null || value === '') {
+    const camelKey = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    if (isEmptyValue(shot[key]) && isEmptyValue(shot[camelKey])) {
       warnings.push(`P1 Missing: ${key}`);
     }
   }
@@ -642,9 +640,8 @@ function validateShot(shot) {
       }
     }
   }
-  // 【P1-18-审计修复】'no text' 检查降为 warning，不再强制阻断
   if (!shot.negative || !shot.negative.includes('no text')) {
-    warnings.push(`Recommended negative constraint: add 'no text' to negative field`);
+    errors.push(`Missing critical negative constraint: no text`);
   }
 
   // 【v2.1.4-fix11-F】最终导出前严格检查：所有25字段必须有非空内容
@@ -654,6 +651,33 @@ function validateShot(shot) {
     if (emptyFields.length > 0) {
       errors.push(`Final-Export strict: ${emptyFields.length} fields empty: ${emptyFields.join(', ')}`);
     }
+  }
+
+  // 【v2.1.5-fix-C】DIALOGUE_BLOCK 字段完整性检查
+  if (shot.dialogueBlocks && Array.isArray(shot.dialogueBlocks)) {
+    for (const block of shot.dialogueBlocks) {
+      const requiredBlockFields = ['speaker', 'line', 'emotion', 'trigger', 'manner', 'type'];
+      const missingFields = requiredBlockFields.filter(f => !block[f] || String(block[f]).trim() === '');
+      if (missingFields.length > 0) {
+        warnings.push(`DialogueBlock missing fields [${missingFields.join(', ')}] for speaker: ${block.speaker || 'unknown'}`);
+      }
+      // 检查 emotion 是否为副词（简单启发式：以 ly 结尾或包含常见副词）
+      if (block.emotion && !/ly$|confidently|hesitates|gently|quietly|warmly|calmly|firmly|softly/i.test(block.emotion)) {
+        warnings.push(`DialogueBlock emotion should be adverb: "${block.emotion}"`);
+      }
+      // 检查 line 长度
+      if (block.line && block.line.length > 30) {
+        warnings.push(`DialogueBlock line too long (${block.line.length} > 30 chars): "${block.line.substring(0, 20)}..."`);
+      }
+    }
+  }
+
+  // 【v2.1.6】场景描述禁止词汇检查（系统级兜底，防止 LLM 生成科幻/抽象场景）
+  const forbiddenSceneWords = ['全息', '虚拟', '投影', '抽象', '概念', '光影场域', '数据空间', '元宇宙', '时间操控', '霓虹', '微观世界', '宏观', '抽象几何', '流动光影', '交织光影', '色彩对冲'];
+  const sceneDesc = shot.scene || '';
+  const foundForbidden = forbiddenSceneWords.filter(w => sceneDesc.includes(w));
+  if (foundForbidden.length > 0) {
+    errors.push(`Scene contains forbidden words: ${foundForbidden.join(', ')}`);
   }
 
   return {
@@ -680,7 +704,7 @@ function validateShots(shots = []) {
       totalShots: shots.length,
       totalP0Missing,
       totalP1Missing,
-      avgPromptLength: Math.round(details.reduce((sum, d) => sum + (d.promptLength || 0), 0) / shots.length)
+      avgPromptLength: shots.length ? Math.round(details.reduce((sum, d) => sum + (d.promptLength || 0), 0) / shots.length) : 0
     }
   };
 }
@@ -702,7 +726,8 @@ function normalizeFields(fields) {
   for (const [key, value] of Object.entries(fields)) {
     const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
     const targetKey = FIELD_ALIAS_MAP[snakeKey] || snakeKey;
-    if (value !== undefined && value !== null && value !== '') {
+    // 【P2-12 修复】dialogue 允许空字符串（无台词镜头），其他字段仍过滤空串
+    if (value !== undefined && value !== null && (value !== '' || targetKey === 'dialogue')) {
       result[targetKey] = normalizeValue(value);
     }
   }

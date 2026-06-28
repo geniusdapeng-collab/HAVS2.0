@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax Check
+        run: |
+          find . -name "*.js" -not -path "*/node_modules/*" -exec node --check {} \; 2>&1 | tee syntax.log
+          if grep -q "SyntaxError" syntax.log; then exit 1; fi
+      - name: JSON Validation
+        run: |
+          find . -name "*.json" -not -path "*/node_modules/*" -exec node -e "JSON.parse(require('fs').readFileSync('{}'))" \; 2>&1 | tee json.log
+          if grep -q "Error" json.log; then exit 1; fi
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install || true
+      - name: Run smoke tests
+        run: |
+          node -e "require('./index.js'); console.log('✅ System loads successfully')"

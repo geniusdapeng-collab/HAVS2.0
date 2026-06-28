@@ -27,7 +27,7 @@ const StyleEncoder = {
     'POL': { name: '精致商业', description: '高饱和、精致布光、产品特写', context: { ADV: '精致商业广告质感', default: '精致商业的高品质呈现' }},
     'MINI': { name: '极简现代', description: 'clean背景、大留白、几何构图', context: { default: '极简现代的设计美学' }},
     'RET': { name: '复古怀旧', description: '暖色调、胶片颗粒、年代感', context: { default: '复古怀旧的温暖质感' }},
-    'FUT': { name: '科幻未来', description: '冷色调、科技感光效、未来感UI', context: { default: '科幻未来的科技美学' }},
+    'FUT': { name: '科幻未来', description: '冷色调、霓虹光、科技感UI', context: { default: '科幻未来的科技美学' }},
     'ART': { name: '艺术实验', description: '非常规构图、抽象视觉、强烈色彩', context: { default: '艺术实验的独特美学' }},
     'WARM': { name: '温暖治愈', description: '柔和光线、暖色调、慢节奏', context: { EDU: '温暖治愈的亲和风格,降低知识门槛', default: '温暖治愈的情感氛围' }},
     'STREET': { name: '街头潮流', description: '快速剪辑、涂鸦元素、动感运镜', context: { default: '街头潮流的动感风格' }},
@@ -236,15 +236,23 @@ class RequirementListBuilder {
     };
 
     // 推断视频类型
+    // 【P0-6 修复】改为"全部打分取最高"而非"首条命中即 break"，
+    // 商业/宣传片强信号优先于教育科普
+    const matchedTypes = [];
     for (const rule of this.rules.videoTypeRules) {
       for (const keyword of rule.keywords) {
         if (text.includes(keyword.toLowerCase())) {
-          result.videoType = rule.type;
-          result.videoTypeName = rule.name;
+          matchedTypes.push(rule.type);
           break;
         }
       }
-      if (result.videoType) break;
+    }
+    if (matchedTypes.length > 0) {
+      const priority = { ADV: 3, PROMO: 3, DRAMA: 2, DOC: 2, EDU: 1, LIFELOG: 1 };
+      const bestType = matchedTypes.sort((a, b) => (priority[b] || 0) - (priority[a] || 0))[0];
+      const bestRule = this.rules.videoTypeRules.find(r => r.type === bestType);
+      result.videoType = bestType;
+      result.videoTypeName = bestRule?.name || bestType;
     }
 
     // 推断平台
@@ -389,18 +397,12 @@ class RequirementListBuilder {
 
     try {
       if (typeof llmEngine.generate === 'function') {
-        // 【P1-23-审计修复】统一使用 generate(prompt, options) 签名
+        // 【P1-16 修复】统一调用契约 (prompt, options)，与 ScriptGenerator/CrossEpisodeValidator 一致
         const response = await Promise.race([
-          llmEngine.generate(prompt, {
-            systemPrompt: '你是一位专业的视频需求分析师。只输出严格格式的JSON，不要markdown代码块。',
-            maxTokens: 2500,
-            temperature: 1,
-            timeoutMs,
-            forceJson: true,
-          }),
+          llmEngine.generate(prompt, { maxTokens: 2500, temperature: 1, timeoutMs }),
           timeoutPromise
         ]).finally(() => clearTimeout(timer));
-        responseText = response.success ? (response.content || '') : '';
+        responseText = response?.success ? (response.content || '') : '';
       } else if (typeof llmEngine.chat === 'function') {
         // 方式2: .chat(systemPrompt, userPrompt, temperature) - BaseAgent 标准接口
         const result = await Promise.race([

@@ -6,7 +6,6 @@
  */
 const { BaseAgent } = require('./base-agent');
 const { normalizeFields, makeGetter } = require('../../field-standardizer');
-const PromptLengthConfig = require('../../../config/prompt-length.js');
 
 // 【v2.1.4-fix10-P25-fix3】外部专家建议：填满 schema 解决 LLM 字段缺失问题
 // 25 个标准字段的 schema 模板：键名 + 类型提示
@@ -29,7 +28,6 @@ const STANDARD_FIELDS_SCHEMA = {
   props: '',
   portraits: '',
   dialogue: '',
-  dialogue_block: '',
   timeline: '',
   mood: '',
   pacing: '',
@@ -89,10 +87,14 @@ function buildFullSchema(shotId) {
 class PromptFusionAgent extends BaseAgent {
   constructor(options = {}) {
     super({ name: 'PromptFusionAgent', enabled: true, llmTimeout: 300000, ...options });
+const PromptLengthConfig = require('../../../config/prompt-length.js');
+// ...
+    // 【审计修复】从配置文件读取，不再硬编码
     this.maxPromptLength = options.maxPromptLength || PromptLengthConfig.HARD_MAX || 12000;
-    this.concurrency = options.concurrency || 3;
-    this.llmTimeout = 300000; // 5 分钟单次（结构化输出需要更长时间）
-    this.llmMaxRetries = 2;
+    // 【P2-11 修复】删除 concurrency 死代码；llmTimeout 走 options，允许外部配置覆盖
+    // this.concurrency = options.concurrency || 2; // 死代码，process() 中从未使用
+    this.llmTimeout = options.llmTimeout || this.llmTimeout || 300000;
+    this.llmMaxRetries = options.llmMaxRetries || 2;
   }
 
   _getSystemPrompt() {
@@ -106,17 +108,17 @@ class PromptFusionAgent extends BaseAgent {
 2. 【基础】：画质基础词，必须包含三类：①分辨率锚定(8K resolution/ultra high definition)、②风格质量(cinematic quality/photorealistic/hyperrealistic)、③细节增强(highly detailed/intricate textures/sharp focus)。标准格式："8K resolution, cinematic quality, highly detailed, photorealistic"
 3. 【场景】：具体场景环境描述（地点、时间、空间深度、材质细节）
 4. 【灯光/照明】：专业灯光设计（主光方向+色温K值+光比+特效光）。格式："主光：右侧45度顶光 5600K冷白光，柔光箱漫射；补光：左前侧反光板 3200K暖光，填充阴影；背景光：轮廓光分离人物与背景；特效：无"；必须包含主光方向（左/右/顶/底/正前/正后）、色温（K值）、光质（硬光/柔光/漫射）
-5. 【构图】：景别+画面比例+主体位置+线条引导。格式："景别：中景（膝上）；主体位置：画面黄金分割右1/3处；线条引导：纵深由近及远；画框边缘：左侧留白1/4给背景信息"
-6. 【色彩/色调】：调色方案+色温倾向+饱和度。格式："主色调：暖黄偏橙（黄昏感）；辅助色：冷蓝阴影点缀；肤色：自然偏暖；饱和度：中等偏低；对比度：中高"
-7. 【景深】：焦点控制+虚化程度+前景/背景层次。格式："焦点：人物面部；景深：中等（f/2.8），背景适度虚化可辨；前景：无；背景：纵深渐变模糊；层次：中景（人物）-背景两层"
+5. 【构图】：景别+画面比例+主体位置+线条引导。格式："景别：中景（膝上）；主体位置：画面黄金分割右1/3处；线条引导：走廊纵深感由近及远；画框边缘：左侧留白1/4给背景信息"
+6. 【色彩/色调】：调色方案+色温倾向+饱和度。格式："主色调：冷白偏青（医院感）；辅助色：暖木色讲台点缀；肤色：自然偏暖；饱和度：中等偏低，避免过度鲜艳；对比度：中高，保持清晰层次"
+7. 【景深】：焦点控制+虚化程度+前景/背景层次。格式："焦点：人物面部；景深：中等（f/2.8），背景适度虚化可辨；前景：讲台边缘轻微虚化；背景：走廊纵深渐变模糊；层次：前景-中景（人物）-背景三层分离"
 8. 【运镜】：镜头运动方式（推/拉/摇/移/跟/升降/手持/稳定器）。格式："0-3s：稳定器缓慢推近（0.3m/s）→ 3-6s：固定机位 → 6-10s：手持微晃跟拍（呼吸感）"
-9. 【角色】：角色身份、姿态、表情（如：主角，短发，站姿挺拔，表情关切）
-10. 【服装】：详细服装描述（颜色、款式、质地、配饰）。格式："深色外套（毛呢质地），内搭浅色衬衫（棉质），深色长裤，皮鞋"
-11. 【化妆】：妆容、发型细节。格式："短发整齐，素颜淡妆，眉毛自然，唇色淡粉"
+9. 【角色】：角色身份、姿态、表情（如：穿警服的示例角色，健康科普主讲人，站姿挺拔，表情关切）
+10. 【服装】：详细服装描述（颜色、款式、质地、配饰）。格式："藏青色警服外套（毛呢质地，肩章完整），内搭浅蓝色衬衫（棉质，领口整洁），黑色西裤，黑色皮鞋"
+11. 【化妆】：妆容、发型细节。格式："短发整齐（黑色，长度及耳），素颜淡妆，眉毛自然，唇色淡粉，无夸张妆容"
 12. 【动作】：角色具体动作（手势、步伐、视线）。格式："右手自然抬起至胸前做强调手势，左手自然下垂，身体微微前倾，目光直视镜头"
-13. 【道具】：关键道具（手持物、桌面物品、背景物件）。格式："手持：空白文件夹（白色，无文字）；背景：木质桌面"
-14. 【定妆照】：角色定妆照引用路径（如：image://characters/xxx/portraits/xxx.jpg）
-15. 【对话指令】：角色对话标注（Seedance 官方格式）。当镜头中有台词时必须输出。格式：角色名(动作触发，情绪修饰，面向[对话对象])："台词内容"，LIP_SYNC:true，身体语言：[描述]。每句台词一行，多句分行排列。包含完整台词内容，无需单独输出【台词】。
+13. 【道具】：关键道具（手持物、桌面物品、背景物件）。格式："手持：空白A4文件夹（白色，无文字）；背景：木质讲台（表面有细微划痕），不锈钢保温杯"
+14. 【定妆照】：角色定妆照引用路径（如：image://characters/chen-zhuo/portraits/chen-zhuo-front.png）
+15. 【台词】：角色直接说的话，格式：纯台词内容（不要写"画外音""旁白"）
 16. 【时间轴】：镜头内部的微观导演调度时间轴。必须采用分段式描述，时间戳使用相对于镜头起始点的偏移格式 T00:XX（如 T00:00, T00:02, T00:04），每段包含画面内容和角色动作。要求至少分3段，时间戳不得重叠或跳跃中断。
    标准格式示例：
    "T00:00 - 中景，主角坐在窗前，阳光从侧面照入；主角缓缓抬起头，目光投向窗外
@@ -133,7 +135,46 @@ class PromptFusionAgent extends BaseAgent {
 24. 【角色约束】：角色出现限制，防止多角色/分身问题。格式："只出现[角色名]一人，禁止其他人物入镜，禁止同一角色重复出现，禁止角色分身或克隆"
 25. 【导演指令】：整体创作意图和风格控制。格式："好莱坞大导演质感，电影级画面，写实风格，无特效，无科幻元素"
 
-【示例已移除 - 使用传入的镜头信息生成，禁止模仿任何固定示例】
+输出JSON格式:
+{
+  "shots": [
+    {
+      "shotId": "SC01",
+      "fields": {
+        "constraint": "画幅比例、分辨率、格式、帧率等技术约束",
+        "baseline": "8K分辨率、画质风格、细节增强词",
+        "scene": "场景环境描述（≥120字符，含地点、时间、空间、材质）",
+        "lighting": "灯光设计（≥150字符，含主光方向+色温K值+光质+补光+背景光）",
+        "composition": "构图设计（≥100字符，含景别+主体位置+线条引导+画框边缘）",
+        "color_palette": "色彩方案（≥80字符，含主色调+辅助色+肤色+饱和度+对比度）",
+        "depth_of_field": "景深控制（≥80字符，含焦点+光圈+前景/背景虚化+层次）",
+        "camera_movement": "运镜设计（≥100字符，含运动方式+速度+时间分布+起止点）",
+        "character": "角色外貌与姿态（根据实际角色设定，不要套用固定示例）",
+        "costume": "服装描述（颜色、款式、质地、配饰）",
+        "makeup": "妆容发型细节",
+        "action": "具体动作（≥120字符，含手势+步伐+视线+情绪+姿态）",
+        "props": "关键道具（手持物、桌面物品、背景物件）",
+        "portraits": "定妆照引用路径（如：image://characters/角色名/portrait.png）",
+        "dialogue": "角色台词（纯台词内容，不要写画外音/旁白）",
+        "timeline": "时间轴（≥200字符，分≥3段，T00:XX格式，每段含画面+动作）",
+        "mood": "情绪关键词（1-2个，如calm/professional/tense）",
+        "pacing": "节奏（五段式：整体/开头/中段/高潮/结尾）",
+        "transition": "转场方式（类型+持续时间+方向）",
+        "audio": "音频（≥100字符，环境音+音乐风格+音量+BPM）",
+        "negative": "负面约束（通用负面词+场景特定负面词）",
+        "bright_constraint": "明亮约束（亮度/光照强制要求）",
+        "character_constraint": "角色约束（只出现指定角色，禁止分身/克隆）",
+        "director_instruction": "导演指令（≥80字符，风格定位+质感要求+禁忌）",
+        "consistency": "跨镜头一致性（角色/光线/色调统一）"
+      }
+    }
+  ]
+}
+
+【⚠️ 重要：示例仅用于展示字段结构，不得直接复制内容】
+上述示例中的具体描述（如"三甲医院检验科走廊"、"藏青色警服"等）仅为字段格式演示，
+实际生成时必须根据当前项目的真实场景、真实角色、真实内容重新创作，严禁照搬示例内容。
+每个字段必须根据镜头信息独立生成，与示例无关。
 
 关键要求：
 1. 【内容充分性要求】每个字段描述必须充分详细，参考以下最低字符数要求：
@@ -148,8 +189,8 @@ class PromptFusionAgent extends BaseAgent {
    - 【景深】≥80字符（须含焦点位置+光圈值+前景/背景虚化+层次分离）
    - 【音频】≥100字符（须含环境音效+音乐风格+音量层级+BPM）
    - 如果某字段内容不足，请补充更多细节使其达标
-2. 【对话指令】字段必须独立，包含角色名+动作触发+情绪修饰+面向对象+台词内容+LIP_SYNC+身体语言，不要写"画外音""旁白"
-3. 场景要具体真实，必须是写实环境，禁止科幻/抽象元素
+2. 【台词】字段必须独立，角色直接对镜头说话，不要写"画外音""旁白"
+3. 场景要具体真实（门诊室、宣教室、检查室），必须是写实环境，禁止科幻/抽象元素
 3. 【动作】必须是真实物理动作和镜头运动：推近、跟拍、手持、站立、行走、手势、转身、注视镜头。严禁使用：全息投影、空间扭曲、时间残影、霓虹色、数据流、抽象构图、梦境流动性、湿版摄影、光即角色、AI瑕疵、宏大比例、微观世界
 4. 禁止词汇（全字段通用）：全息、虚拟、投影、抽象、光影场域、数据空间、元宇宙、时间操控、霓虹、微观世界、宏观、抽象几何、流动光影、交织光影、色彩对冲、空间扭曲、时间残影、数据流、光即角色、梦境流动性、湿版摄影、AI瑕疵
 5. 【场景】中不得出现含文字的物品描述：如"有文字的报告单"、"标牌上的文字"、"商标"、"有字的海报"等。可以描述"空白报告单"、"无文字标识牌"、"图形海报"等不含文字的物品
@@ -163,68 +204,43 @@ class PromptFusionAgent extends BaseAgent {
   }
 
   async process(shots, blueprint) {
+    console.log(`[PromptFusionAgent] 开始处理 ${shots.length} 个镜头（串行模式，避免并发超时）`);
+
     const ratio = blueprint.config?.aspectRatio || '16:9';
     const characters = blueprint.character_system?.characters || [];
-    const concurrency = Math.min(this.concurrency || 2, shots.length);
-
-    console.log(`[PromptFusionAgent] 开始处理 ${shots.length} 个镜头（并发=${concurrency}）`);
 
     const results = new Array(shots.length);
-    const errors = [];
+    let failed = 0;
 
-    // 【P0-2-审计修复】分批并行处理 + 全局截止时间感知 + 逐批 checkpoint
-    for (let batchStart = 0; batchStart < shots.length; batchStart += concurrency) {
-      // 全局截止时间感知：剩余预算不足时提前降级
-      const remaining = this._remainingMs();
-      if (remaining < 30000) {
-        console.warn(`[PromptFusionAgent] ⏰ 剩余预算不足(${remaining}ms)，剩余 ${shots.length - batchStart} 镜头使用规则兜底`);
-        for (let i = batchStart; i < shots.length; i++) {
-          results[i] = this._fallbackSingleShot(shots[i], ratio);
-          results[i].degraded = true;
-          results[i].degradeReason = '全局预算不足，规则兜底';
-        }
-        break;
-      }
-
-      const batchEnd = Math.min(batchStart + concurrency, shots.length);
-      const batchIndices = [];
-      for (let i = batchStart; i < batchEnd; i++) batchIndices.push(i);
-
-      console.log(` 📦 批次 ${Math.floor(batchStart / concurrency) + 1}: 镜头 ${batchStart + 1}-${batchEnd}`);
-
-      // 并行处理当前批次
-      const batchResults = await Promise.allSettled(
-        batchIndices.map(i => this._fuseSingleShot(shots[i], ratio, characters))
-      );
-
-      // 收集结果
-      batchResults.forEach((res, idx) => {
-        const i = batchIndices[idx];
-        if (res.status === 'fulfilled') {
-          results[i] = res.value;
-          console.log(` ✅ ${shots[i].shotId} 完成`);
-        } else {
-          console.warn(` ❌ ${shots[i].shotId} 融合失败: ${res.reason?.message}，规则兜底`);
-          results[i] = this._fallbackSingleShot(shots[i], ratio);
-          results[i].degraded = true;
-          results[i].degradeReason = `LLM融合失败: ${res.reason?.message}`;
-          errors.push({ shotId: shots[i].shotId, error: res.reason?.message });
-        }
-      });
-
-      // 【逐批 checkpoint】每批完成后保存，进程被杀也能续跑
-      if (typeof this._onBatchComplete === 'function') {
+    // 【v2.1.4-fix11】串行处理，避免并发导致API超时
+    for (let i = 0; i < shots.length; i++) {
+      const shot = shots[i];
+      console.log(`\n🎬 处理镜头 ${i + 1}/${shots.length}: ${shot.shotId}`);
+      try {
+        const fused = await this._fuseSingleShot(shot, ratio, characters);
+        results[i] = fused;
+        console.log(`  ✅ ${shot.shotId} 完成`);
+      } catch (e) {
+        failed++;
+        console.warn(`  ❌ ${shot.shotId} 融合失败: ${e.message}`);
+        // 尝试用fillMissingFields补全，而不是直接降级
         try {
-          await this._onBatchComplete('phase3-partial', results.filter(Boolean));
-        } catch (e) {
-          console.warn(`[PromptFusionAgent] checkpoint保存失败(忽略): ${e.message}`);
+          console.log(`  🔄 尝试补全缺失字段...`);
+          const filled = await this._fillMissingFieldsWithRetry(shot, ratio, characters);
+          results[i] = filled;
+          console.log(`  ✅ ${shot.shotId} 补全完成`);
+        } catch (fillError) {
+          console.warn(`  ❌ ${shot.shotId} 补全也失败: ${fillError.message}，规则兜底`);
+          results[i] = this._fallbackSingleShot(shot, ratio);
         }
       }
     }
 
-    const failed = results.filter(r => r && r.degraded).length;
+    if (failed > 0) {
+      console.warn(`[PromptFusionAgent] ⚠️ ${failed}/${shots.length} 镜头需要补全/兜底`);
+    }
     console.log(`[PromptFusionAgent] 完成 ✓ | 降级: ${failed}/${shots.length}`);
-    return { shots: results, degraded: failed > 0, degradeReason: null, errors };
+    return { shots: results, degraded: failed > 0, degradeReason: null };
   }
 
   /**
@@ -248,10 +264,13 @@ class PromptFusionAgent extends BaseAgent {
 
   async _fuseSingleShot(shot, ratio, characters) {
     const prompt = this._buildBatchPrompt([shot], ratio, characters);
-    // 【P0-7-审计修复】schema 添加 required 字段，让校验生效
+    // 【v2.1.4-fix10-P25-fix3】把空 schema 换成带 25 字段键名的完整模板
+    // 【P1-4 修复】schema 加 required/requiredArrays/rejectEmptyArray，让质量门真正生效
     const schema = {
       required: ['shots'],
-      shots: [buildFullSchema(shot.shotId)],
+      requiredArrays: ['shots'],
+      rejectEmptyArray: true,
+      shots: [buildFullSchema(shot.shotId)]
     };
 
     const llmResult = await this._callLLM(prompt, schema, () => {
@@ -264,8 +283,14 @@ class PromptFusionAgent extends BaseAgent {
     // 【v2.1.4-fix10】在 LLM 输出入口统一标准化为 snake_case
     fields = normalizeFields(fields);
     
-    // 【v2.1.4-fix10-P25-fix3】字段完整性校验 + 定向补齐
-    fields = await this._ensureFieldCompleteness(shot, fields, ratio, characters);
+    // 【P1-4 修复】根据LLM结果和字段完整性标记降级状态
+    const usedFallback = llmResult.degraded || Object.keys(fields).length === 0;
+    const completeness = await this._ensureFieldCompleteness(shot, fields, ratio, characters);
+    fields = completeness.fields;
+    const finalDegraded = usedFallback || completeness.usedRuleFallback;
+    const finalDegradeReason = finalDegraded
+      ? (usedFallback ? '主LLM失败,规则兜底' : '部分字段规则补齐')
+      : null;
     
     // 【v2.1.4-fix9-P25-fix7】将 fields 中的关键字段展开到 shot 顶层
     const expandedFields = { ...fields };
@@ -280,8 +305,8 @@ class PromptFusionAgent extends BaseAgent {
       fusionText: fields.scene || '',
       prompt: fullPrompt,
       promptCharCount: this._countChars(fullPrompt),
-      degraded: false,
-      degradeReason: null
+      degraded: finalDegraded, // 【P1-4 修复】真实降级标记
+      degradeReason: finalDegradeReason
     };
   }
 
@@ -290,17 +315,8 @@ class PromptFusionAgent extends BaseAgent {
    * 先校验，缺哪些就只让 LLM 补哪些，一次轻量调用搞定
    */
   async _ensureFieldCompleteness(shot, fields, ratio, characters) {
-    // 1. 先从 shot 中提取已有数据合并到 fields（LLM 可能没覆盖到这些）
-    const shotData = this._extractFieldsFromShot(shot);
-    for (const f of REQUIRED_FIELDS) {
-      if (!fields[f] || String(fields[f]).trim() === '') {
-        if (shotData[f] && String(shotData[f]).trim() !== '') {
-          fields[f] = shotData[f];
-        }
-      }
-    }
-
-    // 2. 找出仍缺失或过短字段
+    let usedRuleFallback = false;
+    // 1. 找出缺失或过短字段
     const missing = REQUIRED_FIELDS.filter(f => {
       const v = fields[f];
       if (!v || String(v).trim() === '') return true;
@@ -308,61 +324,45 @@ class PromptFusionAgent extends BaseAgent {
       return min > 0 && this._countChars(String(v)) < min;
     });
 
-    if (missing.length === 0) return fields; // 全齐，无需补
+    if (missing.length === 0) return { fields, usedRuleFallback: false }; // 全齐，无需补
 
-    // 【P1-13-审计修复】自适应补齐：预算充足用LLM，不足用规则兜底
-    const remaining = this._remainingMs();
-    const budgetPerField = 30000; // 每字段约30s
-    if (remaining >= missing.length * budgetPerField) {
-      const llm = this._getLLMEngine();
-      if (llm) {
-        console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → LLM补齐（预算充足: ${remaining}ms）`);
-        try {
-          const patchResult = await this._callLLM(
-            `为镜头 ${shot.shotId} 补齐以下字段: ${missing.join(',')}。\n\n按标准格式输出每个字段内容，返回JSON格式：{"fields": {"字段名": "内容"}}`,
-            null,
-            () => null,
-            { maxTokens: 4000 }
-          );
-          const patch = patchResult?.result;
-          if (patch && typeof patch === 'object') {
-            const patchFields = patch.fields || patch;
-            for (const f of missing) {
-              if (patchFields[f] && String(patchFields[f]).trim() !== '') {
-                fields[f] = patchFields[f];
-              }
-            }
-          }
-        } catch (e) {
-          console.warn(`[PromptFusion] LLM补齐失败: ${e.message} → 规则兜底`);
+    console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → 定向补齐`);
+
+    // 2. 只补缺失字段，给 LLM 一个极简、聚焦的 prompt
+    const fillPrompt = this._buildFillPrompt(shot, missing, fields, ratio, characters);
+    const fillSchema = { shotId: shot.shotId, fields: Object.fromEntries(missing.map(k => [k, STANDARD_FIELDS_SCHEMA[k]])) };
+
+    try {
+      // 【P1-2 修复】fill调用用小预算，不占用主调用时间
+      const fillResult = await this._callLLM(fillPrompt, fillSchema, () => null, {
+        maxRetries: 1,
+        maxTokens: 4096,
+        timeoutMs: 45000 // fill 用小预算
+      });
+      const fillFields = fillResult?.result?.fields || fillResult?.result?.[shot.shotId] || {};
+      const normalized = normalizeFields(fillFields);
+      for (const k of missing) {
+        if (normalized[k] && String(normalized[k]).trim() !== '') {
+          fields[k] = normalized[k];
         }
-      } else {
-        console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → 规则兜底（LLM引擎不可用）`);
       }
-    } else {
-      console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → 规则兜底（预算不足: ${remaining}ms）`);
+    } catch (e) {
+      console.warn(`[PromptFusion] ${shot.shotId} 补齐失败，保留已有: ${e.message}`);
     }
-    // 兜底：LLM补齐后仍缺失的字段用规则兜底
-    for (const f of missing) {
-      if (!fields[f] || String(fields[f]).trim() === '') {
-        fields[f] = this._defaultFieldValue(f, shot);
+
+    // 3. 仍缺的字段，才用规则兜底（明确标记来源，便于审计）
+    const stillMissing = REQUIRED_FIELDS.filter(f => !fields[f] || String(fields[f]).trim() === '');
+    if (stillMissing.length > 0) {
+      usedRuleFallback = true;
+      const shotData = this._extractFieldsFromShot(shot);
+      for (const f of stillMissing) {
+        if (shotData[f]) fields[f] = shotData[f];
+        else fields[f] = this._defaultFieldValue(f, shot); // 见下
       }
+      console.warn(`[PromptFusion] ${shot.shotId} 规则兜底 ${stillMissing.length} 字段`);
     }
-    // 【v2.1.4-fix16-EDU】强制保护核心字段，防止LLM覆盖原始角色和场景
-    const originalChar = shot.character ? (typeof shot.character === 'string' ? shot.character : shot.character?.name || '') : '';
-    if (originalChar && fields.character !== originalChar) {
-      console.log(`[PromptFusion] ${shot.shotId} 角色被LLM修改，强制还原为原始角色: ${originalChar}`);
-      fields.character = originalChar;
-    }
-    if (shot.scene && fields.scene !== shot.scene) {
-      console.log(`[PromptFusion] ${shot.shotId} 场景被LLM修改，强制还原为原始场景: ${shot.scene}`);
-      fields.scene = shot.scene;
-    }
-    if (shot.action && fields.action !== shot.action) {
-      console.log(`[PromptFusion] ${shot.shotId} 动作被LLM修改，强制还原为原始动作: ${shot.action}`);
-      fields.action = shot.action;
-    }
-    return fields;
+
+    return { fields, usedRuleFallback };
   }
 
   /**
@@ -388,7 +388,8 @@ class PromptFusionAgent extends BaseAgent {
 
       try {
         console.log(`  🔄 补全尝试 ${attempt}/${maxRetries}...`);
-        const filled = await this._ensureFieldCompleteness(shot, fields, ratio, characters);
+        const completeness = await this._ensureFieldCompleteness(shot, fields, ratio, characters);
+        const filled = completeness.fields;
         
         // 检查是否还有空字段
         const stillEmpty = REQUIRED_FIELDS.filter(f => !filled[f] || String(filled[f]).trim() === '');
@@ -430,7 +431,6 @@ class PromptFusionAgent extends BaseAgent {
       props: '场景中必要的写实道具，材质真实，无文字标识，符合场景功能',
       portraits: 'image://characters/default/portrait.png',
       dialogue: '',
-      dialogue_block: null, // 【v1.0.2-fix】空值时不输出，避免无意义标签
       timeline: 'T00:00 - 开场构图，环境展示；T00:03 - 主体进入画面；T00:06 - 核心动作或对白；T00:09 - 收尾定格',
       mood: 'calm, professional, natural',
       pacing: '整体：沉稳中等节奏；开头：平缓引入；中段：自然推进；结尾：平稳收尾',
@@ -443,7 +443,7 @@ class PromptFusionAgent extends BaseAgent {
     };
     
     const value = defaults[field];
-    if (value === undefined) {
+    if (!value) {
       console.warn(`[PromptFusionAgent] 未知字段的默认值: ${field}`);
       return `[规则兜底] ${field} 默认值`;
     }
@@ -468,16 +468,7 @@ ${ctx}
 ## 本次只补齐以下字段，每个必须达到最低字符数
 ${missing.map(f => `- ${f}：${FIELD_DESCS[f]}`).join('\n')}
 
-## 输出格式
-必须输出严格合法的 JSON，格式如下：
-{
-  "shotId": "${shot.shotId}",
-  "fields": {
-${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`).join(',\n')}
-  }
-}
-
-只输出 JSON，不要解释。不要添加 markdown 代码块标记。`;
+只输出 JSON，不要解释。`;
   }
 
   /**
@@ -495,13 +486,9 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     if (shot.cameraString) result.camera_movement = shot.cameraString;
     if (shot.lightingString) result.lighting = shot.lightingString;
     if (shot.backgroundSoundString) result.audio = shot.backgroundSoundString;
-    // 【P1-14-审计修复】统一 dialogue_block 构建
     if (shot.dialogue) {
-      const block = this._buildDialogueBlock(shot.dialogue, shot);
-      if (block) result.dialogue_block = block;
-    }
-    if (shot.dialogueBlock || shot.dialogue_block) {
-      result.dialogue_block = shot.dialogueBlock || shot.dialogue_block;
+      const pureDialogue = shot.dialogueText || this._extractPureDialogue(shot.dialogue);
+      if (pureDialogue) result.dialogue = `"${pureDialogue}"`;
     }
     if (shot.emotionalTarget) {
       const et = shot.emotionalTarget;
@@ -511,7 +498,7 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
       const d = shot.duration;
       const seg1 = Math.floor(d * 0.3);
       const seg2 = Math.floor(d * 0.6);
-      result.timeline = `T00:00 - 全景establishing，环境展示；T00:0${seg1} - 中景推进，人物动作；T00:0${seg2} - 情绪收尾，光线平复`;
+      result.timeline = `T00:00 - 全景establishing，环境展示；T00:${String(seg1).padStart(2, '0')} - 中景推进，人物动作；T00:${String(seg2).padStart(2, '0')} - 情绪收尾，光线平复`;
     }
     if (shot.characterRef) result.portraits = shot.characterRef;
     
@@ -576,22 +563,15 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     const hasForbidden = forbiddenWords.some(w => sceneDesc.includes(w));
     if (hasForbidden) {
       console.warn(`[PromptFusionAgent] ⚠️ 镜头 ${shot.shotId} 场景含禁止词汇: "${sceneDesc.substring(0, 50)}..."，强制替换为写实场景`);
-      // 强制替换为写实场景 - 【v2.1.4-fix15】使用动态兜底，不硬编码医院场景
-      const worldSetting = shot.worldSetting || { name: '真实物理环境' };
-      const worldDesc = worldSetting.description || worldSetting.name || '真实物理环境';
-      const atmosphere = worldSetting.atmosphere || '';
-      const sceneType = shot.sceneType || 'establishing';
-      const typeDesc = {
-        'opening': '史诗开场空间',
-        'establishing': '核心叙事空间',
-        'conflict': '紧张对峙地带',
-        'action': '激烈动作场地',
-        'emotional_climax': '情感高潮场景',
-        'resolution': '平静收尾空间',
-        'discovery': '探索发现区域',
-        'transition': '过渡连接空间'
-      }[sceneType] || '叙事场景';
-      sceneDesc = `${worldDesc}，${typeDesc}${atmosphere ? '，' + atmosphere : ''}`;
+      // 强制替换为写实场景
+      const fallbackScenes = [
+        '医院健康宣教室，白色荧光灯均匀照明，白墙面贴有无文字骨骼肌解剖图与运动损伤海报（纯图形版），木质讲台表面带有细微使用划痕，地面浅灰色防滑PVC地胶',
+        '三甲医院检验科走廊，冷白色LED光源从走廊顶部连续排列向下照射，无文字箭头标识牌指向尿液检验窗口，地面浅色抛光瓷砖，墙面白色医用抗菌涂层',
+        '医生诊室，白色墙面悬挂无文字人体解剖示意图（纯图形版），办公桌摆放听诊器与血压计，检查床铺有蓝色一次性床单，无影灯悬于上方，窗光透入',
+        '医院健康管理中心，嵌入式LED灯带洒下柔和暖白光，接待台后方排列无文字健康宣传展板（纯图形版），前方皮质沙发与实木茶几，地面灰色哑光瓷砖'
+      ];
+      const index = parseInt(shot.shotId.replace(/\D/g, '')) || 0;
+      sceneDesc = fallbackScenes[index % fallbackScenes.length];
     }
     if (sceneDesc) parts.push(`【场景】${sceneDesc}`);
 
@@ -615,19 +595,22 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     const cameraMovement = getField('camera_movement', 'cameraMovement');
     if (cameraMovement) parts.push(`【运镜】${cameraMovement}`);
 
-    // 【P1-17-审计修复】通用化角色服装锁定：支持任意关键词服装
+    // 【角色】
+    // 【v2.1.4-fix9-P4】角色服装锁定：强制使用原始角色设定中的服装
     let characterDesc = fields.character || '';
     if (characterDesc && shot.character) {
-      const originalChar = typeof shot.character === 'string' ? shot.character : '';
-      const costumeKeywords = [
-        '警服', '白大褂', '西装', '铠甲', '战甲', '法袍', '道袍',
-        '军装', '制服', '汉服', '长袍', '盔甲', '披风',
-        'uniform', 'armor', 'robe', 'suit', 'coat'
-      ];
-      const originalCostume = costumeKeywords.find(k => originalChar.includes(k));
-      if (originalCostume && !characterDesc.includes(originalCostume)) {
-        console.warn(`[PromptFusion] ${shot.shotId} 角色服装被LLM修改，强制还原为: ${originalCostume}`);
-        characterDesc = `${originalChar}，${characterDesc}`;
+      // 如果LLM输出的角色描述中没有"警"字，但原始角色设定有，则强制替换
+      const originalChar = shot.character || '';
+      if (originalChar.includes('警') && !characterDesc.includes('警')) {
+        // LLM擅自改了服装，从原始角色描述中提取姓名+服装
+        const nameMatch = originalChar.match(/([^,，]+警[^,，]+)/);
+        if (nameMatch) {
+          characterDesc = characterDesc.replace(/(身着|穿着|身穿|着)[^，]+/, nameMatch[1]);
+          // 如果没替换成功，直接在描述开头插入正确服装
+          if (!characterDesc.includes('警')) {
+            characterDesc = originalChar + '，' + characterDesc;
+          }
+        }
       }
     }
     if (characterDesc) parts.push(`【角色】${characterDesc}`);
@@ -647,20 +630,18 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     const actionHasForbidden = actionForbidden.some(w => actionDesc.includes(w));
     if (actionHasForbidden) {
       console.warn(`[PromptFusionAgent] ⚠️ 镜头 ${shot.shotId} 动作含禁止词汇: "${actionDesc.substring(0, 50)}..."，强制替换为写实动作`);
-      // 根据场景类型生成写实动作 - 【v2.1.4-fix15】使用动态兜底，不硬编码医院动作
-      const charName = shot.character?.name || (typeof shot.character === 'string' ? shot.character.split(/[:,，]/)[0] : '角色');
-      const sceneType = shot.sceneType || 'establishing';
-      const actionTypeDesc = {
-        'opening': '缓缓进入画面，目光扫视环境，建立气场',
-        'establishing': '自然站立或行走，手部自然动作，眼神交流',
-        'conflict': '身体前倾，双手握拳或张开，目光锐利对峙',
-        'action': '快速移动，肢体大幅摆动，与环境互动',
-        'emotional_climax': '情绪爆发，肢体张力达到顶点，面部特写',
-        'resolution': '动作放缓，呼吸调整，姿态放松',
-        'discovery': '探索性动作，观察环境，发现新事物',
-        'transition': '移动过渡，走向新位置，环境变化'
-      }[sceneType] || '自然站立或行走，手部自然动作';
-      actionDesc = `${charName} ${actionTypeDesc}`;
+      // 提取角色名
+      const charName = shot.character?.name || '示例角色';
+      // 根据场景类型生成写实动作
+      const fallbackActions = [
+        '镜头缓慢推近，示例角色站立讲台前，自然手势讲解，眼神注视镜头，警服在荧光灯下轮廓清晰',
+        '稳定机位中景，示例角色沿走廊缓步前行，侧头指向检验窗口，白大褂医生从背景走过',
+        '手持微晃跟拍，示例角色靠近检查床，手指轻触医学挂图，无影灯在头顶形成柔和光晕',
+        '固定机位中景，示例角色坐于沙发边缘，双手交叠置于膝上，LED灯带在身后形成均匀轮廓光',
+        '缓慢后拉全景，示例角色站立检验窗口前，转身面向镜头，不锈钢台面反射冷白色光源'
+      ];
+      const idx = parseInt(shot.shotId.replace(/\D/g, '')) || 0;
+      actionDesc = fallbackActions[idx % fallbackActions.length];
     }
     if (actionDesc) parts.push(`【动作】${actionDesc}`);
 
@@ -668,31 +649,25 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     const propsField = getField('props');
     if (propsField) parts.push(`【道具】${propsField}`);
 
-    // 【定妆照】路径规范化：统一角色目录名
-    let portraitsField = getField('portraits');
-    if (portraitsField) {
-      // 统一替换各种变体为规范路径
-      portraitsField = portraitsField
-        .replace(/characters[/\\]monkey_king/g, 'characters/wukong')
-        .replace(/characters[/\\]sunwukong/g, 'characters/wukong')
-        .replace(/characters[/\\]erlang_shen/g, 'characters/erlang-shen')
-        .replace(/characters[/\\]erlangshen/g, 'characters/erlang-shen')
-        .replace(/characters[/\\]erlangsen/g, 'characters/erlang-shen');
-      parts.push(`【定妆照】${portraitsField}`);
-    }
+    // 【定妆照】
+    const portraitsField = getField('portraits');
+    if (portraitsField) parts.push(`【定妆照】${portraitsField}`);
 
-    // 台词 - 当存在【对话指令】时不再单独输出【台词】，避免重复
-    const dialogueField = getField('dialogue');
-    const dialogueBlockField = getField('dialogue_block');
-    
-    if (dialogueBlockField && String(dialogueBlockField).trim() && !String(dialogueBlockField).includes('规则兜底')) {
-      // 【对话指令】包含完整台词+角色属性+LIP_SYNC，优先使用
-      const dialogueBlockText = dialogueBlockField.startsWith('【对话指令】') ? dialogueBlockField : `【对话指令】${dialogueBlockField}`;
-      parts.push(dialogueBlockText);
-    } else if (dialogueField) {
-      // 无【对话指令】时才输出【台词】作为降级
-      const dialogueText = dialogueField.startsWith('【台词】') ? dialogueField : `【台词】${dialogueField}`;
-      parts.push(dialogueText);
+    // 台词
+    // 【v2.1.6】优先使用 dialogueBlocks 渲染为 Seedance 2.0 内联格式
+    if (shot.dialogueBlocks && Array.isArray(shot.dialogueBlocks) && shot.dialogueBlocks.length > 0) {
+      const renderedDialogue = this._renderDialogueBlocks(shot.dialogueBlocks, shot.duration || 10);
+      if (renderedDialogue) {
+        parts.push(renderedDialogue);
+      }
+    } else {
+      // 回退：使用旧的 dialogue 字段
+      const dialogueField = getField('dialogue');
+      if (dialogueField) {
+        // 【v2.1.4-fix13】确保台词有【台词】前缀
+        const dialogueText = dialogueField.startsWith('【台词】') ? dialogueField : `【台词】${dialogueField}`;
+        parts.push(dialogueText);
+      }
     }
 
     // 【时间轴】镜头内部微观导演调度（T00:XX相对时间戳格式）
@@ -704,7 +679,7 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
       const duration = shot.duration || 10;
       const seg1 = Math.floor(duration * 0.3);
       const seg2 = Math.floor(duration * 0.6);
-      parts.push(`【时间轴】T00:00 - 全景establishing，环境展示，冷静氛围；T00:0${seg1} - 中景推进，人物动作，情绪升温；T00:0${seg2} - 情绪收尾，光线平复`);
+      parts.push(`【时间轴】T00:00 - 全景establishing，环境展示，冷静氛围；T00:${String(seg1).padStart(2, '0')} - 中景推进，人物动作，情绪升温；T00:${String(seg2).padStart(2, '0')} - 情绪收尾，光线平复`);
     }
 
     // 【情绪】
@@ -790,18 +765,14 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
       let sceneDesc = shot.scene || '';
       const sceneForbidden = ['全息', '虚拟', '投影', '抽象', '光影场域', '数据空间', '元宇宙', '时间操控', '霓虹', '微观世界', '宏观', '抽象几何', '流动光影', '交织光影', '色彩对冲'];
       if (sceneForbidden.some(w => sceneDesc.includes(w))) {
-        // 【v2.1.4-fix15】使用动态兜底，不硬编码医院场景
-        const worldSetting = shot.worldSetting || { name: '真实物理环境' };
-        const worldDesc = worldSetting.description || worldSetting.name || '真实物理环境';
-        const atmosphere = worldSetting.atmosphere || '';
-        const sceneType = shot.sceneType || 'establishing';
-        const typeDesc = {
-          'opening': '史诗开场空间', 'establishing': '核心叙事空间',
-          'conflict': '紧张对峙地带', 'action': '激烈动作场地',
-          'emotional_climax': '情感高潮场景', 'resolution': '平静收尾空间',
-          'discovery': '探索发现区域', 'transition': '过渡连接空间'
-        }[sceneType] || '叙事场景';
-        sceneDesc = `${worldDesc}，${typeDesc}${atmosphere ? '，' + atmosphere : ''}`;
+        const fallbackScenes = [
+          '医院健康宣教室，白色荧光灯均匀照明，白墙面贴有无文字骨骼肌解剖图与运动损伤海报（纯图形版），木质讲台表面带有细微使用划痕，地面浅灰色防滑PVC地胶',
+          '三甲医院检验科走廊，冷白色LED光源从走廊顶部连续排列向下照射，无文字箭头标识牌指向尿液检验窗口，地面浅色抛光瓷砖，墙面白色医用抗菌涂层',
+          '医生诊室，白色墙面悬挂无文字人体解剖示意图（纯图形版），办公桌摆放听诊器与血压计，检查床铺有蓝色一次性床单，无影灯悬于上方，窗光透入',
+          '医院健康管理中心，嵌入式LED灯带洒下柔和暖白光，接待台后方排列无文字健康宣传展板（纯图形版），前方皮质沙发与实木茶几，地面灰色哑光瓷砖'
+        ];
+        const idx = parseInt(shot.shotId?.replace(/\D/g, '') || '0') || 0;
+        sceneDesc = fallbackScenes[idx % fallbackScenes.length];
       }
       parts.push(sceneDesc);
       
@@ -810,20 +781,15 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
       let actionDesc = shot.action || '';
       const actionForbidden = ['全息', '虚拟', '投影', '空间扭曲', '时间残影', '霓虹', '数据流', '光即角色', '抽象构图', '梦境流动性', '手绘动画', '湿版摄影', '黑色电影'];
       if (actionForbidden.some(w => actionDesc.includes(w))) {
-        // 【v2.1.4-fix15】使用动态兜底，不硬编码医院动作
-        const charName = shot.character?.name || (typeof shot.character === 'string' ? shot.character.split(/[:,，]/)[0] : '角色');
-        const sceneType = shot.sceneType || 'establishing';
-        const actionTypeDesc = {
-          'opening': '缓缓进入画面，目光扫视环境，建立气场',
-          'establishing': '自然站立或行走，手部自然动作，眼神交流',
-          'conflict': '身体前倾，双手握拳或张开，目光锐利对峙',
-          'action': '快速移动，肢体大幅摆动，与环境互动',
-          'emotional_climax': '情绪爆发，肢体张力达到顶点，面部特写',
-          'resolution': '动作放缓，呼吸调整，姿态放松',
-          'discovery': '探索性动作，观察环境，发现新事物',
-          'transition': '移动过渡，走向新位置，环境变化'
-        }[sceneType] || '自然站立或行走，手部自然动作';
-        actionDesc = `${charName} ${actionTypeDesc}`;
+        const fallbackActions = [
+          '镜头缓慢推近，示例角色站立讲台前，自然手势讲解，眼神注视镜头，警服在荧光灯下轮廓清晰',
+          '稳定机位中景，示例角色沿走廊缓步前行，侧头指向检验窗口，白大褂医生从背景走过',
+          '手持微晃跟拍，示例角色靠近检查床，手指轻触医学挂图，无影灯在头顶形成柔和光晕',
+          '固定机位中景，示例角色坐于沙发边缘，双手交叠置于膝上，LED灯带在身后形成均匀轮廓光',
+          '缓慢后拉全景，示例角色站立检验窗口前，转身面向镜头，不锈钢台面反射冷白色光源'
+        ];
+        const idx = parseInt(shot.shotId?.replace(/\D/g, '') || '0') || 0;
+        actionDesc = fallbackActions[idx % fallbackActions.length];
       }
       if (actionDesc) parts.push(actionDesc);
       
@@ -886,53 +852,12 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
   }
 
   _countChars(str) {
-    if (!str) return 0;
-    // 【v1.0.3-fix】使用实际字符数，避免中文字符加权导致误截断
-    return str.length;
-  }
-
-  /**
-   * 【P1-14-审计修复】统一 dialogue_block 构建（单入口）
-   */
-  _buildDialogueBlock(dialogue, shot) {
-    if (!dialogue) return null;
-    const speaker = shot.character?.name || '角色';
-    const charDesc = typeof shot.character === 'string' ? shot.character : '';
-    
-    // 对象格式 {lines: [...]}
-    if (typeof dialogue === 'object' && dialogue.lines && Array.isArray(dialogue.lines)) {
-      const dialogueBlocks = dialogue.lines.map(line => {
-        const spk = line.speaker || speaker;
-        const text = line.text || line.content || '';
-        const emotion = line.emotion || '平静';
-        const action = line.action || '面向镜头说话';
-        return `${spk}(${action}，${emotion}，面向镜头)："${text}"，LIP_SYNC:true，身体语言：[自然嘴型同步]`;
-      });
-      return dialogueBlocks.join('\n');
-    }
-    
-    // Pipe-delimited 字符串格式
-    if (typeof dialogue === 'string' && dialogue.includes('|')) {
-      const parts = dialogue.split('|');
-      if (parts.length >= 4) {
-        const spk = parts[0] || speaker;
-        const emotion = parts[2] || '平静';
-        const text = parts[3] || '';
-        return `${spk}(面向镜头说话，${emotion}，面向[画外])："${text}"，LIP_SYNC:true，身体语言：[自然嘴型同步]`;
-      }
-    }
-    
-    return null;
+    // 【P2-13 修复】使用真实字符数，中文不再按1.5计
+    return str ? String(str).length : 0;
   }
 
   _extractPureDialogue(dialogue) {
-    // 【v1.0.3-fix】支持对象类型 {lines: [...]} 和字符串类型
-    if (!dialogue) return '';
-    if (typeof dialogue === 'object' && dialogue.lines && Array.isArray(dialogue.lines)) {
-      // 从 lines 数组提取纯文本
-      return dialogue.lines.map(l => l.text || l.content || '').filter(Boolean).join('；');
-    }
-    if (typeof dialogue !== 'string') return String(dialogue || '');
+    if (!dialogue || typeof dialogue !== 'string') return dialogue;
     const parts = dialogue.split(/[|;]/);
     if (parts.length >= 5) {
       return parts[3].trim();
@@ -940,12 +865,40 @@ ${missing.map(f => `    "${f}": "【${f}的具体内容，至少30个字符】"`
     return dialogue.trim();
   }
 
+  /**
+   * 【v2.1.6】将 DIALOGUE_BLOCK 数组渲染为 Seedance 2.0 内联对话格式
+   * 格式：【台词】[时间戳] 角色 trigger, emotion 说："line"
+   */
+  _renderDialogueBlocks(blocks, duration) {
+    if (!blocks || blocks.length === 0) return '';
+    
+    const lines = [];
+    const segmentDuration = duration / blocks.length;
+    
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
+      const startTime = Math.round(i * segmentDuration);
+      const endTime = Math.round((i + 1) * segmentDuration);
+      const timeStr = `[${String(startTime).padStart(2, '0')}s-${String(endTime).padStart(2, '0')}s]`;
+      
+      // 构建内联格式
+      const trigger = b.trigger || 'looks at camera';
+      const emotion = b.emotion || 'neutral';
+      const line = b.line || '';
+      const speaker = b.speaker || '角色';
+      
+      // Seedance 2.0 格式：时间戳 + 动作触发 + 情绪副词 + 说："台词"
+      lines.push(`${timeStr} ${speaker} ${trigger}, ${emotion} 说："${line}"`);
+    }
+    
+    return '【台词】' + lines.join('\n');
+  }
+
   _buildBatchPrompt(shots, ratio, characters) {
     const characterInfo = characters.map(c => `- ${c.name}: ${c.description || ''}`).join('\n');
 
     const shotsInfo = shots.map(s => {
-      const pureDialogue = s.dialogue_block || 
-                          s.dialogue?.lines?.map(l => l.content).join('; ') || 
+      const pureDialogue = s.dialogue?.lines?.map(l => l.content).join('; ') || 
                           (s.dialogue ? this._extractPureDialogue(s.dialogue) : '');
       return `${s.shotId}(${s.duration || '?'}s): ${s.scene || ''} | ${s.mood || ''} | ${pureDialogue} | 运镜:${s.cameraString || ''} | 灯光:${s.lightingString || ''}`;
     }).join('\n');
@@ -973,21 +926,21 @@ ${sufficiency}
 
 【角色服装锁定 - 强制不可修改】
 角色服装必须与角色设定完全一致，禁止根据场景修改：
-- 正确："角色服装必须与原始设定完全一致，不可自由发挥"
+- 正确："示例角色女士，穿警服的陈女士，健康科普主讲人，短发，站姿挺拔"
 - 错误："白色医生服"、"白大褂"、"浅蓝色衬衫"（禁止根据场景更换服装）
 【角色】字段必须严格使用角色设定中的原始服装描述，不可自由发挥。
 
 【动作写实锁定 - 强制不可修改】
 【动作】字段必须是真实物理动作和镜头运动，严禁使用任何科幻/抽象/超现实词汇：
-- 正确："镜头缓慢推近，角色站立场景中，自然手势讲解，眼神注视镜头"
+- 正确："镜头缓慢推近，示例角色站立讲台前，自然手势讲解"
 - 错误："全息投影"、"空间扭曲"、"时间残影"、"霓虹色数据流"、"抽象构图"、"梦境流动性"、"湿版摄影"、"光即角色"
 - 正确运镜：推近、跟拍、手持、稳定器、缓慢后拉、固定机位
 - 错误运镜：无人机穿越微观世界、时间操控慢动作、宏大比例展示
 
 要求：
-1. 按标准字段输出：【约束】【基础】【场景】【灯光/照明】【构图】【色彩/色调】【景深】【运镜】【角色】【服装】【化妆】【动作】【道具】【定妆照】【对话指令】【时间轴】【情绪】【节奏】【转场】【音频】【负面约束】【明亮约束】【角色约束】【导演指令】【角色一致性】
-2. 【对话指令】字段必须独立，包含角色名+动作触发+情绪修饰+面向对象+台词内容+LIP_SYNC+身体语言，不要写"画外音""旁白"
-3. 场景要具体专业，必须是写实环境，禁止科幻/抽象元素。场景中不得出现含文字的物品：如"有文字的报告单"、"标牌上的文字"、"商标"、"有字的海报"等。可以描述"空白报告单"、"无文字标识牌"、"图形海报"等不含文字的物品
+1. 按标准字段输出：【约束】【基础】【场景】【灯光/照明】【构图】【色彩/色调】【景深】【运镜】【角色】【服装】【化妆】【动作】【道具】【定妆照】【台词】【时间轴】【情绪】【节奏】【转场】【音频】【负面约束】【明亮约束】【角色约束】【导演指令】【角色一致性】
+2. 【台词】字段必须独立，角色直接对镜头说话，不要写"画外音""旁白"
+3. 场景要具体专业（门诊室、宣教室、检查室），不要写"社区健身区"。场景中不得出现含文字的物品：如"有文字的报告单"、"标牌上的文字"、"商标"、"有字的海报"等。可以描述"空白报告单"、"无文字标识牌"、"图形海报"等不含文字的物品
 4. 负面约束要完整，包含10+条排除项，必须包含全局禁止文字：no text anywhere in frame, no readable characters, no alphabets, no Chinese characters, no text on walls objects documents signs labels screens clothing packaging, no handwritten text, no printed text, no signage text, no text overlays, no UI elements with text
 5. 只输出JSON，不要解释
 

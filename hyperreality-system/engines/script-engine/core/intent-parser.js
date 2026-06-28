@@ -12,7 +12,7 @@ class IntentParser {
         educational: ['科普', '讲解', '知识', '教程', '学会', '原理', '什么是', '如何', '为什么'],
         documentary: ['纪录片', '纪实', '采访', '真实', '调查', '记录'],
         lifelog: ['家庭', '聚会', '旅行', '回忆', 'Vlog', '日常', '记录生活'],
-        commercial: ['广告', '品牌', '营销', '推广', '产品', '转化', '带货', 'CTA']
+        commercial: ['广告', '品牌', '营销', '推广', '产品', '转化', '带货', 'CTA', '宣传片', '介绍']
       },
       // 混合模式信号
       hybridSignals: {
@@ -47,6 +47,21 @@ class IntentParser {
       text = (rawInput || '').toString();
     }
     
+    // 【v2.1.5-fix-C】支持显式传入 narrativeMode，绕过自动分类
+    if (metadata && metadata.narrativeMode) {
+      const explicitMode = metadata.narrativeMode.toLowerCase();
+      const validModes = ['dramatic', 'educational', 'documentary', 'lifelog', 'commercial'];
+      if (validModes.includes(explicitMode)) {
+        console.log(`[IntentParser] 使用显式 narrativeMode: ${explicitMode}`);
+        return this._buildUserIntent({
+          primary_type: explicitMode,
+          confidence: 1.0,
+          scores: { [explicitMode]: 99 },
+          layer: 'explicit_metadata'
+        }, metadata, 'explicit_metadata', text);
+      }
+    }
+    
     // 第一层：快速分类器
     const fastResult = this._fastClassify(text);
     
@@ -69,11 +84,18 @@ class IntentParser {
     let totalMatches = 0;
 
     // 统计各类型关键词命中数
+    // 【v2.1.5-fix-C】高权重关键词：命中时加2分而非1分
+    const highWeightKeywords = {
+      commercial: ['宣传片', '品牌故事', '广告片']
+    };
+    
     for (const [type, keywords] of Object.entries(this.config.keywordDict)) {
       let matches = 0;
       for (const keyword of keywords) {
         if (text.includes(keyword)) {
-          matches++;
+          // 检查是否高权重关键词
+          const isHighWeight = highWeightKeywords[type]?.includes(keyword);
+          matches += isHighWeight ? 2 : 1;
         }
       }
       scores[type] = matches;
@@ -85,18 +107,11 @@ class IntentParser {
     let primaryType = this.config.defaultMode;
 
     for (const [type, score] of Object.entries(scores)) {
-      if (score > maxScore) {
+      // 【P0-6 修复】平分时 commercial 优先（宣传片强信号不应被 EDU 覆盖）
+      const tiePriority = { commercial: 5, dramatic: 4, documentary: 3, lifelog: 2, educational: 1 };
+      if (score > maxScore || (score === maxScore && (tiePriority[type] || 0) > (tiePriority[primaryType] || 0))) {
         maxScore = score;
         primaryType = type;
-      }
-    }
-
-    // 【审计修复】如果 educational 有匹配（科普内容），优先使用 educational
-    if (scores.educational > 0 && primaryType !== 'educational') {
-      // 只有当 educational 匹配数不少于其他类型时才切换
-      if (scores.educational >= maxScore * 0.5) {
-        primaryType = 'educational';
-        maxScore = scores.educational;
       }
     }
 
@@ -182,22 +197,19 @@ class IntentParser {
    * 提取时长（秒）
    */
   _extractDuration(text) {
-    // 匹配 "120秒", "2分钟", "120s", "2min" 等
+    // 【P2-5 修复】显式单位映射，避免 toString().includes 脆弱判断
     const patterns = [
-      /(\d+)\s*秒/,
-      /(\d+)\s*分钟/,
-      /(\d+)\s*s/i,
-      /(\d+)\s*min/i
+      { regex: /(\d+)\s*秒/, unit: 'second' },
+      { regex: /(\d+)\s*分钟/, unit: 'minute' },
+      { regex: /(\d+)\s*s/i, unit: 'second' },
+      { regex: /(\d+)\s*min/i, unit: 'minute' }
     ];
 
-    for (const pattern of patterns) {
-      const match = text.match(pattern);
+    for (const { regex, unit } of patterns) {
+      const match = text.match(regex);
       if (match) {
         let value = parseInt(match[1]);
-        // 分钟转秒
-        if (pattern.toString().includes('分钟') || pattern.toString().includes('min')) {
-          value *= 60;
-        }
+        if (unit === 'minute') value *= 60;
         return value;
       }
     }

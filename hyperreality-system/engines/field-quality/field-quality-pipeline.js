@@ -13,14 +13,14 @@ const { FieldRepairAgent, PRD } = require('./field-repair-agent');
 
 class FieldQualityPipeline {
   constructor(options = {}) {
-    this.maxRounds = options.maxRounds ?? 1; // 默认1轮，加速处理
+    this.maxRounds = options.maxRounds ?? 2;
     this.checker = new FieldCheckAgent({
       llmModel: options.llmModel || process.env.STORMAXE_LLM_MODEL || 'kimi-k2p6',
-      llmTimeout: options.checkerTimeout || 30000, // 30秒超时，避免长时间阻塞
+      llmTimeout: options.checkerTimeout || 120000,
     });
     this.repairer = new FieldRepairAgent({
       llmModel: options.llmModel || process.env.STORMAXE_LLM_MODEL || 'kimi-k2p6',
-      llmTimeout: options.repairerTimeout || 30000, // 30秒超时
+      llmTimeout: options.repairerTimeout || 180000,
     });
 
     // 设置PRD（从blueprint构建或直接使用）

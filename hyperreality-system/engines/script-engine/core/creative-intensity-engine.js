@@ -257,8 +257,8 @@ const INSTRUCTION_TEMPLATES = {
     L0: '自然光，均匀照明，无特殊光影',
     L1: '三点布光，柔光模拟，自然光增强',
     L2: '戏剧性光影，伦勃朗光，剪影，环境填充',
-    L3: '高对比色温，体积光，光绘轨迹，投影纹理',
-    L4: '强烈明暗对比，环境光叙事，光效驱动情绪',
+    L3: '霓虹色温，体积光，光绘，投影纹理',
+    L4: '黑色电影布光，环境光叙事，光即角色',
     L5: '每个场景定制化灯光叙事，光即情绪，光即哲学'
   },
   composition: {
@@ -266,7 +266,7 @@ const INSTRUCTION_TEMPLATES = {
     L1: '引导线，前景遮挡，标准深度层次',
     L2: '框架构图，多层景深，前景中景背景',
     L3: '极端对称，负空间，几何分割，打破三分法',
-    L4: '宏大比例，空间叙事，环境作为角色',
+    L4: '宏大比例，抽象构图，空间作为叙事',
     L5: '构图即叙事，空间即情绪，画框即世界'
   },
   production: {
@@ -292,7 +292,7 @@ const INSTRUCTION_TEMPLATES = {
     L1: '轻微调色，自然色温，标准饱和度',
     L2: '电影LUT，冷暖对比，单色调色',
     L3: '赛博朋克色，青橙对比，去饱和+单色强调',
-    L4: '琥珀色世界，科技感光效，冷蓝调，单色世界',
+    L4: '琥珀色世界，霓虹色，冷蓝调，单色世界',
     L5: '色彩即叙事，色调即情绪，色温即时间'
   },
   texture: {
@@ -300,7 +300,7 @@ const INSTRUCTION_TEMPLATES = {
     L1: '轻微胶片颗粒，标准锐度',
     L2: '胶片颗粒，柯达2383质感，轻微柔光',
     L3: '16mm胶片感，变形宽银幕，光学瑕疵',
-    L4: '特殊质感处理，粗粒胶片，复古光学效果',
+    L4: '湿版摄影质感，手绘动画质感，AI瑕疵美学',
     L5: '质感即叙事，媒介即情绪，材质即时间'
   },
   vfx: {
@@ -308,15 +308,15 @@ const INSTRUCTION_TEMPLATES = {
     L1: '粒子光斑，简单过渡，环境粒子',
     L2: '光效粒子，镜头光晕，环境互动粒子',
     L3: '复杂粒子系统，流体模拟，光绘轨迹',
-    L4: '高级粒子特效，能量场效果，动态光影',
+    L4: '全息投影，空间扭曲，时间残影',
     L5: '特效即叙事，粒子即情绪，视觉即哲学'
   },
   atmosphere: {
     L0: '轻微雾效，基础环境感',
     L1: '环境雾，轻微体积感',
     L2: '体积雾，光雾交互，季节感',
-    L3: '超现实氛围，时间错位感',
-    L4: '诗意氛围，时间感知变化',
+    L3: '超现实氛围，梦境感，时间错位感',
+    L4: '诗意氛围，梦境流动性，时间即空气',
     L5: '氛围即叙事，环境即情绪，空气即角色'
   },
 
@@ -356,16 +356,16 @@ const NARRATIVE_MODE_BRIDGE = {
       atmosphere: 0.05    // 适度降低氛围
     }
   },
-  narration: {
-    name: '内心独白',
+  voiceover: {
+    name: '旁白',
     boost: {
-      atmosphere: 0.15,
-      color: 0.10,
-      composition: 0.05
+      atmosphere: 0.15,   // 强化氛围
+      color: 0.10,        // 强化色彩
+      composition: 0.05   // 强化构图
     },
     reduce: {
-      performance: 0.10,
-      camera: 0.05
+      performance: 0.10,  // 降低表演要求（无角色出镜）
+      camera: 0.05        // 适度降低运镜复杂度
     }
   },
   mixed: {
@@ -700,6 +700,15 @@ class CreativeIntensityRecommender {
       const dir = require('path').dirname(this.dataPath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(this.dataPath, JSON.stringify(this.data, null, 2));
+      
+      // v2.1.5-fix: 写入验证
+      if (!fs.existsSync(this.dataPath)) {
+        throw new Error(`数据文件写入后不存在: ${this.dataPath}`);
+      }
+      const stats = fs.statSync(this.dataPath);
+      if (stats.size === 0) {
+        throw new Error(`数据文件写入后大小为0: ${this.dataPath}`);
+      }
     } catch (e) {
       console.warn(`[Recommender] 数据保存失败: ${e.message}`);
     }
@@ -710,7 +719,7 @@ class CreativeIntensityRecommender {
    */
   record(entry) {
     const record = {
-      id: `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `entry_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       videoType: entry.videoType || 'unknown',
       intensity: entry.intensity || 0.2,
       completionRate: entry.completionRate || 0,

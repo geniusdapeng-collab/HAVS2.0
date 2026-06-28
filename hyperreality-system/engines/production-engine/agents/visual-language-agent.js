@@ -52,7 +52,7 @@ class VisualLanguageAgent extends BaseAgent {
     const prompt = this._buildPrompt(shots, blueprint);
 
     const schema = {
-      required: ['shots']
+      required: ['shots'], requiredArrays: ['shots'], rejectEmptyArray: true, // 【P1-6 修复】启用数组类型校验
     };
 
     const llmResult = await this._callLLM(prompt, schema, () => {
@@ -69,13 +69,14 @@ class VisualLanguageAgent extends BaseAgent {
       return {
         ...shot,
         camera: designed.camera || shot.camera,
-        cameraString: designed.cameraString || '',
+        // 【P1-3 修复】保留 shot 原值兜底，避免 LLM 未返回时清空已有字段
+        cameraString: designed.cameraString || shot.cameraString || '',
         lighting: designed.lighting || shot.lighting,
-        lightingString: designed.lightingString || '',
+        lightingString: designed.lightingString || shot.lightingString || '',
         timeline: designed.timeline || shot.timeline,
         cameraMovement: {
           ...shot.cameraMovement,
-          timeline: designed.timeline
+          ...(designed.timeline ? { timeline: designed.timeline } : {})
         }
       };
     });
@@ -87,7 +88,11 @@ class VisualLanguageAgent extends BaseAgent {
   _buildPrompt(shots, blueprint) {
     const shotsInfo = shots.map(s => {
       const dialogue = s.dialogue?.lines?.map(l => `"${l.content}"`).join('; ') || s.dialogue || '';
-      return `镜头 ${s.shotId}: ${s.duration || '?'}s; 场景: ${(s.scene || '').substring(0, 60)}; 情绪: ${s.mood || ''}; 台词: ${dialogue.substring(0, 80)}`;
+      // 【v2.1.6】读取 dialogueBlocks 中的 trigger 和 manner，供运镜设计参考
+      const blocks = s.dialogueBlocks || [];
+      const triggerInfo = blocks.map(b => `[${b.speaker}] ${b.trigger || '无动作触发'}`).join('; ');
+      const mannerInfo = blocks.map(b => `[${b.speaker}] ${b.manner || '无说话方式'}`).join('; ');
+      return `镜头 ${s.shotId}: ${s.duration || '?'}s; 场景: ${(s.scene || '').substring(0, 60)}; 情绪: ${s.mood || ''}; 台词: ${dialogue.substring(0, 80)}; 动作触发: ${triggerInfo.substring(0, 100)}; 说话方式: ${mannerInfo.substring(0, 100)}`;
     }).join('\n');
 
     return `## 镜头信息
@@ -96,28 +101,34 @@ ${shotsInfo}
 ## 任务
 为每个镜头设计运镜+灯光+时间轴。
 
+【重要】每个镜头的"动作触发"和"说话方式"信息已提供，你的运镜设计必须与之配合：
+- 如果动作触发是"looks at camera"，运镜应设计为正面中景或特写，角色直视镜头
+- 如果动作触发是"pauses then smiles"，运镜应在停顿处放缓，微笑时轻微推近
+- 如果说话方式是"quietly"，灯光应偏暗、氛围偏静，运镜应平稳
+- 如果说话方式是"direct-address"，运镜应正面、稳定，景别不宜过大
+
 输出每个镜头的:
 1. camera: {shot_size, movement, angle, lens, speed}
-2. cameraString: 运镜描述文本（30-50字，动态描述）
+2. cameraString: 运镜描述文本（30-50字，动态描述，必须呼应动作触发）
 3. lighting: {key_light, fill_light, time_of_day, atmosphere}
-4. lightingString: 灯光场景化描述（30-50字）
-5. timeline: 运镜时间轴（动态切分4-6段，根据情绪起伏设计，每段包含时间范围、运镜动作、画面目的，必须详细具体）
+4. lightingString: 灯光场景化描述（30-50字，必须呼应说话方式和情绪）
+5. timeline: 运镜时间轴（动态切分4-6段，根据台词节奏和动作触发设计，每段包含时间范围、运镜动作、画面目的，必须详细具体）
 
 设计要点:
 - 台词密集处：短切+手持
 - 情绪铺垫处：长镜头+缓慢推近
 - 景别过渡：相邻镜头不要跳跃太大
 - 灯光场景化：不用技术术语，用自然描述
+- 必须呼应动作触发：运镜时机与角色动作同步
 
 输出JSON: {"shots": [{"shotId":"SC01","camera":{},"cameraString":"...","lighting":{},"lightingString":"...","timeline":[]}]}`;
   }
 
   _fallback(shots) {
     console.log(`[VisualLanguageAgent] 使用降级规则...`);
-    // 【v2.1.4-fix13-审计修复】提供完整的降级默认值，避免空字段
-    // 【v2.1.5-fix】timeline 格式与 LLM 返回格式保持一致
     return {
       shots: shots.map(shot => ({
+        ...shot, // 【P1-5 修复】保留上游全部字段
         shotId: shot.shotId,
         camera: shot.camera || {
           shot_size: 'medium',
@@ -135,7 +146,7 @@ ${shotsInfo}
         },
         lightingString: shot.lightingString || '柔和顶光照明，自然补光填充，白天室内明亮氛围',
         timeline: shot.timeline || [
-          { segment: 1, timeRange: '0s-3s', cameraMovement: '镜头稳定，角色入画', shotType: 'medium', purpose: '建立场景' },
+          { segment: 1, timeRange: '0s-3s', cameraMovement: '镜头稳定，角色入画', shotType: 'wide', purpose: '建立场景' },
           { segment: 2, timeRange: '3s-6s', cameraMovement: '保持构图，角色开始动作', shotType: 'medium', purpose: '推进叙事' }
         ]
       }))
