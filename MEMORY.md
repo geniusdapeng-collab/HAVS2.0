@@ -396,3 +396,62 @@ S01-S04、S06 的 prompt 中同时存在两套运镜描述：
 - **总计新增：29 个文件**，全部语法验证通过
 
 **下一步**：进入第三步（甄别验证），用 health-edu-ep01 跑通完整预生产流程验证所有新组件工作正常。
+
+---
+
+## HAVS v2.1.7 迁移完成（2026-06-28）
+
+### 迁移策略
+**站在巨人的肩膀上，成为新的巨人**：将 HAVS_FIXED v2.1.7-audit 的 57 个文件全部对比分析，将优势整合到本地 HAVS 系统（hyperreality-system/）。
+
+### 迁移结果
+
+| 类别 | 数量 | 状态 |
+|------|------|------|
+| HAVS_FIXED 总文件数 | 57 | 已完成 |
+| 新增文件（HAVS_FIXED 独有） | 23 | 已复制到当前系统 |
+| 差异文件（内容不同） | 34 | 已用 HAVS_FIXED 版本覆盖 |
+| 遗留文件（当前 HAVS 独有） | 175 | 已保留不删除 |
+| 语法验证 | 56/56 通过 | ✅ |
+
+### 新增文件清单（23个）
+- `package.json`, `run-promo.js`
+- `config/timeout-config.js`
+- `engines/production-engine/phases/` (5个阶段文件)
+- `engines/production-engine/utils/` (9个工具文件)
+- `shields/` (4个稳定性文件)
+- `systems/llm-reasoning-engine.js`
+- `utils/graceful-shutdown.js`
+
+### 关键差异覆盖（34个）
+- `production-engine.js` 重构：引入 Phase 架构
+- `continuity-review-agent.js` 增强 (+136行)
+- `scene-design-agent.js` 改进 (-166行，更精炼)
+- `prompt-fusion-agent.js` 大幅优化 (-47行)
+- `field-guard.js` / `field-standardizer.js` / `field-quality/` 全面增强
+- `script-generator.js` (+33行) / `script-validator.js` (+13行)
+- `global-negative-prompts.js` (+68行)
+- `post-production-engine.js` (+48行)
+- `rendering-engine.js` (+51行)
+- `index.js` (+120行，入口升级)
+
+### 提交信息
+- Commit: `dc38b14` — `feat(havs): HAVS 系统升级至 v2.1.7-audit`
+- 变更：58 文件，+5633 / -2608 行
+- 仓库: StormaxeAIVideoSystem (闭源)
+
+### 飞书报告
+- `doc_id`: `KLRMdy2YKopOO5xJea0cE6uTnpg`
+- URL: https://www.feishu.cn/docx/KLRMdy2YKopOO5xJea0cE6uTnpg
+
+### 保留的本地特色
+- 技能文件：skills/好莱坞工业电影技能工厂/ 下约 150 个镜头级专项
+- 特殊运行入口：run-myth-wukong-erlang.js, run-preproduction-health-edu.js 等
+- 文档、测试、示例、资源文件全部保留
+- 生产版本备份 (`.production-v1.0.*`)
+
+### 后续建议
+1. 运行 smoke-test 验证功能完整性
+2. 更新 `.env` 配置匹配新模块
+3. 更新 VERSION 文件为 v2.1.7
+4. 确认自定义入口适配新 index.js 接口
