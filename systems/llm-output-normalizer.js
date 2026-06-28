@@ -49,54 +49,138 @@ function cleanJsonText(text) {
 
 /**
  * 从任意文本中提取合法 JSON（对象优先，数组次之）
- * 算法：找到所有 { / [ 起始位置，做括号匹配（处理字符串/转义），命中后 JSON.parse 验证
- * @param {string} text
- * @returns {{json: string, type: 'object'|'array'|null}}
+ * 【SIGKILL 根因修复】O(n²) → O(n) 单次栈扫描
+ * 
+ * 原算法：对每个 '{'/'[' 起始位置扫描到末尾，最坏 O(n²)
+ * 当输入 20 万字符时，循环 4×10¹⁰ 次，冻结事件循环数十秒，
+ * 所有超时兜底失效，进程被 SIGKILL 终止。
+ * 
+ * 新算法：单次栈扫描 O(n) + 输入截断 + 同步时间预算
  */
 function extractJsonObject(text) {
   if (!text || typeof text !== 'string') return { json: '', type: null };
 
-  const tryExtract = (startChar, endChar) => {
-    for (let i = 0; i < text.length; i++) {
-      if (text[i] !== startChar) continue;
-      let depth = 0;
-      let inString = false;
-      let escape = false;
-      for (let j = i; j < text.length; j++) {
-        const c = text[j];
-        if (escape) { escape = false; continue; }
-        if (c === '\\') { escape = true; continue; }
-        if (c === '"') { inString = !inString; continue; }
-        if (inString) continue;
-        if (c === startChar) depth++;
-        else if (c === endChar) {
-          depth--;
-          if (depth === 0) {
-            const candidate = text.slice(i, j + 1);
-            // 第一遍：直接解析
-            try { JSON.parse(candidate); return candidate; } catch (e) {}
-            // 第二遍：清理注释/尾逗号后解析
-            const cleaned = cleanJsonText(candidate);
-            try { JSON.parse(cleaned); return cleaned; } catch (e) {}
-            // 第三遍：修复常见 LLM 错误（单引号、无引号 key）
-            const relaxed = cleaned
-              .replace(/'/g, '"')
-              .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":');
-            try { JSON.parse(relaxed); return relaxed; } catch (e) {}
-            // 命中括号但解析失败，继续找下一个起始位置
-          }
+  // 【防线1】输入硬截断：reasoning 中的目标 JSON 不会出现在 20 万字符之后
+  const MAX_INPUT_LEN = 200000;
+  if (text.length > MAX_INPUT_LEN) {
+    console.warn(`[extractJsonObject] 输入过长(${text.length})，截断到 ${MAX_INPUT_LEN}`);
+    text = text.slice(0, MAX_INPUT_LEN);
+  }
+
+  // 1. 优先尝试 ```json 代码块
+  const codeBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch?.[1]) {
+    const candidate = codeBlockMatch[1].trim();
+    try { JSON.parse(candidate); return { json: candidate, type: 'object' }; } catch (_) {}
+  }
+
+  // 2. 尝试整段
+  const whole = text.trim();
+  if (whole) {
+    try { JSON.parse(whole); return { json: whole, type: whole.startsWith('[') ? 'array' : 'object' }; } catch (_) {}
+  }
+
+  // 3. 【核心】单次栈扫描找出所有"顶层完整 JSON"候选 —— O(n)
+  const candidates = []; // { start, end, type }
+  const stack = []; // { ch, pos }
+  let inString = false, escaped = false;
+
+  // 【防线2】同步时间预算：扫描中定期检查耗时
+  const BUDGET_MS = 300;
+  const scanStart = Date.now();
+  let ops = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    // 每 16384 次操作检查一次时间
+    if ((++ops & 0x3FFF) === 0 && (Date.now() - scanStart) > BUDGET_MS) {
+      console.warn(`[extractJsonObject] 扫描超预算(${Date.now() - scanStart}ms, ops=${ops})，终止扫描`);
+      break;
+    }
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; continue; }
+    if (ch === '{' || ch === '[') {
+      stack.push({ ch, pos: i });
+    } else if (ch === '}' || ch === ']') {
+      if (stack.length === 0) continue;
+      const top = stack[stack.length - 1];
+      const expectedClose = top.ch === '{' ? '}' : ']';
+      if (ch === expectedClose) {
+        stack.pop();
+        if (stack.length === 0) {
+          candidates.push({ start: top.pos, end: i, type: top.ch === '{' ? 'object' : 'array' });
         }
       }
     }
-    return '';
-  };
+  }
 
-  // 对象优先（Stage 5A scenes 通常是对象）
-  let json = tryExtract('{', '}');
-  if (json) return { json, type: 'object' };
+  // 4. 从候选中选最优：最长 + 含关键字段加权
+  let bestCandidate = null, bestType = null, bestScore = -1;
+  for (const c of candidates) {
+    const candidate = text.slice(c.start, c.end + 1).trim();
+    let parsed;
+    try { parsed = JSON.parse(candidate); } catch (_) { continue; }
+    const hasKeyFields = parsed && typeof parsed === 'object' && (
+      parsed.meta || parsed.structure || parsed.shots || parsed.scenes || parsed.characters
+    );
+    const score = candidate.length + (hasKeyFields ? 100000 : 0);
+    if (score > bestScore) {
+      bestScore = score;
+      bestCandidate = candidate;
+      bestType = c.type;
+    }
+  }
+  if (bestCandidate) return { json: bestCandidate, type: bestType };
 
-  json = tryExtract('[', ']');
-  if (json) return { json, type: 'array' };
+  // 5. 截断补全：处理被 max_tokens 截断的不完整 JSON
+  const firstBrace = text.indexOf('{');
+  const firstBracket = text.indexOf('[');
+  const startChar = firstBrace >= 0 && (firstBracket < 0 || firstBrace < firstBracket) ? '{' : '[';
+  const startPos = startChar === '{' ? firstBrace : firstBracket;
+  
+  if (startPos >= 0) {
+    const endChar = startChar === '{' ? '}' : ']';
+    const lastClose = text.lastIndexOf(endChar);
+    const endPos = lastClose >= startPos ? lastClose + 1 : text.length;
+    let candidate = text.slice(startPos, endPos);
+    
+    // 配对校验 + 补全
+    const stk = [];
+    let inStr = false, esc = false, wellFormed = true;
+    for (const ch of candidate) {
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === '\\') esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') { inStr = true; continue; }
+      if (ch === '{' || ch === '[') stk.push(ch);
+      else if (ch === '}') {
+        if (stk[stk.length - 1] === '{') stk.pop();
+        else { wellFormed = false; break; }
+      } else if (ch === ']') {
+        if (stk[stk.length - 1] === '[') stk.pop();
+        else { wellFormed = false; break; }
+      }
+    }
+    if (wellFormed) {
+      let suffix = '';
+      while (stk.length) {
+        const open = stk.pop();
+        suffix += (open === '{') ? '}' : ']';
+      }
+      candidate += suffix;
+      candidate = candidate.replace(/,\s*"[^"]*"?\s*:\s*"[^"]*$/, '');
+      candidate = candidate.replace(/,\s*"[^"]*"?\s*:\s*$/, '');
+      try { JSON.parse(candidate); return { json: candidate, type: startChar === '{' ? 'object' : 'array' }; } catch (_) {}
+    }
+  }
 
   return { json: '', type: null };
 }

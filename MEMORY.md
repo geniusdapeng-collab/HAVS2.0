@@ -366,4 +366,33 @@ S01-S04、S06 的 prompt 中同时存在两套运镜描述：
 - 全写实风格，角色和背景均真实质感
 - 场景描述必须差异化、中文、避免英文模板
 
-<!-- OPENCLAW_CACHE_BOUNDARY -->
+## HAVS v2.1.7 迁移进度（2026-06-28）
+
+**P0 级迁移（已完成）**:
+- [x] O(n) JSON 提取算法替换（`systems/llm-output-normalizer.js`）— SIGKILL 根因修复
+- [x] StabilityShield 引入（`shields/` 目录，4 个文件）
+- [x] HealthMonitor 引入
+- [x] LLMGateway 引入
+- [x] BaselineRegistry 引入
+- [x] graceful-shutdown.js 引入
+- [x] 所有新增文件语法检查通过
+
+**P1 级迁移（已完成）**:
+- [x] Phase 架构引入（phases/ 目录，5 个文件）
+- [x] Utils 工具层引入（engines/production-engine/utils/ 目录，9 个文件）
+- [x] LLM 推理引擎引入（`systems/llm-reasoning-engine.js`）
+- [x] 超时配置中心（`config/timeout-config.js` 和 `engines/production-engine/config/timeout-config.js` 双路径兼容）
+- [x] 所有新增文件语法检查通过
+
+**P2 级迁移（已完成）**:
+- [x] 创意指数引擎（`engines/script-engine/core/creative-intensity-engine.js`）— L0-L5 等级 + 叙事模式桥接 + 世界设定桥接
+- [x] 全局进程防护升级（`engines/process-guard.js`）— 吸收 LLM 超时悬空 rejection，不杀进程
+- [x] 所有新增文件语法检查通过
+
+**迁移完成统计**：
+- P0（稳定性基础设施）：5 个文件（shields 4 + utils 1 + systems 1）
+- P1（架构升级）：15 个文件（phases 5 + utils 9 + systems 1 + config 1）
+- P2（功能增强）：10 个文件（script-engine 9 + engines 1）
+- **总计新增：29 个文件**，全部语法验证通过
+
+**下一步**：进入第三步（甄别验证），用 health-edu-ep01 跑通完整预生产流程验证所有新组件工作正常。

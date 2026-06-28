@@ -1,31 +1,32 @@
-// llm-reasoning-engine.js v6.5.27-expert-fix
-// 专家重构：两阶段生成 + 禁止reasoning_content顶替content
+// llm-reasoning-engine.js v6.5.28-parallel
+// 在 v6.5.27 基础上增加：截止时间(deadline)感知 + 可控重试，适配并行链路
 const fs = require('fs');
 const path = require('path');
 const { normalizeLLMOutput } = require('./llm-output-normalizer');
 
 class LLMEngine {
   constructor(options = {}) {
-    this.model = options.model || process.env.STORMAXE_MODEL || 'kimi-k2p6';
-    this.maxTokens = options.maxTokens || parseInt(process.env.STORMAXE_MAX_TOKENS, 10) || 4096;
-    this.timeoutMs = options.timeoutMs || parseInt(process.env.STORMAXE_TIMEOUT_MS, 10) || 180000;
-    this.temperature = options.temperature ?? (process.env.STORMAXE_TEMPERATURE ? parseFloat(process.env.STORMAXE_TEMPERATURE) : 1);
-    this.topP = options.topP ?? 0.95;
-    this.maxRetries = options.maxRetries || parseInt(process.env.STORMAXE_MAX_RETRIES, 10) || 3;
+    this.model = options.model || 'kimi-k2p6';
+    this.maxTokens = options.maxTokens || 8192; // 【v2.1.4-fix10-P25-fix3】提到8192，防25字段×详细描述被截断
+    this.timeoutMs = options.timeoutMs || 600000;
+    this.temperature = 1;
+    this.topP = 0.95;
+    this.maxRetries = options.maxRetries || 3;
     this.contextWindow = options.contextWindow || 8192;
     this.conversationHistory = [];
     this.stats = { totalCalls: 0, totalTokens: 0, totalDuration: 0, errors: 0 };
     this.mode = options.mode || 'production';
-    this.baseUrl = options.baseUrl || process.env.STORMAXE_BASE_URL || 'https://agent-gw.kimi.com/coding/v1/chat/completions';
-    this.apiKey = options.apiKey || process.env.STORMAXE_API_KEY || process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || process.env.KIMI_PLUGIN_API_KEY;
+    this.baseUrl = options.baseUrl || 'https://agent-gw.kimi.com/coding/v1/chat/completions';
+    this.apiKey = options.apiKey || process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || process.env.KIMI_PLUGIN_API_KEY;
 
-    if (!this.apiKey) {
-      console.warn('[LLMEngine] ⚠️ 未检测到 API Key，请确认环境变量 KIMI_API_KEY 或 MOONSHOT_API_KEY');
+    // 【P0-13 修复】apiKey 缺失时标记为不可用，避免 401 无意义重试
+    this._noApiKey = !this.apiKey;
+    if (this._noApiKey) {
+      console.error('[LLMEngine] ❌ 未检测到 API Key，请确认环境变量 KIMI_API_KEY / MOONSHOT_API_KEY / KIMI_PLUGIN_API_KEY');
     }
   }
 
   _buildHeaders() {
-    // 使用Kimi Plugin认证（兼容agent-gw.kimi.com/coding端点）
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${this.apiKey}`,
@@ -35,42 +36,43 @@ class LLMEngine {
   }
 
   async _fetchWithTimeout(url, options, timeoutMs) {
+    console.log(`[LLMEngine._fetchWithTimeout] 发起请求 | url=${url} | timeout=${timeoutMs}ms`);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    // v6.6.3-fix: LLM 调用心跳保活
-    // 问题: kimi-k2p6 推理模型单次响应需 30-120 秒，期间 await fetch 等待网络
-    // 响应时进程无 stdout 输出，子代理活跃度监控判定为"僵死"并 SIGKILL。
-    // 原理: Node.js 的 await fetch 是异步 I/O，等待期间事件循环不阻塞，
-    // setInterval 心跳可以正常触发，持续向 stdout 输出保活信号。
-    let heartbeatTicks = 0;
-    const heartbeat = setInterval(() => {
-      heartbeatTicks++;
-      // 【fix】每5秒输出带换行符的心跳，确保OpenClaw exec检测到进程活性
-      process.stdout.write(`[llm-heartbeat] tick ${heartbeatTicks}\n`);
-      // 每12次（约60秒）额外输出内存信息
-      if (heartbeatTicks % 12 === 0) {
-        const m = process.memoryUsage();
-        process.stdout.write(`[llm-heartbeat ${heartbeatTicks * 5}s] rss=${(m.rss / 1048576).toFixed(0)}MB heap=${(m.heapUsed / 1048576).toFixed(0)}MB\n`);
-      }
-    }, 5000);
-
+    let textTimer;
     try {
+      console.log(`[LLMEngine._fetchWithTimeout] fetch 开始...`);
       const res = await fetch(url, { ...options, signal: controller.signal });
-      return res;
-    } catch (err) {
-      if (err.name === 'AbortError' || err.code === 'ABORT_ERR') {
-        const error = new Error(`Request timeout after ${timeoutMs}ms`);
-        error.code = 'TIMEOUT';
-        error.original = err;
-        throw error;
-      }
-      throw err;
+      console.log(`[LLMEngine._fetchWithTimeout] fetch 返回 | status=${res.status} | ok=${res.ok}`);
+
+      // 响应体读取加独立超时，防止流半开挂死
+      const textTimeoutMs = Math.max(10000, timeoutMs);
+      console.log(`[LLMEngine._fetchWithTimeout] 开始读取响应体 | textTimeout=${textTimeoutMs}ms`);
+      const text = await Promise.race([
+        res.text(),
+        new Promise((_, reject) => {
+          textTimer = setTimeout(() => {
+            try { controller.abort(); } catch (_) {}
+            // 【健壮性修复】主动取消底层流，释放 socket，防止 res.text() 悬挂泄漏
+            try { res.body && typeof res.body.cancel === 'function' && res.body.cancel(); } catch (_) {}
+            reject(new Error(`res.text() 读取响应体超时(${textTimeoutMs}ms)`));
+          }, textTimeoutMs);
+        })
+      ]).finally(() => clearTimeout(textTimer));
+      console.log(`[LLMEngine._fetchWithTimeout] 响应体读取完成 | length=${text.length}`);
+
+      return {
+        ...res,
+        ok: res.ok,
+        status: res.status,
+        statusText: res.statusText,
+        headers: res.headers,
+        url: res.url,
+        text: () => Promise.resolve(text)
+      };
     } finally {
       clearTimeout(timer);
-      clearInterval(heartbeat);
-      // 心跳结束后补一个换行，避免后续日志粘连在点号后
-      if (heartbeatTicks > 0) process.stdout.write('\n');
+      clearTimeout(textTimer);
     }
   }
 
@@ -86,67 +88,201 @@ class LLMEngine {
     }
   }
 
+  /**
+   * 【根因修复】从文本中提取合法 JSON 字符串
+   *
+   * 原算法为 O(n²)：先找所有 '{'/'[' 起始位置，再对每个起始位置扫描到末尾。
+   * 当输入为 Kimi K2 的 reasoning_content（可达数十万字符）时，会独占 CPU
+   * 数十秒，冻结 Node.js 事件循环，导致所有基于 setTimeout 的超时兜底
+   * （_callWithTimeout / _totalTimeout / AbortController）全部失效，
+   * 进程被外部健康监控 SIGTERM 终止。
+   *
+   * 本修复：单次栈扫描 O(n) + 输入截断 + 同步时间预算，绝不阻塞事件循环。
+   */
   _extractJsonObject(text) {
-    if (!text || typeof text !== 'string') return '';
-    const { json } = require('./llm-output-normalizer').extractJsonObject(text);
-    return json || '';
+    if (!text || typeof text !== 'string') return null;
+
+    // 【防线1】输入硬截断：reasoning 中的目标 JSON 不会出现在 20 万字符之后
+    const MAX_INPUT_LEN = 200000;
+    if (text.length > MAX_INPUT_LEN) {
+      console.warn(`[LLMEngine._extractJsonObject] 输入过长(${text.length})，截断到 ${MAX_INPUT_LEN}`);
+      text = text.slice(0, MAX_INPUT_LEN);
+    }
+
+    // 1. 优先尝试 ```json 代码块
+    const codeBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/i);
+    if (codeBlockMatch?.[1]) {
+      const candidate = codeBlockMatch[1].trim();
+      try { JSON.parse(candidate); return candidate; } catch (_) {}
+    }
+
+    // 2. 尝试整段
+    const whole = text.trim();
+    if (whole) {
+      try { JSON.parse(whole); return whole; } catch (_) {}
+    }
+
+    // 3. 【核心】单次栈扫描找出所有"顶层完整 JSON"候选 —— O(n)
+    // 遇到 '{'/'[' 入栈，遇到匹配的 '}'/']' 出栈，栈空时记录一个完整候选
+    const candidates = []; // { start, end }
+    const stack = []; // { ch, pos }
+    let inString = false, escaped = false;
+
+    // 【防线2】同步时间预算：扫描中定期检查耗时，超过预算立即终止
+    const BUDGET_MS = 300;
+    const scanStart = Date.now();
+    let ops = 0;
+
+    for (let i = 0; i < text.length; i++) {
+      // 每 16384 次操作检查一次时间，避免检查本身成为瓶颈
+      if ((++ops & 0x3FFF) === 0 && (Date.now() - scanStart) > BUDGET_MS) {
+        console.warn(`[LLMEngine._extractJsonObject] 扫描超预算(${Date.now() - scanStart}ms, ops=${ops})，终止扫描`);
+        break;
+      }
+      const ch = text[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (ch === '\\') escaped = true;
+        else if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') { inString = true; continue; }
+      if (ch === '{' || ch === '[') {
+        stack.push({ ch, pos: i });
+      } else if (ch === '}' || ch === ']') {
+        if (stack.length === 0) continue; // 多余的闭合符，跳过
+        const top = stack[stack.length - 1];
+        const expectedClose = top.ch === '{' ? '}' : ']';
+        if (ch === expectedClose) {
+          stack.pop();
+          if (stack.length === 0) {
+            // 栈空 = 找到一个顶层完整 JSON
+            candidates.push({ start: top.pos, end: i });
+          }
+        }
+        // 不匹配的闭合符（如 '{' 遇到 ']'）忽略，避免误判
+      }
+    }
+
+    // 4. 从候选中选最优：最长 + 含关键字段(meta/structure)加权
+    let bestCandidate = null;
+    let bestScore = -1;
+    for (const c of candidates) {
+      const candidate = text.slice(c.start, c.end + 1).trim();
+      let parsed;
+      try { parsed = JSON.parse(candidate); } catch (_) { continue; }
+      const hasKeyFields = parsed && typeof parsed === 'object' &&
+        parsed.meta && parsed.structure;
+      const score = candidate.length + (hasKeyFields ? 100000 : 0);
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = candidate;
+      }
+    }
+    if (bestCandidate) return bestCandidate;
+
+    // 5. 【截断补全】处理被 max_tokens 截断的不完整 JSON（保留原逻辑，加配对校验）
+    const firstBrace = text.indexOf('{');
+    if (firstBrace >= 0) {
+      const lastBrace = text.lastIndexOf('}');
+      const endPos = lastBrace >= firstBrace ? lastBrace + 1 : text.length;
+      let candidate = text.slice(firstBrace, endPos);
+      const stk = [];
+      let inStr = false, esc = false, wellFormed = true;
+      for (const ch of candidate) {
+        if (inStr) {
+          if (esc) esc = false;
+          else if (ch === '\\') esc = true;
+          else if (ch === '"') inStr = false;
+          continue;
+        }
+        if (ch === '"') { inStr = true; continue; }
+        if (ch === '{' || ch === '[') stk.push(ch);
+        else if (ch === '}') {
+          if (stk[stk.length - 1] === '{') stk.pop();
+          else { wellFormed = false; break; }
+        } else if (ch === ']') {
+          if (stk[stk.length - 1] === '[') stk.pop();
+          else { wellFormed = false; break; }
+        }
+      }
+      if (wellFormed) {
+        let suffix = '';
+        while (stk.length) {
+          const open = stk.pop();
+          suffix += (open === '{') ? '}' : ']';
+        }
+        candidate += suffix;
+        // 截掉最后一个不完整的键值对
+        candidate = candidate.replace(/,\s*"[^"]*"?\s*:\s*"[^"]*$/, '');
+        candidate = candidate.replace(/,\s*"[^"]*"?\s*:\s*$/, '');
+        try { JSON.parse(candidate); return candidate; } catch (_) {}
+      }
+    }
+
+    return null;
   }
 
   _extractFromReasoning(reasoning) {
-    if (!reasoning || reasoning.length === 0) return '';
-
-    // 策略 1：提取 JSON（优先）
-    const json = this._extractJsonObject(reasoning);
-    if (json) {
-      console.log(`[LLMEngine] ✅ 从reasoning提取到JSON | 长度: ${json.length}`);
-      return json;
-    }
-
-    // 策略 2：提取最后一段含 { / [ 的段落（可能不是合法 JSON，交给上层校验）
-    const segments = reasoning.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
-    for (let i = segments.length - 1; i >= 0; i--) {
-      const seg = segments[i];
-      if (seg.includes('{') || seg.includes('[')) {
-        console.log(`[LLMEngine] ⚠️ 从reasoning提取到含结构标记段落(待JSON校验) | 长度: ${seg.length}`);
-        return seg;
+    if (!reasoning || typeof reasoning !== 'string') return null;
+    const lines = reasoning.split('\n');
+    // 【P1-27 修复】收紧 indicators，去掉过于宽泛的 { }，保留结构化字段名
+    const indicators = [
+      '"meta"', '"structure"', '"scenes"', '"characters"', '"dialogue"',
+      '"character_system"', '"world_setting"', '"voice_system"',
+      '"shots"', '"review"', '"prompt"', '"title"',
+      '镜头', '全景', '中景', '特写', '推轨', '场景', '角色', '台词',
+      '独白', '对白', '旁白', '片头', '片尾', '画面'
+    ];
+    let best = null, bestLen = 0, current = '';
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (!line) {
+        if (current.length > bestLen) {
+          const hasInd = indicators.some(ind => current.includes(ind));
+          if (hasInd) { bestLen = current.length; best = current.trim(); }
+        }
+        current = '';
+      } else {
+        current = line + '\n' + current;
       }
     }
-    return '';
+    if (current.length > bestLen) {
+      const hasInd = indicators.some(ind => current.includes(ind));
+      if (hasInd) { bestLen = current.length; best = current.trim(); }
+    }
+    return best;
   }
 
   async reason(prompt, options = {}) {
+    // 【P0-13 修复】apiKey 缺失时快速失败，避免 401 无意义重试
+    if (this._noApiKey) {
+      return { success: false, error: 'API Key 未配置', retryable: false };
+    }
+
     const startedAt = Date.now();
     this.stats.totalCalls++;
+
+    const forceJson = options.forceJson === true || options.responseFormat?.type === 'json_object';
 
     const body = {
       model: options.model || this.model,
       messages: [
-        {
-          role: 'system',
-          content: options.systemPrompt || '你是一个严格输出 JSON 的助手。除合法 JSON 外不要输出任何额外文字。'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
+        { role: 'system', content: options.systemPrompt || (forceJson ? '你是一个严格输出 JSON 的助手。除合法 JSON 外不要输出任何额外文字。' : '你是一个可靠的助手。') },
+        { role: 'user', content: prompt }
       ],
-      temperature: options.temperature ?? this.temperature,  // v6.6.5-fix: 优先使用传入值，回退实例值
-      top_p: options.topP ?? this.topP,
+      temperature: options.temperature ?? 1,
+      top_p: options.topP ?? 0.95,
       max_tokens: options.maxTokens ?? this.maxTokens
     };
 
-    if (options.responseFormat) {
-      body.response_format = options.responseFormat;
-    }
+    if (forceJson) body.response_format = { type: 'json_object' };
+    else if (options.responseFormat) body.response_format = options.responseFormat;
 
     try {
       const response = await this._fetchWithTimeout(
         this.baseUrl,
-        {
-          method: 'POST',
-          headers: this._buildHeaders(),
-          body: JSON.stringify(body)
-        },
+        { method: 'POST', headers: this._buildHeaders(), body: JSON.stringify(body) },
         options.timeoutMs || this.timeoutMs
       );
 
@@ -158,218 +294,192 @@ class LLMEngine {
       }
 
       let result;
-      try {
-        result = JSON.parse(text);
-      } catch (e) {
+      try { result = JSON.parse(text); }
+      catch (e) {
         this.stats.errors++;
         const file = this._dumpDebugFile('invalid_response_json', text);
         throw new Error(`API响应不是合法JSON: ${e.message}${file ? ` | dump=${file}` : ''}`);
       }
 
       const message = result.choices?.[0]?.message || {};
-      const content = message.content || '';
-      const reasoningContent = message.reasoning_content || '';
+      const content = typeof message.content === 'string' ? message.content : '';
+      const reasoningContent = typeof message.reasoning_content === 'string' ? message.reasoning_content : '';
       const usage = result.usage || {};
       const tokenCount = usage.total_tokens || 0;
 
       this.stats.totalTokens += tokenCount;
       this.stats.totalDuration += Date.now() - startedAt;
 
-      console.log(`[LLMEngine] ✅ API完成 | Tokens: ${tokenCount} | content=${content.length} | reasoning=${reasoningContent.length}`);
+      console.log(`[LLMEngine] API完成 | Tokens: ${tokenCount} | content=${content.length} | reasoning=${reasoningContent.length}`);
 
-      // 统一使用 normalizeLLMOutput 处理输出
-      const normalized = normalizeLLMOutput({
-        content,
-        reasoning_content: reasoningContent
-      });
+      const normalized = normalizeLLMOutput({ content, reasoning_content: reasoningContent });
+      let finalContent = normalized.text || '';
 
-      let finalContent = normalized.text;
-
-      if (!normalized.ok || !finalContent || finalContent.trim().length < 50) {
-        if (reasoningContent && reasoningContent.length > 50) {  // v6.5.65-P8-patch-005: 降低阈值，适配通用内容
-          const extracted = this._extractFromReasoning(reasoningContent);
-          if (extracted && extracted.length > 50) {  // v6.5.65-P8-patch-005: 降低阈值
-            finalContent = extracted;
-            console.log(`[LLMEngine] ✅ 从reasoning提取内容 | 长度: ${extracted.length}`);
-          } else {
-            const reasonFile = this._dumpDebugFile('empty_content_reasoning', reasoningContent);
-            throw new Error(
-              `LLM返回content为空，且无法从reasoning提取有效内容` +
-              `${reasonFile ? ` | reasoning_dump=${reasonFile}` : ''}`
-            );
+      // 【根因修复·源头】JSON 模式下仅当 content 为空/空白时才回退 reasoning 提取
+      //
+      // 原阈值 content.length < 5000 过于激进：会把 ContinuityReview 等场景的
+      // 完整短 JSON（如 1193 字符的审查结果）误判为"极短/不完整"，强行对超长
+      // reasoning_content 触发 _extractJsonObject 的 O(n²) 扫描，同步阻塞事件循环，
+      // 导致所有 setTimeout 超时兜底失效 → 进程挂起 → SIGTERM。
+      //
+      // 修复策略：content 非空即信任，交给上层 reasonStructured 解析；解析失败由
+      // reasonStructured 的重试机制处理，绝不在此处对 reasoning 做重量级提取。
+      if (forceJson) {
+        const contentEmpty = !content || !content.trim();
+        if (contentEmpty) {
+          if (reasoningContent && reasoningContent.trim()) {
+            console.warn('[LLMEngine] JSON模式content为空，尝试从reasoning提取...');
+            const extracted = this._extractJsonObject(reasoningContent);
+            if (extracted) {
+              console.log('[LLMEngine] 从reasoning成功提取JSON，长度：' + extracted.length);
+              return { success: true, content: extracted, reasoning_content: reasoningContent, source: 'reasoning-extract-json', tokenCount, raw: result };
+            }
           }
-        } else {
           const reasonFile = this._dumpDebugFile('empty_content_reasoning', reasoningContent);
-          throw new Error(
-            `LLM返回content为空，疑似tokens被reasoning耗尽` +
-            `${reasonFile ? ` | reasoning_dump=${reasonFile}` : ''}`
-          );
+          throw new Error(`LLM返回content为空，JSON模式下无法从reasoning提取有效JSON${reasonFile ? ` | reasoning_dump=${reasonFile}` : ''}`);
+        }
+        // content 非空（即使较短）：信任，正常返回，交给上层解析
+      } else {
+        if (!normalized.ok || !finalContent || !finalContent.trim()) {
+          const reasonFile = this._dumpDebugFile('empty_content_reasoning', reasoningContent);
+          throw new Error(`LLM返回content为空，且当前请求未获得有效正文${reasonFile ? ` | reasoning_dump=${reasonFile}` : ''}`);
         }
       }
 
-      // v6.7.0-fix: 如果 content 有效，将 reasoning_content 截断为摘要，避免外部内存膨胀
-      let trimmedReasoning = reasoningContent;
-      if (finalContent && finalContent.length > 50 && reasoningContent && reasoningContent.length > 200) {
-        trimmedReasoning = reasoningContent.substring(0, 200) + '... (truncated, ' + reasoningContent.length + ' chars)';
-      }
-
-      return {
-        success: true,
-        content: finalContent,
-        reasoning_content: trimmedReasoning,
-        source: normalized.source,
-        tokenCount
-        // raw: result  // v6.6-fix: 不返回完整raw响应,减少内存占用
-      };
+      return { success: true, content: forceJson ? content : finalContent, reasoning_content: reasoningContent, source: forceJson ? 'content-only-json-mode' : normalized.source, tokenCount, raw: result };
     } catch (error) {
       this.stats.errors++;
+      // 【P0-12 修复】区分错误类型：超时/鉴权错误不可重试
+      const isTimeout = error.name === 'AbortError' || /超时|timeout|res\.text\(\)/i.test(error.message);
+      const isAuth = /401|403|auth|鉴权|unauthorized|API Key/i.test(error.message);
       return {
         success: false,
-        error: error.message || String(error)
+        error: error.message || String(error),
+        retryable: !isTimeout && !isAuth
       };
     }
   }
 
-  async generate(prompt, options = {}) {
-    const result = await this.reason(prompt, options);
-    return result;
+  async generate(prompt, options = {}) { return this.reason(prompt, options); }
+
+  /**
+   * chat 接口（BaseAgent 标准接口兼容）
+   * 【P0-2 修复】LLMEngine 原本没有 chat 方法，但 field-check-agent / field-repair-agent /
+   * cross-episode-validator 都调用 this.llm.chat(systemPrompt, userPrompt, temperature)，
+   * 期望返回字符串。缺失 chat 会导致同步 TypeError → 模块失效 + 定时器泄漏 + 进程崩溃。
+   * @param {string} systemPrompt - 系统提示词
+   * @param {string} userPrompt - 用户提示词
+   * @param {number} [temperature=1] - 温度
+   * @returns {Promise<string>} 返回 content 字符串
+   */
+  async chat(systemPrompt, userPrompt, temperature = 1) {
+    if (this._noApiKey) {
+      throw new Error('API Key 未配置');
+    }
+    const result = await this.reason(userPrompt, {
+      systemPrompt: systemPrompt || '你是一个可靠的助手。',
+      temperature: temperature,
+      forceJson: false
+    });
+    if (!result || !result.success) {
+      throw new Error(result && result.error ? result.error : 'LLM chat 调用失败');
+    }
+    const content = typeof result.content === 'string' ? result.content : '';
+    if (!content) {
+      throw new Error('LLM chat 返回 content 为空');
+    }
+    return content;
   }
 
+  /**
+   * 结构化推理（v6.5.28：支持 maxRetries / deadlineMs 覆盖 + 截止时间门控重试）
+   */
   async reasonStructured(prompt, schema, options = {}) {
-    const startTime = Date.now();
-    const maxRetries = options.maxRetries || this.maxRetries || 3;
-    const timeoutMs = options.timeoutMs || this.timeoutMs || 120000;
-    const temperature = options.temperature ?? 1;
-    const topP = options.topP ?? 0.95;
-    const maxTokens = options.maxTokens ?? this.maxTokens ?? 4096;
+    const structuredPrompt = [
+      prompt,
+      '',
+      '【硬性输出要求】',
+      '1. 只输出合法 JSON',
+      '2. 不要输出 markdown 代码块',
+      '3. 不要输出解释、前言、结尾',
+      '4. 所有字段必须存在',
+      '5. 输出必须能被 JSON.parse 直接解析',
+      '',
+      '【目标JSON结构示例】',
+      JSON.stringify(schema, null, 2)
+    ].join('\n');
 
+    const maxRetries = options.maxRetries ?? this.maxRetries;
+    const deadlineMs = options.deadlineMs || null;
+    // 【问题4 修复】单次 reasonStructured 总耗时上限 = options.timeoutMs（外层 perCallTimeout）
+    const totalTimeout = options.timeoutMs || this.timeoutMs;
+    const callStart = Date.now();
     let lastError = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      // === 截止时间门控：超时则停止重试 ===
+      if (deadlineMs && Date.now() >= deadlineMs) {
+        console.warn(`[LLMEngine] 截止时间已到，停止重试 (attempt ${attempt}/${maxRetries})`);
+        break;
+      }
+
+      // 【问题4 修复】总耗时门控：不能超过外层 perCallTimeout
+      const elapsed = Date.now() - callStart;
+      if (elapsed >= totalTimeout) {
+        console.warn(`[LLMEngine] reasonStructured 总耗时(${elapsed}ms)已达上限(${totalTimeout}ms)，停止重试`);
+        break;
+      }
+
+      // 单次超时 = min(调用方 timeoutMs, 距截止时间, 剩余总预算)
+      let attemptTimeout = options.timeoutMs || this.timeoutMs;
+      if (deadlineMs) {
+        attemptTimeout = Math.min(attemptTimeout, Math.max(10000, deadlineMs - Date.now()));
+      }
+      attemptTimeout = Math.min(attemptTimeout, Math.max(10000, totalTimeout - elapsed));
+      if (attemptTimeout < 10000) {
+        console.warn(`[LLMEngine] 单次重试剩余预算不足(${attemptTimeout}ms)，停止`);
+        break;
+      }
+
+      const result = await this.reason(structuredPrompt, {
+        ...options,
+        forceJson: true,
+        responseFormat: { type: 'json_object' },
+        temperature: options.temperature ?? 1,
+        maxTokens: options.maxTokens ?? this.maxTokens,
+        timeoutMs: attemptTimeout
+      });
+
+      if (!result.success) {
+        lastError = result.error;
+        console.warn(`[LLMEngine] reasonStructured attempt ${attempt}/${maxRetries} 失败: ${lastError}`);
+        // 【P0-12 修复】超时/鉴权错误不可重试
+        if (result.retryable === false) {
+          console.warn(`[LLMEngine] 错误不可重试(${lastError})，停止重试`);
+          break;
+        }
+        continue;
+      }
+
       try {
-        console.log(`[LLMEngine] reasonStructured 第 ${attempt}/${maxRetries} 次尝试`);
-
-        const result = await this.reason(prompt, {
-          ...options,
-          responseFormat: { type: 'json_object' },
-          temperature,
-          topP,
-          maxTokens,
-          timeoutMs
-        });
-
-        if (!result.success) {
-          lastError = result.error;
-          console.warn(`[LLMEngine] ⚠️ reasonStructured attempt ${attempt}/${maxRetries} API失败: ${lastError}`);
-          if (attempt < maxRetries) {
-            const wait = 1000 * Math.pow(2, attempt - 1) + Math.random() * 500;
-            console.log(`[LLMEngine] ${Math.round(wait)}ms 后重试...`);
-            await new Promise(r => setTimeout(r, wait));
-          }
-          continue;
+        if (!result.content || !result.content.trim()) {
+          const dump = this._dumpDebugFile('json_extract_fail_content', result.content || '');
+          throw new Error(`content为空，无法解析JSON${dump ? ` | dump=${dump}` : ''}`);
         }
-
-        const reasoningContent = result.reasoning_content || '';
-        const normalized = require('./llm-output-normalizer').normalizeLLMOutput({
-          content: result.content,
-          reasoning_content: reasoningContent
-        });
-
-        console.log(
-          `[LLMEngine] 归一化 | source=${normalized.source} ok=${normalized.ok} ` +
-          `hasJson=${normalized.hasJson} jsonType=${normalized.jsonType} textLen=${normalized.text?.length || 0}`
-        );
-
-        // ============ 决策链：按优先级确定 finalContent ============
-        let finalContent = '';
-
-        // 1) 归一化已提取到 JSON → 直接用
-        if (normalized.hasJson && normalized.jsonText) {
-          finalContent = normalized.jsonText;
-          console.log(`[LLMEngine] ✅ 使用归一化JSON | source=${normalized.source} len=${finalContent.length}`);
+        const extracted = this._extractJsonObject(result.content);
+        if (!extracted) {
+          const dump = this._dumpDebugFile('json_extract_fail_content', result.content);
+          throw new Error(`无法从content提取合法JSON${dump ? ` | dump=${dump}` : ''}`);
         }
-        // 2) content 来源且本身是合法 JSON 文本
-        else if (normalized.source === 'content' && normalized.text) {
-          const j = this._extractJsonObject(normalized.text);
-          finalContent = j || normalized.text;
-          console.log(`[LLMEngine] ${j ? '✅' : '⚠️'} content来源 ${j ? '提取JSON' : '使用原文'} | len=${finalContent.length}`);
-        }
-        // 3) ★关键修复：reasoning 来源但 hasJson=false → 强制重新抠 JSON
-        else if (normalized.source === 'reasoning_content') {
-          console.log(`[LLMEngine] ⚠️ reasoning来源但归一化未提取到JSON，强制重新提取`);
-          const extracted = this._extractFromReasoning(reasoningContent);
-          finalContent = (extracted && extracted.length > 20) ? extracted : normalized.text;
-        }
-        // 4) 兜底
-        else if (normalized.ok && normalized.text) {
-          finalContent = normalized.text;
-        }
-
-        // ============ 最终 JSON 合法性校验 ============
-        const validated = this._extractJsonObject(finalContent);
-        if (validated) {
-          finalContent = validated;
-        } else {
-          console.log(`[LLMEngine] ❌ 最终内容非合法JSON，从原始reasoning做最后兜底`);
-          if (reasoningContent && reasoningContent.length > 50) {
-            const lastJson = this._extractJsonObject(reasoningContent);
-            if (lastJson) {
-              finalContent = lastJson;
-              console.log(`[LLMEngine] ✅ 最后兜底从reasoning提取JSON成功 | len=${finalContent.length}`);
-            } else {
-              throw new Error(
-                `LLM返回内容无法解析为JSON | source=${normalized.source} ` +
-                `textLen=${finalContent.length} reasoningLen=${reasoningContent.length}`
-              );
-            }
-          } else {
-            throw new Error(`LLM返回内容无法解析为JSON且无reasoning可用 | textLen=${finalContent.length}`);
-          }
-        }
-
-        // ============ 长度校验 ============
-        if (!finalContent || finalContent.trim().length < 20) {
-          throw new Error(`LLM返回内容过短 | len=${finalContent?.length || 0} source=${normalized.source}`);
-        }
-
-        // ============ 解析 ============
-        const parsed = JSON.parse(finalContent);
-
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`[LLMEngine] ✅ reasonStructured成功 | 耗时:${elapsed}s 尝试:${attempt} source=${normalized.source}`);
-
-        // v6.7.0-fix: 截断 reasoning_content，避免外部内存膨胀
-        let trimmedReasoning = reasoningContent;
-        if (reasoningContent && reasoningContent.length > 200) {
-          trimmedReasoning = reasoningContent.substring(0, 200) + '... (truncated, ' + reasoningContent.length + ' chars)';
-        }
-
-        return {
-          success: true,
-          data: parsed,
-          rawContent: finalContent,
-          reasoning_content: trimmedReasoning,
-          source: normalized.source,
-          attempts: attempt,
-          elapsed: parseFloat(elapsed)
-        };
-
-      } catch (err) {
-        lastError = err;
-        console.log(`[LLMEngine] ❌ 第 ${attempt}/${maxRetries} 次失败: ${err.message}`);
-        if (attempt < maxRetries) {
-          const wait = 1000 * Math.pow(2, attempt - 1) + Math.random() * 500;
-          console.log(`[LLMEngine] ${Math.round(wait)}ms 后重试...`);
-          await new Promise(r => setTimeout(r, wait));
-        }
+        const parsed = JSON.parse(extracted);
+        return { success: true, data: parsed, rawContent: result.content, reasoning_content: result.reasoning_content };
+      } catch (parseError) {
+        lastError = `JSON parse error: ${parseError.message}`;
+        console.warn(`[LLMEngine] reasonStructured attempt ${attempt}/${maxRetries} 解析失败: ${lastError}`);
       }
     }
 
-    return {
-      success: false,
-      error: lastError?.message || '未知错误',
-      attempts: maxRetries
-    };
+    return { success: false, error: lastError || '未知错误' };
   }
 }
 
