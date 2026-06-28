@@ -754,8 +754,8 @@ class ProductionEngine {
 
       // ===== Phase-3.5: 字段质量检查与修复（自适应预算）=====
       const remainingBudget = this._budgetRemaining();
-      if (remainingBudget < 15000) {
-        this.log('FIELD-QUALITY', `⚠️ 预算不足(剩${remainingBudget}ms),跳过字段质量检查`);
+      if (remainingBudget < 15000 || this.agentConfig.skipFieldQuality) {
+        this.log('FIELD-QUALITY', `⚠️ 预算不足或已配置跳过(剩${remainingBudget}ms),跳过字段质量检查`);
       } else if (remainingBudget < 60000) {
         // 15s-60s: 纯规则检查（不调LLM）
         try {
@@ -786,8 +786,8 @@ class ProductionEngine {
           const pipeline = new FieldQualityPipeline({
             llmModel: this.llmModel,
             maxRounds: 1, // 1轮
-            checkerTimeout: 60000,
-            repairerTimeout: 120000,
+            checkerTimeout: 30000,
+            repairerTimeout: 30000,
           });
           pipeline.setPRDFromBlueprint(adaptedBlueprint);
           // 【v2.1.4-fix13-审计修复】下发全局 deadline
@@ -807,9 +807,9 @@ class ProductionEngine {
           const { FieldQualityPipeline } = require('../field-quality');
           const pipeline = new FieldQualityPipeline({
             llmModel: this.llmModel,
-            maxRounds: 2,
-            checkerTimeout: 120000,
-            repairerTimeout: 180000,
+            maxRounds: 1, // 1轮（审计修复：超时频发，降为1轮）
+            checkerTimeout: 30000,
+            repairerTimeout: 30000,
           });
           pipeline.setPRDFromBlueprint(adaptedBlueprint);
           // 【v2.1.4-fix13-审计修复】下发全局 deadline
@@ -1705,7 +1705,7 @@ class ProductionEngine {
           const fullPath = path.join(dir, item.name);
           if (item.isDirectory()) {
             searchDir(fullPath);
-          } else if (item.isFile() && /\.(png|jpg|jpeg|webp)$/i.test(item.name)) {
+          } else if ((item.isFile() || item.isSymbolicLink()) && /\.(png|jpg|jpeg|webp)$/i.test(item.name)) {
             const lowerName = item.name.toLowerCase();
             // 优先匹配包含角度关键词的文件名
             let matched = false;

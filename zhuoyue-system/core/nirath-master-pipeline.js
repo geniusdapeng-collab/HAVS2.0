@@ -53,7 +53,7 @@
  * - 副标题长度限制15字，过长时智能生成（系列信息/主讲人/类型标签）
  * - run-preproduction-v3.js: 不再将 requirement.topic 直接传入 subtitle
  * - v6.6.0-P2: Checkpoint 路径修复 - 2026-06-16
- * - 修复 Stage 5A/11 checkpoint 落盘路径错误（原写入 /tmp，现统一至 output/health-edu-ep01/）
+ * - 修复 Stage 5A/11 checkpoint 落盘路径错误（原写入 /tmp，现统一至 output/$项目名/）
  * - 使用 path.resolve(process.cwd(), this.outputDir) 确保绝对路径一致
  * - v6.6.0-P1: 内存稳定性补丁 (Memory Stability Patch) - 2026-06-16
  * - 生产验证: 82分/B级/PASS, 无SIGKILL, RSS稳定在90MB
@@ -316,6 +316,22 @@ function slimPipelineResult(result) {
 
 // ========== v6.6.5-fix: 主题一致性配置表（按项目/主题管理，防主题漂移）==========
 const TOPIC_CONSISTENCY_CONFIG = {
+  'health-edu-ep01-rhabdomyolysis-symptoms': {
+    seriesTitle: '健康科普系列：横纹肌溶解',
+    episodeIndex: 1,
+    episodeTitle: '症状与检查',
+    topic: '横纹肌溶解的症状以及实验室检查',
+    forbiddenContext: '',
+    requiredKeywords: ['横纹肌', '溶解', '症状', '肌无力', '疼痛', '肿胀', '尿液', '颜色', '肌酸激酶', '肌红蛋白', 'CK', '肾'],
+    forbiddenKeywords: [],
+    sceneNameMapping: {
+      'S01': '开场-引入横纹肌溶解',
+      'S02': '症状表现-肌肉与尿液',
+      'S03': '实验室检查-核心指标',
+      'S04': '总结与就医建议',
+      'S05': '结尾-回顾重点'
+    }
+  },
   'health-edu-ep02-rhabdomyolysis-causes': {
     seriesTitle: '健康科普系列：横纹肌溶解',
     episodeIndex: 2,
@@ -367,7 +383,23 @@ const TOPIC_CONSISTENCY_CONFIG = {
   }
 };
 
-// 默认配置兜底（未命中项目时）
+// v6.7.1-fix: 动态构建通用项目配置
+function buildDynamicTopicConfig(input) {
+  const title = input.title || input.projectName || '';
+  const topic = input.topic || input.content?.topic || title;
+  
+  return {
+    seriesTitle: title.substring(0, 30) || '未命名系列',
+    episodeIndex: input.currentEpisode || 1,
+    episodeTitle: title.substring(0, 30),
+    topic: topic,
+    forbiddenContext: '',
+    requiredKeywords: [],
+    forbiddenKeywords: [],
+    sceneNameMapping: {}
+  };
+}
+
 const DEFAULT_TOPIC_CONFIG = {
   requiredKeywords: [],
   forbiddenKeywords: [],
@@ -2091,8 +2123,15 @@ const { spawn } = require('child_process');
     if (id.includes('xiao') || id.includes('g') || name.includes('小')) {
       return { age: 8, gender: 'boy', role: 'audience' };
     }
-    if (id.includes('nurse') || name.includes('护士') || name.includes('陈女士')) {
-      return { age: 30, gender: 'female', role: 'nurse' };
+    // v6.7.1-fix: 动态推断角色类型，消灭硬编码护士检测
+    if (name.includes('护士') || name.includes('医生') || name.includes('医师')) {
+      return { age: 30, gender: 'female', role: 'medical' };
+    }
+    if (name.includes('孙悟空') || name.includes('猴') || id.includes('wukong')) {
+      return { age: 500, gender: 'male', role: 'mythical-warrior' };
+    }
+    if (name.includes('二郎') || name.includes('杨戬') || id.includes('erlang')) {
+      return { age: 1000, gender: 'male', role: 'mythical-warrior' };
     }
     if (id.includes('coach') || name.includes('教练') || name.includes('李明')) {
       return { age: 35, gender: 'male', role: 'coach' };
@@ -2641,7 +2680,7 @@ const { spawn } = require('child_process');
     }
 
     const results = [];
-    const outputBase = path.resolve(this.outputDir || './output/health-edu-ep01');
+    const outputBase = path.resolve(this.outputDir || `./output/${this.input?.projectName || 'project'}`);
     const stage5ACheckpoint = path.join(outputBase, 'stage5A-checkpoint.json');
     const stage5AJsonl = path.join(outputBase, 'stage5A-batches.jsonl');
 
@@ -2849,7 +2888,7 @@ const { spawn } = require('child_process');
     };
 
     const results = [];
-    const outputBase = path.resolve(this.outputDir || './output/health-edu-ep01');
+    const outputBase = path.resolve(this.outputDir || `./output/${this.input?.projectName || 'project'}`);
     const stage5BCheckpoint = path.join(outputBase, 'stage5B-checkpoint.json');
     const stage5BJsonl = path.join(outputBase, 'stage5B-shots.jsonl');
 
@@ -2962,16 +3001,34 @@ const { spawn } = require('child_process');
     // F: 正面引导替代负面约束
 
     const parts = [];
+    
+    // v6.7.1-fix: 动态推断 Agent 类型，消灭硬编码"健康科普"
+    const isMedicalTopic = topic && (topic.includes('健康') || topic.includes('医学') || topic.includes('疾病') || topic.includes('症状') || topic.includes('科普'));
+    const isMythologyTopic = topic && (topic.includes('神话') || topic.includes('孙悟空') || topic.includes('神仙') || topic.includes('天庭'));
+    const isActionTopic = topic && (topic.includes('战斗') || topic.includes('对决') || topic.includes('动作') || topic.includes('战争'));
+    
+    let agentRole = '视频剧本策划Agent';
+    let agentExpertise = '你擅长将主题内容转化为生动有趣的视频讲解，既保持专业度又兼顾观众理解。';
+    if (isMedicalTopic) {
+      agentRole = '资深健康科普视频剧本策划Agent';
+      agentExpertise = '你擅长将医学知识转化为通俗易懂的科普讲解，既保持专业度又兼顾大众理解。';
+    } else if (isMythologyTopic) {
+      agentRole = '神话史诗视频剧本策划Agent';
+      agentExpertise = '你擅长将神话故事转化为震撼史诗的视听叙事，既保持神话原型的魅力又兼顾现代观众的审美。';
+    } else if (isActionTopic) {
+      agentRole = '动作影视剧本策划Agent';
+      agentExpertise = '你擅长设计紧张刺激的动作场面和角色对白，既保持视觉冲击力又兼顾叙事节奏。';
+    }
 
     // ---------------- 系统角色 (正面引导) ----------------
     parts.push(`<system>`);
-    parts.push(`你是一位资深健康科普视频剧本策划Agent。你的任务是根据给定的视频主题和场景要求，生成对应的剧本骨架。`);
-    parts.push(`你擅长将医学知识转化为通俗易懂的科普讲解，既保持专业度又兼顾大众理解。`);
+    parts.push(`你是一位${agentRole}。你的任务是根据给定的视频主题和场景要求，生成对应的剧本骨架。`);
+    parts.push(`${agentExpertise}`);
     parts.push(`</system>`);
 
     // ---------------- 主题上下文 ----------------
     parts.push(`\n<topic_context>`);
-    parts.push(`<series>${config.seriesTitle || '健康科普系列'}</series>`);
+    parts.push(`<series>${config.seriesTitle || '视频系列'}</series>`);
     parts.push(`<episode>第 ${config.episodeIndex || 'N'} 集：${config.episodeTitle || topic}</episode>`);
     parts.push(`<topic>${config.topic || topic}</topic>`);
     if (config.episodeIndex > 1) {
@@ -3078,7 +3135,7 @@ const { spawn } = require('child_process');
   // v6.6.5-fix: 主题一致性辅助函数
   // ============================================================
 
-  // 读取主题配置（支持按项目名或按主题关键词匹配）
+  // 读取主题配置（支持按项目名或按主题关键词匹配，v6.7.1-fix: 未命中时动态构建）
   _getTopicConfig(projectName, topic) {
     if (projectName && TOPIC_CONSISTENCY_CONFIG[projectName]) {
       return TOPIC_CONSISTENCY_CONFIG[projectName];
@@ -3089,7 +3146,8 @@ const { spawn } = require('child_process');
         return cfg;
       }
     }
-    return { ...DEFAULT_TOPIC_CONFIG, topic };
+    // v6.7.1-fix: 未命中时动态构建通用配置，消灭硬编码兜底
+    return buildDynamicTopicConfig({ projectName, topic });
   }
 
   // 计算单条台词的主题偏离度 (v6.6.8-fix: 放宽标准，避免过度修正)
@@ -3351,8 +3409,13 @@ const { spawn } = require('child_process');
 
     parts.push(`
 【风格要求】`);
-    parts.push(`- 超写实纪录片风格`);
-    parts.push(`- 医疗/科普场景真实可信`);
+    // v6.7.1-fix: 动态风格要求，消灭硬编码"纪录片/医疗"
+    const isMythPrompt = topic && (topic.includes('神话') || topic.includes('孙悟空') || topic.includes('神仙'));
+    const isActPrompt = topic && (topic.includes('战斗') || topic.includes('对决') || topic.includes('动作'));
+    const styleHint = isMythPrompt ? '神话史诗风格' : (isActPrompt ? '动作电影风格' : '超写实纪录片风格');
+    const sceneHint = isMythPrompt ? '神话/史诗场景真实可信' : (isActPrompt ? '动作/战斗场景真实可信' : '医疗/科普场景真实可信');
+    parts.push(`- ${styleHint}`);
+    parts.push(`- ${sceneHint}`);
     parts.push(`- 人物表情自然,不夸张`);
     parts.push(`- 适合后续视频生成模型理解`);
 
@@ -3367,7 +3430,7 @@ const { spawn } = require('child_process');
 【输出示例】`);
     parts.push(`{
   "id": "${scene.id}",
-  "visualPrompt": "超写实纪录片风格,专业医疗科普环境中,主持人面对镜头进行清晰讲解,神态自然沉稳,人物位于中近景构图,背景为整洁明亮的诊室或科普演播空间,画面采用柔和自然光,细节真实,镜头稳定,整体呈现专业、可信、克制的医学科普质感。",
+  "visualPrompt": "超写实风格,人物面对镜头进行清晰讲解,神态自然沉稳,人物位于中近景构图,背景整洁明亮,画面采用柔和自然光,细节真实,镜头稳定,整体呈现专业、可信的质感。",
   "action": "双手自然展开,身体微微前倾,面向镜头讲解"
 }`);
 
@@ -3380,45 +3443,41 @@ const { spawn } = require('child_process');
     
     // v6.6.8-fix: 更智能的 fallback，基于场景名称和描述生成具体内容
     const charNames = Object.values(characters || {}).map(c => c.name || c.id || '').filter(Boolean);
-    const speaker = charNames[0] || '陈卓';
+    // v6.7.1-fix: 消灭硬编码 "陈卓" 兜底
+    const speaker = charNames[0] || '主讲人';
 
     // 根据场景类型和名称生成更具体的 fallback 内容
     const nameLower = name.toLowerCase();
     
-    // 开场场景
+    // 开场场景 - v6.7.1-fix: 通用化开场台词，不再硬编码医学主题
     if (scene.type === 'intro' || scene.type === 'opening' || scene.type === 'establishing') {
-      return `大家好，我是${speaker}。今天给大家讲的是横纹肌溶解的相关知识。很多人可能对这个名词不太熟悉，但它其实和我们的生活息息相关。接下来，我会从症状表现和检查方法两个方面，带大家深入了解。`;
+      const topic = scene.topic || scene.title || desc || '今天的主题';
+      return `大家好，我是${speaker}。今天给大家讲的是${topic}。接下来，我会带大家深入了解。`;
     }
     
-    // 结尾场景
+    // 结尾场景 - v6.7.1-fix: 通用化结尾台词
     if (scene.type === 'ending' || scene.type === 'closing') {
-      return `好了，今天关于横纹肌溶解的内容就讲到这里。记住，如果出现肌肉剧痛、尿液颜色加深等症状，一定要及时就医检查。早发现、早治疗，才能保护好我们的健康。`;
+      const topic = scene.topic || scene.title || desc || '今天的内容';
+      return `好了，今天关于${topic}就讲到这里。希望这些内容对你有帮助。`;
     }
     
     // 根据场景名称关键词生成具体内容
-    if (nameLower.includes('症状') || nameLower.includes('表现')) {
-      return `横纹肌溶解最典型的症状有三个：第一是肌肉疼痛和无力，特别是大腿、小腿和腰部；第二是尿液颜色变深，像浓茶或酱油色；第三是全身乏力、恶心呕吐。这些症状一旦出现，就要高度警惕。`;
-    }
-    
-    if (nameLower.includes('检查') || nameLower.includes('化验') || nameLower.includes('实验室')) {
-      return `到了医院，医生主要通过几项检查来确诊。最重要的是肌酸激酶，也就是CK值，正常人是几百，横纹肌溶解的患者能飙到几万。还要查肌红蛋白、肾功能和电解质，看看有没有伤到肾脏。`;
-    }
-    
-    if (nameLower.includes('原因') || nameLower.includes('机制') || nameLower.includes('为什么')) {
-      return `横纹肌溶解的原因有很多，最常见的是运动过度。平时不锻炼的人突然剧烈运动，肌纤维就会大量损伤。另外，某些药物、外伤、高温脱水也可能引发。简单说，就是肌肉细胞破了，里面的东西漏到血液里。`;
-    }
-    
-    if (nameLower.includes('治疗') || nameLower.includes('处理')) {
-      return `治疗横纹肌溶解，最关键的就是大量补液，帮助身体把肌红蛋白尽快排出去。如果肾功能已经受损，可能还需要做血液净化。所以发现症状千万别拖，越早治疗效果越好。`;
-    }
-    
-    if (nameLower.includes('预防') || nameLower.includes('避免')) {
-      return `预防横纹肌溶解，记住三句话：第一，运动要循序渐进，不要突然上高强度；第二，服药期间注意观察，有不适及时就医；第三，高温天多喝水，避免脱水。做好这三点，风险就能大大降低。`;
-    }
-    
-    // 根据描述生成
+    // v6.7.1-fix: 通用 fallback 内容生成——从场景描述推断主题，消灭硬编码医学台词
     if (desc) {
       return `接下来${speaker}重点讲解${desc}，帮助大家快速抓住关键知识点。`;
+    }
+    
+    // 根据场景名称关键词推断
+    if (nameLower.includes('症状') || nameLower.includes('表现') || nameLower.includes('检查') || nameLower.includes('化验') || nameLower.includes('原因') || nameLower.includes('机制') || nameLower.includes('治疗') || nameLower.includes('预防')) {
+      return `这一部分${speaker}重点讲解${name}，帮助大家快速抓住关键知识点。`;
+    }
+    
+    if (nameLower.includes('开场') || nameLower.includes('开场') || nameLower.includes('intro')) {
+      return `大家好，我是${speaker}。今天我们要探讨的是${topic || '这个主题'}，接下来会带大家深入了解。`;
+    }
+    
+    if (nameLower.includes('结尾') || nameLower.includes('结束') || nameLower.includes('closing')) {
+      return `好了，今天关于${topic || '这个主题'}的讲解就到这里。希望这些内容对你有帮助。`;
     }
     
     return `这一部分${speaker}重点讲解${name}，帮助大家快速抓住关键知识点。`;
@@ -3426,7 +3485,7 @@ const { spawn } = require('child_process');
 
   _buildFallbackDialogueBlock(scene, characters = {}, text = '') {
     const charNames = Object.values(characters || {}).map(c => c.name || c.id || '').filter(Boolean);
-    const speaker = charNames[0] || '陈卓';
+    const speaker = charNames[0] || '主讲人';
 
     // 推断对话类型
     let type = '独白';
@@ -3469,7 +3528,7 @@ const { spawn } = require('child_process');
 
     // v6.5.29: 确保结尾镜头narration完整收束,避免以半截词结尾
     if (scene.type === 'closing') {
-      return `以上就是关于${scene.name || '本话题'}的核心要点。如果出现相关症状,请及时就医。`;
+      return `以上就是关于${scene.name || '本话题'}的核心要点。`;
     }
 
     return desc + '。';
@@ -3477,14 +3536,14 @@ const { spawn } = require('child_process');
 
   _buildFallbackVisualPrompt(scene, world) {
     return [
-      `超写实纪录片风格,`,
+      `超写实风格,`,
       `${world?.setting || '真实场景'},`,
       `镜头表现${scene.name || '当前场景'},`,
       `突出${scene.description || '关键信息讲解'},`,
       `人物动作自然,表情专业克制,`,
       `采用中近景或特写镜头,`,
       `自然光或柔和室内布光,`,
-      `画面真实、干净、稳定,适合医学科普视频生成。`
+      `画面真实、干净、稳定。`
     ].join('');
   }
 
@@ -3520,8 +3579,17 @@ const { spawn } = require('child_process');
         }
       }
     }
-    // 如果没有提取到角色,使用默认值
-    const defaultChars = isNirath ? 'xiaoG,taotie' : 'chen-nurse,xiaoG,coach-li';
+    // 如果没有提取到角色,使用默认值 - v6.7.1-fix: 消灭硬编码默认角色
+    let defaultChars;
+    if (allChars.size > 0) {
+      defaultChars = Array.from(allChars).join(',');
+    } else if (isNirath) {
+      defaultChars = 'xiaoG,taotie';
+    } else {
+      // 从input或world推断默认角色，不再硬编码
+      const inferredDefault = this.inferDefaultCharactersFromInput(input);
+      defaultChars = inferredDefault || ' protagonist';
+    }
     const charList = allChars.size > 0 ? Array.from(allChars).join(',') : defaultChars;
 
     return `你是一位编剧,为${projectType}生成台词剧本(批次${batchIdx + 1}/${totalBatches})。
@@ -3993,7 +4061,11 @@ ${isNirath
       try {
         const { result, driver, attempts } = await this.llmEnforcer.requireLLM(
           'STAGE-7',
-          () => StagePrompts.STAGE_7_STORYBOARD(mappedScenes, durations, this.mode),
+          () => StagePrompts.STAGE_7_STORYBOARD(
+            mappedScenes,
+            this.input?.world || this.input?.prd?.world || { setting: '未指定' },
+            this.stages?.characters || input?.characters || {}
+          ),
           {
             llmEngine: this._createLLMEngine({ maxTokens: 4096 }),
             llmOptions: { maxTokens: 4096, temperature: 1 } // v6.6.6-fix-fix: kimi-k2p6 requires temperature=1
@@ -4192,7 +4264,9 @@ ${isNirath
     const genericChars = [
       { id: 'chen-nurse', keywords: ['陈女士', 'chen-nurse', '护士', '主讲', '主持人'] },
       { id: 'coach-li', keywords: ['李明教练', 'coach-li', '教练', '李教练', '康复专家'] },
-      { id: 'xiaoG', keywords: ['小G', '小g', '男孩', ' protagonist', '主角'] }
+      { id: 'xiaoG', keywords: ['小G', '小g', '男孩', ' protagonist', '主角'] },
+      { id: 'wukong', keywords: ['孙悟空', '悟空', '齐天大圣', '猴王', 'wukong', 'monkey king'] },
+      { id: 'erlang-shen', keywords: ['二郎神', '杨戬', '二郎', 'erlang', 'erlang-shen'] }
     ];
 
     for (const char of genericChars) {
@@ -4224,6 +4298,31 @@ ${isNirath
     }
 
     return chars;
+  }
+
+  /**
+   * v6.7.1-fix: 从输入推断默认角色，消灭硬编码
+   */
+  inferDefaultCharactersFromInput(input) {
+    const topic = input?.topic || input?.title || '';
+    const text = `${topic} ${input?.description || ''} ${input?.world?.setting || ''}`;
+    
+    const charMap = [
+      { id: 'wukong', keywords: ['孙悟空', '悟空', '猴王', '齐天大圣', 'wukong'] },
+      { id: 'erlang-shen', keywords: ['二郎神', '杨戬', '二郎', 'erlang'] },
+      { id: 'chen-nurse', keywords: ['陈女士', '陈卓', '护士', '主讲人'] },
+      { id: 'coach-li', keywords: ['李明', '教练', '康复'] },
+      { id: 'xiaoG', keywords: ['小G', '男孩', '主角'] }
+    ];
+    
+    const found = [];
+    for (const char of charMap) {
+      if (char.keywords.some(kw => text.includes(kw))) {
+        found.push(char.id);
+      }
+    }
+    
+    return found.length > 0 ? found.join(',') : null;
   }
 
   /**
@@ -5628,7 +5727,7 @@ ${isNirath
     await memoryReliefPoint('stage11:start', {
       totalShots: storyboard?.shots?.length || 0,
     });
-    const outputBase11 = path.resolve(this.outputDir || './output/health-edu-ep01');
+    const outputBase11 = path.resolve(this.outputDir || `./output/${this.input?.projectName || 'project'}`);
     const stage11Checkpoint = path.join(outputBase11, 'stage11-prompts.json');
     const stage11Jsonl = path.join(outputBase11, 'stage11-shots.jsonl');
     
@@ -8792,20 +8891,20 @@ ${isNirath
   _getDirectorStyleInjection(sceneName, shotType, emotionPhase) {
     // generic模式: 返回通用纪录片/教育风格
     if (this.mode !== 'nirath') {
-      const isMedical = sceneName && (sceneName.includes('健康') || sceneName.includes('医疗') || sceneName.includes('医院') || sceneName.includes('科普'));
-      const isDocumentary = isMedical || (sceneName && (sceneName.includes('纪录') || sceneName.includes('纪实')));
+      // v6.7.1-fix: 消灭硬编码医疗关键词，使用通用风格推断
+      const isDocumentary = sceneName && (sceneName.includes('纪录') || sceneName.includes('纪实') || sceneName.includes('科普'));
       return {
         sceneType: isDocumentary ? 'documentary' : 'generic',
         primaryDirector: isDocumentary ? '纪录片导演' : '通用导演',
-        secondaryDirector: isDocumentary ? '医疗纪录片' : '通用风格',
+        secondaryDirector: isDocumentary ? '纪录片风格' : '通用风格',
         stylePrompt: isDocumentary
-          ? '超写实纪录片风格,电影级自然光影,专业医疗科普氛围,真实人物质感,浅景深,4K画质'
+          ? '超写实纪录片风格,电影级自然光影,专业科普氛围,真实人物质感,浅景深,4K画质'
           : '超写实,电影级光影,真实场景质感,自然光,专业氛围',
         directorTags: isDocumentary
           ? ['纪录片手持摄影', '自然光', '真实质感', '浅景深']
           : ['超写实', '电影级光影', '自然光'],
         recommendedTags: isDocumentary
-          ? ['医疗纪录片', '真实场景', '专业氛围', '自然光']
+          ? ['纪录片', '真实场景', '专业氛围', '自然光']
           : ['通用风格', '写实']
       };
     }
@@ -10135,39 +10234,49 @@ ${isNirath
     const sceneName = typeof shot.scene === 'string' ? shot.scene : (shot.scene?.name || '场景');
     const timeOfDay = shot.lighting?.timeOfDay || shot.timeOfDay || '白天';
     const mood = shot.emotionPhase || 'neutral';
-
-    // 基于场景类型生成五维空间
+    
+    // v6.7.1-fix: 从项目配置或世界设定获取场景模板，消灭硬编码医疗描述
+    const worldSetting = this.input?.world?.setting || this.input?.prd?.world?.setting || '真实场景';
+    const projectType = this.input?.videoType || this.input?.prd?.videoType || 'generic';
+    
+    // 基于场景类型生成通用五维空间（不再硬编码医疗内容）
     const spatialMap = {
       'intro': {
-        environment: '专业医疗环境,现代化诊疗空间,明亮整洁的室内场景,背景可见人体肌肉解剖模型和肾脏结构展示',
-        depth: '中景到近景过渡,前景有医疗设备,背景可见诊疗室门和走廊',
+        environment: `${worldSetting},开场氛围营造,环境元素与主题呼应`,
+        depth: '中景到近景过渡,前景有环境元素,背景可见场景延伸',
         orientation: '正面微仰视角,人物占据画面视觉中心,视线引导自然',
-        atmosphere: '专业、权威、可信赖,营造安心就医氛围',
-        time: '明亮均匀的室内照明,色温5000K-5500K,模拟自然光环境'
+        atmosphere: '引人入胜,建立情绪基调,吸引观众注意力',
+        time: `${timeOfDay}照明,色温自然,营造开场氛围`
       },
       'explanation': {
-        environment: '医疗科普展示空间,整洁专业的背景,背景可见运动医学相关图示、人体肌肉解剖投影和尿液颜色对比样本展示',
+        environment: `${worldSetting},内容展示空间,背景整洁专业`,
         depth: '中等景深,主体清晰突出,背景适度虚化保留环境信息',
-        orientation: '平视或微俯视角,便于展示讲解内容,画面稳定专业',
+        orientation: '平视或微俯视角,便于展示内容,画面稳定',
         atmosphere: '清晰、严谨、易于理解,知识传递氛围浓厚',
-        time: '稳定室内照明,色温4000K-5000K,适合长时间观看不疲劳'
+        time: '稳定照明,色温自然,适合长时间观看'
       },
       'demonstration': {
-        environment: '实验室或诊疗室环境,专业设备清晰可见,操作台面整洁,背景可见生化检验仪器和CK指标动态监测展示',
-        depth: '近景特写为主,突出操作细节和仪器显示,背景辅助说明',
-        orientation: '正面或侧面特写,聚焦操作区域,手部动作清晰可见',
+        environment: `${worldSetting},专业展示环境,重点元素清晰可见`,
+        depth: '近景特写为主,突出关键细节,背景辅助说明',
+        orientation: '正面或侧面特写,聚焦核心区域,动作清晰可见',
         atmosphere: '精准、专注、专业示范,步骤清晰可跟随',
-        time: '高亮度照明,色温5500K-6500K,确保细节清晰可见,无阴影干扰'
+        time: '高亮度照明,色温自然,确保细节清晰可见'
       },
       'ending': {
-        environment: '医疗场景收束,回归专业形象,背景简洁有力,可见肾脏保健科普海报和就医指引图示',
+        environment: `${worldSetting},场景收束,背景简洁有力`,
         depth: '中景或全景,展示完整人物姿态和场景氛围',
-        orientation: '正面稳定视角,给人以可靠感和安心感,视觉收束',
+        orientation: '正面稳定视角,给人以可靠感和视觉收束',
         atmosphere: '安心、专业、值得信赖,温和有力的收尾',
-        time: '温暖柔和照明,色温4000K-4500K,营造人文关怀氛围'
+        time: '温暖柔和照明,色温自然,营造收束氛围'
       },
       'generic': {
-        environment: '专业医疗环境,现代化诊疗空间,真实可信的室内场景,背景融入运动医学和肾脏健康主题元素',
+        environment: `${worldSetting},真实可信的场景,背景融入主题元素`,
+        depth: '中景到近景过渡,前景有环境元素,背景可见场景延伸',
+        orientation: '正面视角,人物占据画面视觉中心,构图稳定',
+        atmosphere: '专业、真实、自然,营造可信氛围',
+        time: '自然照明,色温适中,营造真实感'
+      }
+    };
         depth: '中景到近景过渡,前景有医疗设备,背景可见诊疗环境',
         orientation: '正面微仰视角,人物占据画面视觉中心,构图稳定',
         atmosphere: '专业、权威、可信赖,自然真实的医疗氛围',

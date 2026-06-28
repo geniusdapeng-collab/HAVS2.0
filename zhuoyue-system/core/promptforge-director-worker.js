@@ -109,14 +109,14 @@ async function fallbackLLM(prompt, options) {
 // 基于镜头数据直接合成高质量输出，无需LLM
 
 function synthesizeDirectorIntent(shots, projectConfig) {
-  const theme = projectConfig.theme || '健康科普';
+  const theme = projectConfig.theme || '主题视频';
   const emotionBase = projectConfig.emotionBase || '专业可信';
   
   return {
-    intent: `专业${theme}视频，视觉风格清晰明亮、权威可信。情绪弧线从专业严谨过渡到温和安心，适合大众健康传播。核心视觉记忆点：主讲人形象专业亲切、信息图表清晰易懂。`,
-    style: '专业医疗科普风格，清晰明亮',
-    emotionArc: '专业→温和→安心',
-    guidance: '画面清晰，人物可信，节奏舒缓，信息传达准确'
+    intent: `专业${theme}视频，视觉风格清晰明亮、权威可信。情绪弧线流畅自然，适合目标受众观看。核心视觉记忆点：画面质感专业、信息传达清晰。`,
+    style: '专业风格，清晰明亮',
+    emotionArc: '专业→流畅→收束',
+    guidance: '画面清晰，节奏得当，信息传达准确'
   };
 }
 
@@ -181,19 +181,19 @@ function synthesizePromptFusion(shot, directorIntent, writerResult, cinematograp
   const parts = [];
   
   // 视觉层
-  parts.push(`【视觉】${visualPart || scene || '医疗科普场景'}。${cinematographerResult.shotSize}。人物专业可信，画面清晰明亮。`);
+  parts.push(`【视觉】${visualPart || scene || '专业场景'}。${cinematographerResult.shotSize}。人物表现自然，画面质感专业。`);
   
   // 运镜层
   parts.push(`【运镜】${cameraString || cinematographerResult.cameraDesign}。构图稳定，焦点清晰。`);
   
   // 光影层
-  parts.push(`【光影】${lightingString || cinematographerResult.lightingDesign}。色温4500K，明暗适中。`);
+  parts.push(`【光影】${lightingString || cinematographerResult.lightingDesign}。色温自然，明暗适中。`);
   
   // 音频层
   parts.push(`【音频】环境音自然，人声清晰。${writerResult.rhythm}。`);
   
   // 渲染层
-  parts.push(`【渲染】超写实风格，高清细腻，色彩准确，适合医疗科普传播。`);
+  parts.push(`【渲染】超写实风格，高清细腻，色彩准确，适合专业传播。`);
   
   const finalPrompt = parts.join(' | ');
   
@@ -220,9 +220,9 @@ async function stage1DirectorIntent(shots, projectConfig) {
   console.log('🎬 Stage 1: 总导演建立创作意图...');
   
   try {
-    const prompt = `你是一位资深医疗科普视频总导演。请基于以下项目信息，建立整体创作意图：
+    const prompt = `你是一位资深视频总导演。请基于以下项目信息，建立整体创作意图：
 
-项目主题：${projectConfig.theme || '健康科普'}
+项目主题：${projectConfig.theme || '主题视频'}
 情感基调：${projectConfig.emotionBase || '专业可信'}
 镜头数：${shots.length}
 
@@ -255,7 +255,7 @@ ${shots.map(s => `- ${s.id}: ${s.scene || '未知场景'} | ${s.emotionPhase || 
 
 function extractStyleFromIntent(text) {
   const match = text.match(/视觉风格[：:]([^\n]+)/);
-  return match ? match[1].trim() : '专业医疗科普风格';
+  return match ? match[1].trim() : '专业风格';
 }
 
 function extractEmotionArcFromIntent(text) {
@@ -273,10 +273,10 @@ async function stage2aScriptWriter(shot, directorIntent) {
   console.log(`  📝 Stage 2a: ${shot.id} 编剧台词...`);
   
   try {
-    const prompt = `你是一位医疗科普编剧。请为以下镜头创作优化台词：
+    const prompt = `你是一位专业编剧。请为以下镜头创作优化台词：
 
 镜头：${shot.id}
-场景：${shot.scene || '医疗场景'}
+场景：${shot.scene || '当前场景'}
 原始台词：${shot.narration || '无'}
 情绪：${shot.emotionPhase || 'neutral'}
 导演意图：${directorIntent.intent.substring(0, 200)}...

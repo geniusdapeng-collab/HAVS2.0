@@ -276,14 +276,8 @@ class UserRequirementParser {
       contentIsolation: data.contentIsolation || '',
       
       // 八、世界观
-      world: {
-        name: '现实世界',
-        setting: '现代',
-        location: '室内/室外',
-        lighting: '自然光',
-        atmosphere: '专业/亲和',
-        style: '写实'
-      },
+      // v6.7.1-fix: 从用户输入动态推断世界观，消灭硬编码
+      world: this._inferWorld(data.rawInput || '', data.videoType || 'EDU'),
       
       // 九、风格与约束
       style: {
@@ -473,27 +467,34 @@ class UserRequirementParser {
     const sceneCount = Math.max(3, Math.min(6, Math.ceil(targetDuration / 10)));
     const scenes = [];
     
-    // v6.7.0-fix: 根据主题智能分配场景描述，避免LLM自由发挥导致内容重叠
+    // v6.7.1-fix: 通用场景构建——从 topic 动态推断，消灭硬编码医学主题
     const topicStr = topic || '内容';
     let contentDescriptions = [];
     
-    // 根据主题关键词推断内容结构
-    if (topicStr.includes('横纹肌溶解')) {
+    // 简单的关键词推断逻辑（可扩展）
+    if (topicStr.includes('症状') || topicStr.includes('检查') || topicStr.includes('疾病')) {
       contentDescriptions = [
-        '症状概述：肌肉疼痛、肿胀、无力',
-        '实验室检查：肌酸激酶、肌红蛋白检测',
-        '尿液变化：浓茶色/酱油色尿液识别',
-        '就医建议：及时就诊的重要性'
+        '核心概念讲解',
+        '关键特征分析',
+        '实际案例说明',
+        '注意事项总结'
       ];
-    } else if (topicStr.includes('糖尿病') || topicStr.includes('高血压') || topicStr.includes('健康')) {
+    } else if (topicStr.includes('战斗') || topicStr.includes('对决') || topicStr.includes('动作')) {
       contentDescriptions = [
-        '疾病概述与危害',
-        '常见症状识别',
-        '诊断方法与标准',
-        '预防与管理建议'
+        '开场对峙与气场建立',
+        '初次交锋与试探',
+        '高潮对抗与冲突升级',
+        '决胜一击与结局收束'
+      ];
+    } else if (topicStr.includes('故事') || topicStr.includes('剧情') || topicStr.includes('叙事')) {
+      contentDescriptions = [
+        '背景铺垫与人物引入',
+        '冲突发生与情节推进',
+        '高潮转折与情感爆发',
+        '结局收束与主题升华'
       ];
     } else {
-      // 通用科普结构
+      // 通用结构
       contentDescriptions = [
         '核心概念讲解',
         '关键特征分析',
@@ -508,12 +509,11 @@ class UserRequirementParser {
       const type = isFirst ? 'intro' : (isLast ? 'ending' : 'content');
       const duration = isFirst || isLast ? Math.floor(targetDuration * 0.15) : Math.floor(targetDuration * 0.7 / (sceneCount - 2));
       
-      // v6.7.0-fix: 填充有意义的场景描述，而非"待填充"
       let description = '待填充';
       if (type === 'intro') {
-        description = '开场：主讲人自我介绍，引入主题，建立信任感';
+        description = '开场：引入主题，建立氛围，吸引注意力';
       } else if (type === 'ending') {
-        description = '结尾：总结要点，强调核心信息，呼吁行动';
+        description = '结尾：总结要点，强调核心信息，留下印象';
       } else {
         const contentIdx = i - 1;
         description = contentIdx < contentDescriptions.length ? contentDescriptions[contentIdx] : `内容${contentIdx + 1}`;
@@ -536,6 +536,58 @@ class UserRequirementParser {
     return scenes;
   }
   
+  _inferWorld(input, videoType) {
+    // v6.7.1-fix: 根据用户输入动态推断世界观
+    if (input.includes('Nirath') || input.includes('异世界') || input.includes('外星') || input.includes('星球')) {
+      return {
+        name: 'Nirath',
+        setting: '外星生态星球',
+        location: '异世界地表',
+        lighting: '双恒星光照',
+        atmosphere: '神秘/史诗',
+        style: '超写实科幻'
+      };
+    }
+    if (input.includes('神话') || input.includes('天庭') || input.includes('仙侠') || input.includes('云端') || input.includes('雷电')) {
+      return {
+        name: '神话世界',
+        setting: '东方神话',
+        location: '天庭/云端/战场',
+        lighting: '史诗光影',
+        atmosphere: '史诗/震撼',
+        style: '全写实神话'
+      };
+    }
+    if (input.includes('古代') || input.includes('历史') || input.includes('古装')) {
+      return {
+        name: '古代世界',
+        setting: '历史时期',
+        location: '古代场景',
+        lighting: '自然光/烛光',
+        atmosphere: '古典/庄重',
+        style: '历史写实'
+      };
+    }
+    if (videoType === 'EDU' || videoType === 'DOC') {
+      return {
+        name: '现实世界',
+        setting: '现代',
+        location: '室内/室外',
+        lighting: '自然光',
+        atmosphere: '专业/亲和',
+        style: '写实'
+      };
+    }
+    return {
+      name: '虚构世界',
+      setting: '现代',
+      location: '待定',
+      lighting: '自然光',
+      atmosphere: '待定',
+      style: '写实'
+    };
+  }
+
   _buildReasoning(data) {
     const reasons = [];
     if (data.videoType) reasons.push(`视频类型：${data.videoType}`);

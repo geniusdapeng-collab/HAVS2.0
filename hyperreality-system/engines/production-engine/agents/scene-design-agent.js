@@ -67,14 +67,21 @@ ${sceneOptions}
    */
   /**
    * 【v2.1.4-fix15】动态生成场景选项，基于 worldSetting，不使用硬编码场景池
-   * 原则：
-   * 1. 优先从 worldSetting 提取世界描述生成选项
-   * 2. 无 worldSetting 时返回场景类型指导，不硬编码具体场景
-   * 3. 绝不使用医院/神话/科幻等固定场景模板
+   * 根据视频类型（EDU/教育）生成科普场景选项，而非戏剧场景
    */
   _generateSceneOptions(blueprint = {}) {
-    const meta = blueprint._metadata || blueprint.config?._metadata || {};
+    const meta = blueprint._metadata || blueprint.config?._metadata || blueprint.metadata || {};
     const worldSetting = blueprint.worldSetting || {};
+    const filmType = meta.filmType || blueprint.filmType || blueprint.config?.filmType || blueprint.film_type || '';
+    
+    // 教育/科普类型：生成专业讲解场景选项
+    if (filmType === 'EDU' || filmType === 'educational') {
+      return `   根据教育科普主题生成写实讲解场景，可选方向：
+   - 方向A：专业讲解空间（主讲人面向镜头讲解，背景为真实医疗/办公环境）
+   - 方向B：案例展示空间（数据图表、实物模型、症状图片展示）
+   - 方向C：警示提醒空间（关键信息高亮，严肃提醒注意事项）
+   - 方向D：总结归纳空间（要点回顾，给出实用建议和行动号召）`;
+    }
     
     // 优先从世界设定提取
     if (worldSetting.description || worldSetting.name) {
@@ -100,6 +107,10 @@ ${sceneOptions}
 
     // 【v2.1.4-fix13-审计修复】存储 blueprint 供 _getSystemPrompt 动态使用
     this._currentBlueprint = blueprint;
+
+    // 获取视频类型用于后续场景选择
+    const meta = blueprint._metadata || blueprint.config?._metadata || blueprint.metadata || {};
+    const filmType = meta.filmType || blueprint.filmType || blueprint.config?.filmType || blueprint.film_type || '';
 
     const prompt = this._buildPrompt(shots, blueprint);
 
@@ -133,6 +144,32 @@ ${sceneOptions}
         !shot.action.includes('speaking to camera');
       let action = hasExistingAction ? shot.action : (designed.action || shot.action || '');
       
+      // 【v2.1.4-fix16-EDU】强制覆盖：教育/科普类型强制使用专业讲解场景
+      if (filmType === 'EDU' || filmType === 'educational') {
+        const eduSceneMap = {
+          'opening': '片头开场场景，主讲人专业出场，主题清晰引入',
+          'establishing': ' establishing shot，展示真实讲解环境',
+          'explanation': '知识讲解场景，主讲人面向镜头讲解核心内容',
+          'demonstration': '案例演示场景，展示数据、图表或实物',
+          'warning': '警示提醒场景，强调关键风险和注意事项',
+          'summary': '要点总结场景，回顾核心知识',
+          'resolution': '结尾收尾场景，给出实用建议和行动号召',
+          'conflict': '问题呈现场景，展示症状或案例引发关注',
+          'rising': '深入讲解场景，逐步展开知识点',
+          'emotional_climax': '重点强调场景，突出关键信息',
+          'transition': '过渡转场场景，平滑切换主题'
+        };
+        const sceneType = shot.sceneType || shot.scene_type || 'establishing';
+        const eduScene = eduSceneMap[sceneType];
+        if (eduScene) {
+          scene = eduScene;
+        }
+        // 强制角色为陈卓（科普主讲人）
+        if (action && !action.includes('陈卓') && !action.includes('主讲人')) {
+          action = action.replace(/医学讲解者|医学讲师|主讲人|讲解者/g, '陈卓');
+        }
+      }
+      
       // 【v2.1.4-fix15】场景校验：包含禁止词汇则使用动态兜底
       const forbiddenWords = ['全息', '虚拟', '投影', '抽象', '光影场域', '数据空间', '元宇宙', '时间操控', '霓虹', '微观世界', '宏观', '抽象几何', '流动光影', '交织光影', '色彩对冲'];
       const hasForbidden = forbiddenWords.some(w => scene.includes(w));
@@ -145,9 +182,9 @@ ${sceneOptions}
         const sceneType = shot.sceneType || shot.scene_type || 'establishing';
         
         if (worldDesc) {
-          scene = `${worldDesc}，${this._getSceneTypeBase(sceneType)}${atmosphere ? '，' + atmosphere : ''}`;
+          scene = `${worldDesc}，${this._getSceneTypeBase(sceneType, filmType)}${atmosphere ? '，' + atmosphere : ''}`;
         } else {
-          scene = this._getSceneTypeBase(sceneType);
+          scene = this._getSceneTypeBase(sceneType, filmType);
         }
       }
       
@@ -161,6 +198,46 @@ ${sceneOptions}
     });
 
     console.log(`[SceneDesignAgent] 完成 ✓`);
+    
+    // 【v2.1.4-fix16-EDU】最终强制覆盖：教育/科普类型强制使用专业讲解场景
+    const debugMeta = blueprint.config?._metadata || blueprint.metadata || {};
+    console.log(`[SceneDesignAgent] blueprint structure: ${JSON.stringify({
+      hasConfig: !!blueprint.config,
+      configKeys: blueprint.config ? Object.keys(blueprint.config) : [],
+      hasMetadata: !!blueprint.config?._metadata,
+      metadataKeys: blueprint.config?._metadata ? Object.keys(blueprint.config._metadata) : [],
+      hasFilmType: !!(blueprint.config?._metadata?.filmType || blueprint.config?.filmType || blueprint.filmType || blueprint.film_type),
+      filmTypeValue: blueprint.config?._metadata?.filmType || blueprint.config?.filmType || blueprint.filmType || blueprint.film_type || 'NOT_FOUND',
+      topLevelKeys: Object.keys(blueprint)
+    })}`);
+    if (filmType === 'EDU' || filmType === 'educational') {
+      console.log(`[SceneDesignAgent] ✅ 强制覆盖生效: 教育/科普场景`);
+      const eduSceneMap = {
+        'opening': '片头开场场景，主讲人专业出场，主题清晰引入',
+        'establishing': ' establishing shot，展示真实讲解环境',
+        'explanation': '知识讲解场景，主讲人面向镜头讲解核心内容',
+        'demonstration': '案例演示场景，展示数据、图表或实物',
+        'warning': '警示提醒场景，强调关键风险和注意事项',
+        'summary': '要点总结场景，回顾核心知识',
+        'resolution': '结尾收尾场景，给出实用建议和行动号召',
+        'conflict': '问题呈现场景，展示症状或案例引发关注',
+        'rising': '深入讲解场景，逐步展开知识点',
+        'emotional_climax': '重点强调场景，突出关键信息',
+        'transition': '过渡转场场景，平滑切换主题'
+      };
+      designedShots.forEach(shot => {
+        const sceneType = shot.sceneType || 'establishing';
+        const eduScene = eduSceneMap[sceneType];
+        if (eduScene) {
+          shot.scene = eduScene;
+        }
+        // 强制角色为陈卓（科普主讲人）
+        if (shot.action && !shot.action.includes('陈卓') && !shot.action.includes('主讲人')) {
+          shot.action = shot.action.replace(/医学讲解者|医学讲师|主讲人|讲解者/g, '陈卓');
+        }
+      });
+    }
+    
     return { shots: designedShots, degraded: false, degradeReason: null };
   }
 
@@ -182,8 +259,8 @@ ${sceneOptions}
     const directorContext = this._buildDirectorContext(blueprint);
     
     // 【v2.1.4-fix14】根据类型动态调整约束
-    const meta = blueprint._metadata || blueprint.config?._metadata || {};
-    const filmType = meta.filmType || blueprint.filmType || '';
+    const meta = blueprint._metadata || blueprint.config?._metadata || blueprint.metadata || {};
+    const filmType = meta.filmType || blueprint.filmType || blueprint.config?.filmType || blueprint.film_type || '';
     const isMythFantasy = filmType === 'FANTASY' || filmType === 'ACTION' || filmType === 'MYTHOLOGY';
     
     const constraints = isMythFantasy 
@@ -281,9 +358,28 @@ ${sceneOptions}
 
   /**
    * 【v2.1.4-fix15】基于场景类型返回基础描述符（不含具体场景内容）
-   * 用于兜底生成，避免硬编码场景池
+   * 根据视频类型动态选择描述风格
    */
-  _getSceneTypeBase(sceneType) {
+  _getSceneTypeBase(sceneType, filmType = '') {
+    // 教育/科普类型使用专业讲解场景
+    if (filmType === 'EDU' || filmType === 'educational') {
+      const eduDescriptors = {
+        'opening': '片头开场场景，主讲人专业出场，主题清晰引入',
+        'establishing': ' establishing shot，展示真实讲解环境',
+        'explanation': '知识讲解场景，主讲人面向镜头讲解核心内容',
+        'demonstration': '案例演示场景，展示数据、图表或实物',
+        'warning': '警示提醒场景，强调关键风险和注意事项',
+        'summary': '要点总结场景，回顾核心知识',
+        'resolution': '结尾收尾场景，给出实用建议和行动号召',
+        'conflict': '问题呈现场景，展示症状或案例引发关注',
+        'rising': '深入讲解场景，逐步展开知识点',
+        'emotional_climax': '重点强调场景，突出关键信息',
+        'transition': '过渡转场场景，平滑切换主题'
+      };
+      return eduDescriptors[sceneType] || '科普讲解场景';
+    }
+    
+    // 默认戏剧/电影场景
     const descriptors = {
       'opening': '史诗开场场景，宏大视角',
       'establishing': '全景 establishing shot，展示空间关系',

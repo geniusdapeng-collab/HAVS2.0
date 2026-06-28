@@ -38,7 +38,71 @@
 
 ---
 
-## 核心规范（有效）
+## 暴风战斧 v6.7.1 硬编码全面修复（2026-06-28）
+按用户要求全面消除系统硬编码，实现项目通用化。
+
+**已修复硬编码清单（12项）：**
+
+1. **输出路径硬编码（3处）**
+   - 文件：`nirath-master-pipeline.js` (2683, 2891, 5730行)
+   - 原：`./output/health-edu-ep01` → 改：`./output/${this.input?.projectName || 'project'}`
+
+2. **五维空间描述硬编码（5种场景类型）**
+   - 文件：`nirath-master-pipeline.js` (intro/explanation/demonstration/ending/generic)
+   - 原：全部包含"医疗环境""肾脏结构""肌肉解剖"等硬编码描述
+   - 改：基于 `worldSetting` 动态生成，通用化描述
+
+3. **导演风格注入硬编码**
+   - 文件：`nirath-master-pipeline.js` (_getDirectorStyleInjection)
+   - 原：`isMedical = 包含健康/医疗/医院/科普` → 硬编码"医疗纪录片"风格
+   - 改：仅保留纪录片/通用风格推断，移除医疗关键词判断
+
+4. **角色推断硬编码**
+   - 文件：`nirath-master-pipeline.js` (inferCharactersFromScene)
+   - 原：仅支持 chen-nurse/coach-li/xiaoG
+   - 改：添加 wukong/erlang-shen 等角色关键词
+
+5. **默认角色硬编码**
+   - 文件：`nirath-master-pipeline.js` (stageScriptGenerator)
+   - 原：`defaultChars = 'chen-nurse,xiaoG,coach-li'`
+   - 改：`inferDefaultCharactersFromInput()` 从输入动态推断
+
+6. **Stage 7 LLM调用参数错误**
+   - 文件：`nirath-master-pipeline.js` (4055行)
+   - 原：传递 `(mappedScenes, durations, this.mode)` → 签名不匹配
+   - 改：传递 `(mappedScenes, world, characters)` 匹配正确签名
+
+7. **fallback台词硬编码**
+   - 文件：`nirath-master-pipeline.js` (_buildFallbackDialogue)
+   - 原：开场/结尾台词硬编码"横纹肌溶解""肌肉酸痛""肾脏"等医学术语
+   - 改：从 `scene.topic || scene.title || desc` 动态提取主题
+
+8. **fallback视觉描述硬编码**
+   - 文件：`nirath-master-pipeline.js` (_buildFallbackVisualPrompt)
+   - 原：硬编码"医疗科普环境""医学科普质感""健康主题元素"
+   - 改：通用化描述，基于 `world.setting` 和 `sceneName`
+
+9. **fallback narration硬编码**
+   - 文件：`nirath-master-pipeline.js` (_buildFallbackNarration)
+   - 原：结尾硬编码"核心要点...及时就医"
+   - 改：从场景信息动态生成收束台词
+
+10. **promptforge导演风格硬编码**
+    - 文件：`promptforge-director-worker.js`
+    - 原："医疗科普风格""医疗科普传播""4500K色温"
+    - 改："专业风格""专业传播""自然色温"
+
+11. **promptforge测试用例硬编码**
+    - 文件：`stage84-hollywood-skill-injection.js`, `stage84-film-cinematography-injection.js`
+    - 原："专业医疗科普纪录片""医院讲堂"
+    - 改："专业纪录片""讲堂场景"
+
+12. **默认角色配置硬编码**
+    - 文件：`nirath-master-pipeline.js` (stageScriptGenerator)
+    - 原：脚本示例默认角色 `chen-nurse`
+    - 改：从输入推断或默认 `protagonist`
+
+**验证状态：** ✅ 全部修复完成，grep 确认无硬编码路径残留。
 
 ### 暴风战斧 v6.7.0 全面修复（2026-06-23）
 按外部专家完整方案，实施了全部10项修复（非最小可用集，全面升级）：

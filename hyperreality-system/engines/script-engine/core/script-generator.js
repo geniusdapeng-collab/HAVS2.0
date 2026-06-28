@@ -76,7 +76,15 @@ class ScriptGenerator {
    * 加载模板
    */
   async _loadTemplate(userIntent) {
-    const mode = userIntent.parsed?.primary_mode || 'dramatic';
+    // 【审计修复】根据 videoType 选择模板，科普类使用 educational 模板
+    const videoType = userIntent.metadata?.videoType || userIntent.parsed?.video_type;
+    let mode = userIntent.parsed?.primary_mode || 'dramatic';
+    
+    // 如果是科普/教育类型，强制使用 educational 模板
+    if (videoType === 'EDU' || videoType === 'educational') {
+      mode = 'educational';
+    }
+    
     const templatePath = path.join(this.config.templateDir, `${mode}-template.json`);
 
     try {

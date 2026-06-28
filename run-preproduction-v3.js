@@ -151,7 +151,7 @@ if (cliProject === 'wukong-erlang') {
       closeup: erlangFront, // fallback
     }
   };
-  userInput = '神话战斗史诗大片。孙悟空大战二郎神，巅峰对决，全写实风格，电影级质感，IMAX级视觉。孙悟空金甲猴脸，二郎神银甲三眼，云端战场雷电交加。8-10分钟，史诗叙事，强烈情感冲击，无旁白，角色对白驱动。开头有片头主标题和副标题。';
+  userInput = '神话战斗史诗大片。孙悟空大战二郎神，巅峰对决，全写实风格，电影级质感，IMAX级视觉。孙悟空金甲猴脸，二郎神银甲三眼，云端战场雷电交加。60秒，史诗叙事，强烈情感冲击，无旁白，角色对白驱动。开头有片头主标题和副标题。';
 } else {
   // 默认：health-edu-ep01 陈卓科普视频
   const PORTRAIT_BASE = path.join(WORKSPACE, 'characters/chenzhuo/portraits');
@@ -378,43 +378,47 @@ async function run() {
  * 将统一需求结构转换为Pipeline输入格式
  */
 function buildPipelineInput(requirement, portraits, filmType = 'EDU') {
-  // 根据影片类型构建角色配置
-  let charactersConfig;
-  if (filmType === 'NIRATH' || requirement.videoType === 'NIRATH') {
-    // 神话战斗项目：孙悟空 + 二郎神
-    charactersConfig = {
-      'wukong': {
-        id: 'wukong', name: '孙悟空', role: 'protagonist',
-        visual: {
-          age: 'immortal', gender: 'male', build: 'muscular', height: 'medium',
-          skinTone: 'golden', hair: 'brown', eyes: 'golden', facialFeatures: 'monkey_face',
-          outfit: 'golden chain mail armor, phoenix wing purple gold crown, tiger skin skirt'
-        },
-        portraits: portraits?.wukong || {}
-      },
-      'erlang-shen': {
-        id: 'erlang-shen', name: '二郎神', role: 'antagonist',
-        visual: {
-          age: 'immortal', gender: 'male', build: 'muscular', height: 'tall',
-          skinTone: 'pale', hair: 'black', eyes: 'third_eye', facialFeatures: 'divine_warrior',
-          outfit: 'silver bright armor, white robe, black boots, head crown'
-        },
-        portraits: portraits?.['erlang-shen'] || {}
-      }
-    };
+  // v6.7.1-fix: 通用角色配置——从 portraits 和 requirement 动态构建，消灭硬编码
+  const charactersConfig = {};
+  const portraitKeys = Object.keys(portraits || {});
+  
+  if (portraitKeys.length > 0) {
+    // 有定妆照配置：从 portraits 动态构建角色
+    for (const charId of portraitKeys) {
+      const charPortraits = portraits[charId];
+      const charName = charId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      charactersConfig[charId] = {
+        id: charId,
+        name: charName,
+        role: 'character',
+        portraits: charPortraits
+      };
+    }
+  } else if (requirement.characters && Object.keys(requirement.characters).length > 0) {
+    // 从 requirement.characters 构建
+    for (const [charId, charData] of Object.entries(requirement.characters)) {
+      charactersConfig[charId] = {
+        id: charId,
+        name: charData.name || charId,
+        role: charData.role || 'character',
+        visual: charData.visual || {},
+        portraits: portraits?.[charId] || {}
+      };
+    }
+  }
+  
+  // 推断模式：nirath 或 generic
+  // v6.7.1-fix: Nirath 模式不再仅由 filmType 触发，必须同时满足 world 名称包含 Nirath
+  const isNirath = (requirement.world?.name?.includes('Nirath') || requirement.topic?.includes('Nirath')) &&
+                   (filmType === 'NIRATH' || requirement.videoType === 'NIRATH');
+  const mode = isNirath ? 'nirath' : 'generic';
+  
+  // 推断系列标题：从 requirement 动态提取，消灭硬编码
+  let seriesTitle = requirement.title || '未命名系列';
+  if (requirement.isSeries && requirement.totalEpisodes > 1) {
+    seriesTitle = seriesTitle.substring(0, 20) + '系列';
   } else {
-    // 默认：陈卓科普视频
-    charactersConfig = {
-      'chen-zhuo': {
-        id: 'chen-zhuo', name: '陈卓', role: 'presenter',
-        visual: {
-          age: 35, gender: 'female', build: 'average', height: 'medium',
-          skinTone: 'warm', hair: 'black', eyes: 'brown', facialFeatures: 'asian',
-          outfit: 'standard Chinese police uniform with formal police cap'
-        },
-        portraits: portraits?.['chen-zhuo'] || portraits || {}
-      }
-    };
+    seriesTitle = seriesTitle.substring(0, 30);
   }
 
   return {
@@ -422,14 +426,12 @@ function buildPipelineInput(requirement, portraits, filmType = 'EDU') {
     videoType: requirement.videoType.toLowerCase(),
     targetDuration: requirement.targetDuration,
     style: requirement.style.visualStyle || requirement.visualStyleDetail,
-    mode: (filmType === 'NIRATH' || requirement.videoType === 'NIRATH') ? 'nirath' : 'generic',
+    mode: mode,
     hasOpening: requirement.opening.hasOpening,
     hasNextEpisodePreview: false,
     
-    // 创意指数
     creativityIndex: requirement.creativityIndex,
     
-    // 统一结构字段直接传递
     title: requirement.title,
     topic: requirement.topic,
     keyPoints: requirement.keyPoints,
@@ -444,10 +446,8 @@ function buildPipelineInput(requirement, portraits, filmType = 'EDU') {
     contentStyle: requirement.contentStyle,
     musicStyle: requirement.musicStyle,
     
-    // 世界观
     world: requirement.world,
     
-    // 场景（从统一结构转换）
     scenes: requirement.scenes.map((scene, index) => ({
       id: scene.id || `S0${index+1}`,
       name: scene.name || `场景${index+1}`,
@@ -459,26 +459,22 @@ function buildPipelineInput(requirement, portraits, filmType = 'EDU') {
       importance: scene.importance || 5
     })),
     
-    // 角色
     characters: charactersConfig,
     
-    // 片头
     opening: {
-      seriesTitle: (filmType === 'NIRATH') ? '神话史诗系列' : '居民健康科普系列',
+      seriesTitle: seriesTitle,
       episodeTitle: requirement.title,
       episodeNumber: `EP0${requirement.currentEpisode || 1}`,
-      subtitle: '', // v6.6.1-fix: 不传递长字符串，让generic-opening-system智能生成
+      subtitle: '',
       style: requirement.visualStyleDetail,
       duration: requirement.opening.duration || 5
     },
     
-    // 内容核心
     content: {
       topic: requirement.topic,
       keyPoints: requirement.keyPoints
     },
     
-    // 系列信息
     isSeries: requirement.isSeries,
     totalEpisodes: requirement.totalEpisodes,
     currentEpisode: requirement.currentEpisode,
@@ -514,10 +510,17 @@ function generateReport(result, outputPath) {
     };
   });
   
-  let md = `# 健康科普系列 - 预生产报告
+  // v6.7.1-fix: 从 result 动态提取项目信息，消灭硬编码
+  const projectTitle = result.projectName || result.stages?.projectConfig?.title || result.stages?.input?.title || '预生产报告';
+  const mainCharacter = result.stages?.characters?.[0]?.name || result.stages?.input?.characters?.[Object.keys(result.stages?.input?.characters || {})[0]]?.name || '';
+  
+  let md = `# ${projectTitle} - 预生产报告
 
 `;
-  md += `**主讲**: 陈卓（穿警服的护士小姐姐）\n\n`;
+  md += `**项目**: ${projectTitle}\n\n`;
+  if (mainCharacter) {
+    md += `**主讲/主角**: ${mainCharacter}\n\n`;
+  }
   md += `**总时长**: ${totalDuration} 秒\n\n`;
   md += `**镜头数**: ${shots.length}\n\n`;
   
@@ -730,8 +733,14 @@ function generateInternalTimeline(shot, duration) {
 }
 
 function generateFallbackReport(input, outputPath) {
-  let md = `# 健康科普系列 - 预生产报告（基础版）\n\n`;
-  md += `**主讲**: 陈卓\n\n`;
+  // v6.7.1-fix: 动态提取项目信息，消灭硬编码
+  const projectTitle = input.title || input.projectName || '预生产报告';
+  const mainCharacter = input.characters?.[Object.keys(input.characters || {})[0]]?.name || '';
+  
+  let md = `# ${projectTitle} - 预生产报告（基础版）\n\n`;
+  if (mainCharacter) {
+    md += `**主讲/主角**: ${mainCharacter}\n\n`;
+  }
   md += `**总时长**: ${input.targetDuration} 秒\n\n`;
   md += `**镜头数**: ${input.scenes.length}\n\n`;
   md += `---\n\n`;

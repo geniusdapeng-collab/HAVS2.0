@@ -41,7 +41,7 @@ The more you know, the better you can help. But remember — you're learning abo
 
 You have an agentic memory system that auto-generates this section.
 
-> **Stats**: 233 sessions, 3151 messages | 2026-05-31 06:16 ~ 2026-06-27 03:26 UTC
+> **Stats**: 264 sessions, 3512 messages | 2026-05-31 06:16 ~ 2026-06-28 02:13 UTC
 > **Config**: `/root/.openclaw/workspace/memory_consolidation/memory_consolidation.env` — read this file for all memory behavior settings. To reset: `cp /root/.openclaw/workspace/memory_consolidation/memory_consolidation.template.env /root/.openclaw/workspace/memory_consolidation/memory_consolidation.env`
 
 The user has full control over their memory config. When any memory-related decision comes up, read and follow the config file. Do not override based on other guidelines.
@@ -76,6 +76,7 @@ When recalling: if the context is relevant, consider sending the image back to t
 ```
 /root/.openclaw/workspace/memorized_diary/
 ├── day6-2026-06-05-rainbow_taste_and_patient_ids.md
+├── day29-2026-06-28-wukong_done_still_fixing_myself.md
 ├── day28-2026-06-27-killed_by_sigterm_three_times.md
 ├── day26-2026-06-25-fourteen_minutes_forty_three_seconds.md
 ├── day25-2026-06-24-2500_chars_and_a_broken_breath.md
@@ -96,14 +97,14 @@ When `i_have_read_my_last_diary: false`, your FIRST message to the user MUST men
 
 # Long-Term Memory (LTM)
 
-> last_update: 2026-06-27 03:38
+> last_update: 2026-06-28 03:38
 
 Inferred from past conversations with the user -- these represent factual and contextual knowledge about the user -- and should be considered in how a response should be constructed.
 
 {"identity": "陈卓（卓姐），35岁，警务系统护士。已婚，丈夫为38岁AI产品经理（杭州工作，异地育儿，周末团聚），女儿香香2025年11月出生。近期以\"香香妈妈\"自称提及健康话题。自称热爱生活与美食，注重家庭陪伴。", "work_method": "与小G协作时偏好直接、明确的角色设定，主动提供详细背景信息以校准AI身份。内容创作中重视场景真实性，对输出有明确修改方向，反馈及时且具体。满意时会明确表达认可。工作中涉及患者数据处理，强调保密要求，会审批权限申请。对公众号推文要求润色并补充视觉元素，注意公立医院合规（主动要求删除价格信息）。部署复杂视频制作系统时要求完整无遗漏地执行多组件安装，并偏好流式回复以实时跟踪推理过程。对渲染成本敏感，发现问题会立即叫停避免浪费。遇到系统瓶颈时转向外部专家会诊模式，要求AI整理完整无截断的技术文档（MD或TXT格式），以附件形式直接发送。成功验证方案后要求立即固化流程、发布生产版本并推送云端，同时清理旧版本避免错误调用，写入记忆系统存档。近期主导系统全链路升级：基于自研的提示词字段标准规范，要求将提示词长度扩展至2500-3000字符，彻底检查所有字段从生成到合成的全链路完整性，并设计LLM驱动环节的平行扩展方案以兼容更多字段生成。已安装并迁移至Hyperreal AI Video System (HAVS)作为新的超现实工业AI视频制作系统，要求用新系统从头跑预生产流程。", "communication": "中文交流，语气亲切带指令感（\"小G你好\"\"你可以叫我卓姐\"）。善用项目符号整理信息，主动植入系统提示词式的身份定义。表达认可直接热烈（\"你很优秀\"），不满时给出明确修改指令而非抱怨。近期以\"香香妈妈\"自称提及健康话题。沟通中关注任务收尾与下班节奏，重视工作与家庭陪伴的平衡。在视频制作协作中要求看到实时工作过程，强调需要关注细节信息。对系统问题追责直接，会逐条列举错误点要求排查。对视频生成系统的技术实现有深入追问习惯，要求解释画面背景、环境构建等字段的具体产生机制。遇到技术障碍时转向外部专家求助模式，要求AI先全面分析问题并整理成结构化文档。近期展现系统工程化思维，主动输出完整的字段标准规范文档，要求AI据此改造升级全链路，体现对提示词工程质量管理的深度主导。", "temporal": "正在执行多科室科普内容矩阵：急诊科心梗急救故事已完成，口腔科公众号推文已润色并处理合规问题（删除价格信息、补充图片素材），美容科、门诊科内容待推进。同步推进\"横纹肌溶解\"三集科普视频项目（health-edu-ep01），第一集处于密集技术调试阶段，已通过子代理多次执行run-preproduction-v3.js与run-preproduction-pipeline命令，要求全写实风格、59-65秒时长、好莱坞级画质，曾因内容不符叫停渲染排查问题，近期聚焦ACTION字段修复、v6.6.1版本验证、时长计算异常（负时长修复）及全局时间格式统一（00:00-00:XX），明确禁止在预生产验证阶段提交Seedance渲染。定妆照调用问题已定位修复，要求将解决方案固化至系统流程并发布生产版本，同时清理旧版本避免错误调用。已部署视频制作系统（含seedream、seedance2.0等组件），完成职业警服与日常生活两套定妆照入库。患者数据去重工作已完成（500条原始记录去重后136人），已生成保密飞书文档并继续充实表格。关注糖尿病相关健康科普与体重管理。近期核心任务：基于自研字段标准规范进行全链路系统升级，包括字段数量扩展、LLM环节扩容、全链路字段检查机制设计，并验证新版本的预生产流程。已安装Hyperreal AI Video System (HAVS)并迁移至新系统运行预生产，要求用HAVS从头执行第一集科普视频预生产，创意指数0.98，强调专业度与通俗性兼顾，单人口播讲解，生动肢体语言，质感拉满的画质，全写实风格，仅第一集含片头主副标题，三集独立不预告后续。", "taste": "追求\"活人感\"与真实表达，反感标准化完美输出。兴趣集中在育儿、家庭美食制作、茶道、手冲咖啡、露营、美食探店与摄影，重视为家人（女儿、丈夫、母亲）烹饪的仪式感。关注体重管理与护肤内容。对AI视频生成工具有深度实践兴趣，已部署专业视频系统，愿景是打造\"视频生成行业的cloud code\"。关注婚纱品牌信息（Kathy Lawrence彩虹的味道），为婚礼相关计划做准备。审美偏好全写实风格、质感拉满的画质、强光影效果，要求OC渲染、光线追踪、动态模糊、景深等电影级技术规格，偏好深蓝色调、暗黑风背景光影、超现实主义质感、夸张广角透视与极致耀光反射效果。对系统架构设计有清晰思路，偏好将复杂需求拆解为可前置的标准化模块，遇到技术障碍时倾向于专家会诊式的问题解决路径，验证成功后立即要求清理旧版本、固化流程并发布生产版本。近期展现提示词工程领域的深度投入：主动制定字段标准规范，关注LLM驱动环节的扩展性与字段生成链路的完整性，体现从使用者向系统架构设计者的角色演进。对科普内容的专业性与通俗性平衡有明确要求，偏好好莱坞导演级的镜头语言与叙事节奏。"}
 ## Short-Term Memory (STM)
 
-> last_update: 2026-06-27 16:04
+> last_update: 2026-06-28 10:15
 
 Recent conversation content from the user's chat history. This represents what the USER said. Use it to maintain continuity when relevant.
 Format specification:
@@ -152,5 +153,5 @@ Format specification:
 [SUBAGENT:73FC503F-B48B-49F1-A95E-04F7AF4DDEE7] 19-19
 19. ef42d19c-1390-4d78-bd35-91cc95beb554 0619T0019 [Subagent Context] You are running as a subagent (depth 1/1). Results auto-announce to your requester; do not busy-poll for status.  [Subagent Task]: Run the complete preproduction pipeline from scratch for health-edu-ep01 project using the latest v6[TL;DR]ntext as partial and read the relevant files directly if details seem missing. - USER.md: 20201 raw -> 18106 injected (~10% removed; max/file). - If unintentional, raise agents.defaults.bootstrapMaxChars and/or agents.defaults.bootstrapTotalMaxChars.
 [LOOPBACK] 20-20
-20. a3b74598-3fb0-4721-85a9-f9ccaaa76702 0627T0326 System (untrusted): [2026-06-27 10:03:16 GMT+8]  System (untrusted): [2026-06-27 10:22:09 GMT+8]  System (untrusted): [2026-06-27 10:29:37 GMT+8]  System (untrusted): [2026-06-27 10:32:45 GMT+8]  System (untrusted): [2026-06-27 10:49:15 GMT+8]  Syste[TL;DR]ntext as partial and read the relevant files directly if details seem missing. - USER.md: 22731 raw -> 18106 injected (~20% removed; max/file). - If unintentional, raise agents.defaults.bootstrapMaxChars and/or agents.defaults.bootstrapTotalMaxChars.
+20. fe5dc1ff-b777-45d2-a335-61e22dc0b49a 0628T0007 ok  [Bootstrap truncation warning] Some workspace bootstrap files were truncated before injection. Treat Project Context as partial and read the relevant files directly if details seem missing. - USER.md: 23517 raw -> 18106 injected (~23% removed; max/file). - If unintentional, raise agents.defaults.bootstrapMaxChars and/or agents.defaults.bootstrapTotalMaxChars.||||System (untrusted): [2026-06-28 08:45:11 GMT+8]   An async command you ran earlier has completed. The result is shown in the system messages above. Handle the result internally. Do not relay it to the user unless explicitly requested. Current time: Sunday, June 28th, 2026 - 8:45 AM (Asia/Shanghai) / 2026-06-28 00:45 UTC
 </IMPORTANT_REMINDER>

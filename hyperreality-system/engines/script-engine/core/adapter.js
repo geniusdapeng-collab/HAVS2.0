@@ -70,7 +70,11 @@ class ScriptBlueprintAdapter {
       
       // v1.2.5: 传递系列和平台元数据
       aspectRatio: meta._metadata?.aspectRatio || meta.aspectRatio || '16:9',
-      _metadata: meta._metadata || {},
+      _metadata: {
+        ...(meta._metadata || {}),
+        filmType: meta.videoType || meta.filmType || 'EDU',
+        visualStyle: meta.visual_style || 'REAL'
+      },
       
       // 【v2.1.4-fix9-P1】传递导演上下文信息
       content_theme: meta.content_theme || this._extractContentTheme(meta.title, meta),

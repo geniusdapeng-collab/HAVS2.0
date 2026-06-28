@@ -208,11 +208,17 @@ class HyperrealitySystem {
       const stage2Start = Date.now();
 
       // 【修复】应用运行时 agentConfig(解决配置不生效问题)
-      if (options.productionEngine?.agentConfig) {
-        this.productionEngine.updateAgentConfig(options.productionEngine.agentConfig);
+      if (options.productionEngine?.agentConfig || options.skipFieldQuality) {
+        this.productionEngine.updateAgentConfig({
+          ...options.productionEngine?.agentConfig,
+          ...(options.skipFieldQuality ? { skipFieldQuality: true } : {})
+        });
       }
 
-      const productionResult = await this.productionEngine.produce(adapted, options.productionEngine?.agentConfig);
+      const productionResult = await this.productionEngine.produce(adapted, {
+        ...options.productionEngine?.agentConfig,
+        ...(options.skipFieldQuality ? { skipFieldQuality: true } : {})
+      });
 
       result.stages.productionEngine = {
         shots: productionResult.shots.map(s => {

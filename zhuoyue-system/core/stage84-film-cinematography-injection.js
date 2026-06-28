@@ -259,7 +259,7 @@ if (require.main === module) {
   
   // 测试增强 - 纪录片
   console.log('\n=== 测试增强 - 纪录片 ===');
-  const testDocPrompt = "DIRECTOR: 专业医疗科普纪录片。SCENE: 医院讲堂。CAMERA: 中景稳定。LIGHTING: 自然柔和。AUDIO: 清晰人声。RENDER: 4K高品质。";
+  const testDocPrompt = "DIRECTOR: 专业纪录片。SCENE: 讲堂场景。CAMERA: 中景稳定。LIGHTING: 自然柔和。AUDIO: 清晰人声。RENDER: 4K高品质。";
   const testDocMeta = { camera: 'medium_shot', mood: 'professional', lighting: 'soft' };
   const docResult = enhancePromptWithFilmicSkills(testDocPrompt, testDocMeta, 'documentary');
   

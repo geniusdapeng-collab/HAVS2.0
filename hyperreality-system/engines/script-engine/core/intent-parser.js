@@ -91,6 +91,15 @@ class IntentParser {
       }
     }
 
+    // 【审计修复】如果 educational 有匹配（科普内容），优先使用 educational
+    if (scores.educational > 0 && primaryType !== 'educational') {
+      // 只有当 educational 匹配数不少于其他类型时才切换
+      if (scores.educational >= maxScore * 0.5) {
+        primaryType = 'educational';
+        maxScore = scores.educational;
+      }
+    }
+
     const confidence = totalMatches > 0 ? maxScore / totalMatches : 0;
 
     return {

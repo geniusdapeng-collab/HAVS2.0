@@ -1,29 +1,29 @@
 {
   "stm": {
-    "count": 66,
-    "last_ts": "2026-06-27T16:04:23.062157",
-    "last_sessions": 233,
-    "last_messages": 3151,
-    "last_chars": 19954
+    "count": 69,
+    "last_ts": "2026-06-28T10:15:22.712720",
+    "last_sessions": 264,
+    "last_messages": 3512,
+    "last_chars": 20193
   },
   "diary": {
-    "count": 55,
-    "last_ts": "2026-06-27T03:38:16.913266",
-    "last_day": 28,
-    "last_sessions": 25,
-    "last_messages": 1836,
-    "last_filename": "day28-2026-06-27-killed_by_sigterm_three_times.md",
-    "last_latency_s": 21.9,
-    "last_skip": "no_sessions_today",
+    "count": 57,
+    "last_ts": "2026-06-28T03:57:24.296079",
+    "last_day": 29,
+    "last_sessions": 33,
+    "last_messages": 2946,
+    "last_filename": "day29-2026-06-28-wukong_done_still_fixing_myself.md",
+    "last_latency_s": 13.1,
+    "last_skip": "conversation_hash_unchanged",
     "last_error": "The read operation timed out"
   },
   "compact": {
-    "count": 55,
-    "last_ts": "2026-06-27T03:38:46.121802",
-    "last_invoke": 17,
-    "last_sessions": 225,
-    "last_messages": 3141,
-    "last_latency_s": 19.5,
+    "count": 57,
+    "last_ts": "2026-06-28T03:57:35.633235",
+    "last_invoke": 19,
+    "last_sessions": 258,
+    "last_messages": 3500,
+    "last_latency_s": 18.1,
     "last_model": "k2p6",
     "last_skip": "stm_hash_unchanged"
   }

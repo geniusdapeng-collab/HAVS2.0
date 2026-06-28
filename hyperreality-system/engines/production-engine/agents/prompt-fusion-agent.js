@@ -90,7 +90,7 @@ class PromptFusionAgent extends BaseAgent {
   constructor(options = {}) {
     super({ name: 'PromptFusionAgent', enabled: true, llmTimeout: 300000, ...options });
     this.maxPromptLength = options.maxPromptLength || PromptLengthConfig.HARD_MAX || 12000;
-    this.concurrency = options.concurrency || 2;
+    this.concurrency = options.concurrency || 3;
     this.llmTimeout = 300000; // 5 分钟单次（结构化输出需要更长时间）
     this.llmMaxRetries = 2;
   }
@@ -338,6 +338,20 @@ class PromptFusionAgent extends BaseAgent {
       if (!fields[f] || String(fields[f]).trim() === '') {
         fields[f] = this._defaultFieldValue(f, shot);
       }
+    }
+    // 【v2.1.4-fix16-EDU】强制保护核心字段，防止LLM覆盖原始角色和场景
+    const originalChar = shot.character ? (typeof shot.character === 'string' ? shot.character : shot.character?.name || '') : '';
+    if (originalChar && fields.character !== originalChar) {
+      console.log(`[PromptFusion] ${shot.shotId} 角色被LLM修改，强制还原为原始角色: ${originalChar}`);
+      fields.character = originalChar;
+    }
+    if (shot.scene && fields.scene !== shot.scene) {
+      console.log(`[PromptFusion] ${shot.shotId} 场景被LLM修改，强制还原为原始场景: ${shot.scene}`);
+      fields.scene = shot.scene;
+    }
+    if (shot.action && fields.action !== shot.action) {
+      console.log(`[PromptFusion] ${shot.shotId} 动作被LLM修改，强制还原为原始动作: ${shot.action}`);
+      fields.action = shot.action;
     }
     return fields;
   }

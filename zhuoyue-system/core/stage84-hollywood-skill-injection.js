@@ -22,7 +22,7 @@ const path = require('path');
  * @returns {Object} 增强后的故事板
  */
 async function stage84HollywoodSkillInjection(pipeline, storyboard, input) {
-  pipeline.log('STAGE-8.4', '好莱坞技能注入启动(医疗科普专用)');
+  pipeline.log('STAGE-8.4', '好莱坞技能注入启动');
 
   try {
     // 1. 初始化技能路由器
@@ -188,7 +188,7 @@ if (require.main === module) {
   console.log('技能库统计:', JSON.stringify(getSkillLibraryStats(), null, 2));
   
   // 测试增强
-  const testPrompt = "DIRECTOR: 专业医疗科普纪录片。SCENE: 医院讲堂。CAMERA: 中景稳定。LIGHTING: 自然柔和。AUDIO: 清晰人声。RENDER: 4K高品质。";
+  const testPrompt = "DIRECTOR: 专业纪录片。SCENE: 讲堂场景。CAMERA: 中景稳定。LIGHTING: 自然柔和。AUDIO: 清晰人声。RENDER: 4K高品质。";
   const testMeta = { camera: 'medium_shot', mood: 'professional', lighting: 'soft' };
   const result = enhancePromptWithFilmicSkills(testPrompt, testMeta);
   
