@@ -164,9 +164,12 @@ ${sceneOptions}
         if (eduScene) {
           scene = eduScene;
         }
-        // 强制角色为陈卓（科普主讲人）
-        if (action && !action.includes('陈卓') && !action.includes('主讲人')) {
-          action = action.replace(/医学讲解者|医学讲师|主讲人|讲解者/g, '陈卓');
+        // v6.7.1-fix: 通用化角色处理，消灭硬编码"陈卓"
+        const characters = blueprint.characters || {};
+        const charNames = Object.values(characters).map(c => c.name).filter(Boolean);
+        const defaultSpeaker = charNames[0] || '主讲人';
+        if (action && !charNames.some(name => action.includes(name)) && !action.includes('主讲人')) {
+          action = action.replace(/医学讲解者|医学讲师|主讲人|讲解者/g, defaultSpeaker);
         }
       }
       
@@ -231,9 +234,12 @@ ${sceneOptions}
         if (eduScene) {
           shot.scene = eduScene;
         }
-        // 强制角色为陈卓（科普主讲人）
-        if (shot.action && !shot.action.includes('陈卓') && !shot.action.includes('主讲人')) {
-          shot.action = shot.action.replace(/医学讲解者|医学讲师|主讲人|讲解者/g, '陈卓');
+        // v6.7.1-fix: 通用化角色处理，消灭硬编码"陈卓"
+        const characters2 = blueprint.characters || {};
+        const charNames2 = Object.values(characters2).map(c => c.name).filter(Boolean);
+        const defaultSpeaker2 = charNames2[0] || '主讲人';
+        if (shot.action && !charNames2.some(name => shot.action.includes(name)) && !shot.action.includes('主讲人')) {
+          shot.action = shot.action.replace(/医学讲解者|医学讲师|主讲人|讲解者/g, defaultSpeaker2);
         }
       });
     }
