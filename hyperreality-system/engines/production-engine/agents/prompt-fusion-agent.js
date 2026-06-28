@@ -313,25 +313,34 @@ class PromptFusionAgent extends BaseAgent {
     // 【P1-13-审计修复】自适应补齐：预算充足用LLM，不足用规则兜底
     const remaining = this._remainingMs();
     const budgetPerField = 30000; // 每字段约30s
-    if (remaining >= missing.length * budgetPerField && this.llmModel) {
-      console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → LLM补齐（预算充足: ${remaining}ms）`);
-      try {
-        const patch = await this.llmModel.call({
-          prompt: `为镜头 ${shot.shotId} 补齐以下字段: ${missing.join(',')}。按标准格式输出每个字段内容。`,
-          timeout: Math.min(remaining - 5000, 120000)
-        });
-        if (patch && typeof patch === 'object') {
-          for (const f of missing) {
-            if (patch[f] && String(patch[f]).trim() !== '') {
-              fields[f] = patch[f];
+    if (remaining >= missing.length * budgetPerField) {
+      const llm = this._getLLMEngine();
+      if (llm) {
+        console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → LLM补齐（预算充足: ${remaining}ms）`);
+        try {
+          const patchResult = await this._callLLM(
+            `为镜头 ${shot.shotId} 补齐以下字段: ${missing.join(',')}。\n\n按标准格式输出每个字段内容，返回JSON格式：{"fields": {"字段名": "内容"}}`,
+            null,
+            () => null,
+            { maxTokens: 4000 }
+          );
+          const patch = patchResult?.result;
+          if (patch && typeof patch === 'object') {
+            const patchFields = patch.fields || patch;
+            for (const f of missing) {
+              if (patchFields[f] && String(patchFields[f]).trim() !== '') {
+                fields[f] = patchFields[f];
+              }
             }
           }
+        } catch (e) {
+          console.warn(`[PromptFusion] LLM补齐失败: ${e.message} → 规则兜底`);
         }
-      } catch (e) {
-        console.warn(`[PromptFusion] LLM补齐失败: ${e.message} → 规则兜底`);
+      } else {
+        console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → 规则兜底（LLM引擎不可用）`);
       }
     } else {
-      console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → 规则兜底（预算不足: ${remaining}ms 或 LLM不可用）`);
+      console.log(`[PromptFusion] ${shot.shotId} 缺失/过短字段 ${missing.length} 个: ${missing.join(',')} → 规则兜底（预算不足: ${remaining}ms）`);
     }
     // 兜底：LLM补齐后仍缺失的字段用规则兜底
     for (const f of missing) {
