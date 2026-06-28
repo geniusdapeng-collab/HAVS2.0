@@ -763,7 +763,7 @@ class HyperrealitySystem {
       ];
       for (const openingField of openingFields) {
         const seqStr = String(seq).padStart(2, '0');
-        lines.push(`${seqStr}.【${of.label}】(片头专属字段,需单独配置)`);
+        lines.push(`${seqStr}.【${openingField.label}】(片头专属字段,需单独配置)`);
         seq++;
       }
     }
