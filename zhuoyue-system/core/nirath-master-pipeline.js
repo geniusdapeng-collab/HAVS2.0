@@ -879,7 +879,7 @@ class NirathMasterPipeline {
       const cpStage7Config = cpEngine.getStageConfig('7-storyboard');
       input._cpStage7Config = cpStage7Config;
       this.log('STAGE-7', `🎨 创意参数配置: 镜头复杂度=${cpStage7Config.shotComplexity}, 构图=${cpStage7Config.composition}`);
-      result.stages.storyboard = await runStage('STAGE-7', () => this.stageStoryboard(result.stages.script, result.stages.duration, input));
+      result.stages.storyboard = await runStage('STAGE-7', () => this.stageStoryboard(result.stages.script, result.stages.duration, input, result.stages.characters));
 
       // Stage 7.2: 【v6.2-patch51】主角主动性自动注入
       result.stages.protagonistInitiative = await runStage('STAGE-7.2', () => this.stageProtagonistInitiative(result.stages.storyboard, input));
@@ -3826,7 +3826,7 @@ ${isNirath
   }
 
       // ========== Stage 7: 故事板生成(防硬编码:结构化生成 + mouthAction字段 + Nirath场景映射) ==========
-  async stageStoryboard(script, durations, input = {}) {
+  async stageStoryboard(script, durations, input = {}, characters = {}) {
     this.log('STAGE-7', '故事板生成(结构化生成器 + mouthAction字段 + Nirath场景映射)');
 
     // ========== StoryCraft Engine v2.0 集成 ==========
@@ -4064,7 +4064,7 @@ ${isNirath
           () => StagePrompts.STAGE_7_STORYBOARD(
             mappedScenes,
             this.input?.world || this.input?.prd?.world || { setting: '未指定' },
-            this.stages?.characters || input?.characters || {}
+            characters || input?.characters || {}
           ),
           {
             llmEngine: this._createLLMEngine({ maxTokens: 4096 }),
@@ -4104,11 +4104,18 @@ ${isNirath
           scene.characters = originalScene.characters;
           this.log('STAGE-7', `  🔧 角色字段修复: ${scene.id} → 从input透传 ${originalScene.characters.join(', ')}`);
         } else {
-          // 兜底:自动推断
-          const inferredChars = this.inferCharactersFromScene(scene);
-          if (inferredChars.length > 0) {
-            this.log('STAGE-7', `  🔍 角色自动推断: ${scene.id} → ${inferredChars.join(', ')}`);
-            scene.characters = inferredChars;
+          // 其次: 从Stage 4生成的characters中获取
+          const charIds = Object.keys(characters || {});
+          if (charIds.length > 0) {
+            scene.characters = charIds;
+            this.log('STAGE-7', `  🔧 角色字段修复: ${scene.id} → 从Stage 4角色透传 ${charIds.join(', ')}`);
+          } else {
+            // 兜底:自动推断
+            const inferredChars = this.inferCharactersFromScene(scene);
+            if (inferredChars.length > 0) {
+              this.log('STAGE-7', `  🔍 角色自动推断: ${scene.id} → ${inferredChars.join(', ')}`);
+              scene.characters = inferredChars;
+            }
           }
         }
       }
