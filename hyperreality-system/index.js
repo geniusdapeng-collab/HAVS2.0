@@ -502,7 +502,7 @@ class HyperrealitySystem {
               const optimizer = new OpeningTitleOptimizer({
                 llmTimeout: 120000,
                 llmMaxRetries: 2,
-                llmModel: process.env.STORMAXE_LLM_FAST_MODEL || process.env.STORMAXE_LLM_MODEL || 'kimi-k2p6'
+                llmModel: process.env.HAVS_LLM_FAST_MODEL || process.env.HAVS_LLM_MODEL || 'kimi-k2p6'
               });
               // 【P2-10 修复】下发 deadline，防止不受控挂起
               optimizer.setDeadline(Date.now() + 180000); // 3分钟总体预算

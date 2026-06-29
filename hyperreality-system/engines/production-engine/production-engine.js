@@ -33,8 +33,8 @@ const DEFAULT_AGENT_CONFIG = {
   llmTimeout: 180000, // 【v2.1.4-fix10-P25-fix3】单次3分钟，避免一次失败吃掉1/3预算
   llmMaxRetries: 2,
   // 【v2.1.4-fix13-审计修复】从环境变量读取模型配置，消除硬编码
-  llmModel: process.env.STORMAXE_LLM_MODEL || 'kimi-k2p6',
-  fastModel: process.env.STORMAXE_LLM_FAST_MODEL || process.env.STORMAXE_LLM_MODEL || 'kimi-k2p6',
+  llmModel: process.env.HAVS_LLM_MODEL || 'kimi-k2p6',
+  fastModel: process.env.HAVS_LLM_FAST_MODEL || process.env.HAVS_LLM_MODEL || 'kimi-k2p6',
   totalDeadlineMs: 1050000, // 【v2.1.4-fix13-审计修复】从540000提升至1050000(~17.5分钟)，匹配实际需求：Phase1(~90s)+Phase2(~300s)+Phase3(~540s)+QualityCheck(~120s)
   memThresholdMB: 1800, // 【v2.1.4-fix10-P25-fix3】提升阈值，避免GC风暴
   promptFusionConcurrency: 2 // 【v2.1.4-fix10-P25-fix3】并发2，平衡速度与稳定性

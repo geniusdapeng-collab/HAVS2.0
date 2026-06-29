@@ -7,8 +7,8 @@
 const path = require('path');
 
 // 从环境变量读取模型配置，消除硬编码
-const DEFAULT_MODEL = process.env.STORMAXE_LLM_MODEL || 'kimi-k2p6';
-const DEFAULT_FAST_MODEL = process.env.STORMAXE_LLM_FAST_MODEL || DEFAULT_MODEL;
+const DEFAULT_MODEL = process.env.HAVS_LLM_MODEL || 'kimi-k2p6';
+const DEFAULT_FAST_MODEL = process.env.HAVS_LLM_FAST_MODEL || DEFAULT_MODEL;
 
 function loadLLMEngine(model, maxTokens) {
   try {

@@ -18,9 +18,9 @@ try {
 
 class ScriptGenerator {
   constructor(options = {}) {
-    const model = options.model || process.env.STORMAXE_LLM_MODEL || null;
+    const model = options.model || process.env.HAVS_LLM_MODEL || null;
     if (!model) {
-      console.warn('[ScriptGenerator] ⚠️ 未配置模型名，请设置 STORMAXE_LLM_MODEL 或传入 options.model');
+      console.warn('[ScriptGenerator] ⚠️ 未配置模型名，请设置 HAVS_LLM_MODEL 或传入 options.model');
     }
     this.config = {
       llmEndpoint: options.llmEndpoint || process.env.LLM_ENDPOINT || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
