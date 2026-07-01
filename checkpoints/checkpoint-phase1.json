@@ -1,0 +1,432 @@
+{
+  "phase": "phase1",
+  "shots": [
+    {
+      "shotId": "SC01",
+      "sceneType": "establishing",
+      "sceneFunction": "establish",
+      "timing": {
+        "start": 0,
+        "duration": 8,
+        "end": 8
+      },
+      "duration": 8,
+      "scene": "废弃工厂内，红砖墙面斑驳脱落，LED顶灯冷白照明，锈蚀金属货架与废弃机床排列两侧，灰色水泥地面布满裂痕与油污，空气弥漫铁锈味。",
+      "mood": "剑拔弩张，对峙氛围压抑紧绷，挑衅意味浓烈",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg; 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "孙悟空双手握金箍棒斜指前方，双脚前后开立，身体前倾，头部微昂，眼神挑衅紧盯二郎神。",
+      "dialogue": "孙悟空|台词|挑衅|二郎神，今日定要分出高下！|LIP_SYNC:YES",
+      "dialogueBlocks": [],
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "二郎神，今日定要分出高下！",
+      "emotionalTarget": {
+        "valence": 0.4,
+        "arousal": 0.8
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:00",
+          "end": "T00:08",
+          "duration": 8,
+          "type": "establishing",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:00-T00:08 / duration: 8s / type: establishing / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 8,
+        "dialogueFactor": 1.2,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "挑衅"
+    },
+    {
+      "shotId": "SC02",
+      "sceneType": "conflict",
+      "sceneFunction": "confront",
+      "timing": {
+        "start": 8,
+        "duration": 7,
+        "end": 15
+      },
+      "duration": 7,
+      "scene": "废弃厂房中，灰色水泥墙面粗糙裸露，荧光灯管频闪微光，老旧金属工作台与锈蚀管道纵横交错，深色混凝土地面潮湿反光。",
+      "mood": "冰冷肃杀，空气凝固沉重，神威暗藏不露",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg; 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "二郎神静立不动，双手持三尖两刃刀横于身侧，下巴微收，眼神冷峻如霜直视孙悟空。",
+      "dialogue": "二郎神|台词|冷峻|妖猴，休得猖狂！|LIP_SYNC:YES",
+      "dialogueBlocks": [],
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "妖猴，休得猖狂！",
+      "emotionalTarget": {
+        "valence": 0.3,
+        "arousal": 0.9
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:08",
+          "end": "T00:15",
+          "duration": 7,
+          "type": "conflict",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:08-T00:15 / duration: 7s / type: conflict / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 7,
+        "dialogueFactor": 1.0333333333333334,
+        "typeWeight": 1.3,
+        "preserved": true
+      },
+      "emotional_target": "冷峻"
+    },
+    {
+      "shotId": "SC03",
+      "sceneType": "action",
+      "sceneFunction": "escalate",
+      "timing": {
+        "start": 15,
+        "duration": 8,
+        "end": 23
+      },
+      "duration": 8,
+      "scene": "废弃仓库内，黄褐砖墙角落窗光斜射而入，老旧木箱与金属货架堆叠成山，灰色水泥地面尘埃飞扬，角落散落无文字标识牌。",
+      "mood": "狂妄轻蔑，戏谑挑衅气氛浓烈，躁动不安",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg; 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "孙悟空转身后撤步，单脚点地跃起，右手抬至耳边做挑衅手势，咧嘴大笑，身形灵动。",
+      "dialogue": "孙悟空|台词|狂傲|追上我再说！|LIP_SYNC:YES",
+      "dialogueBlocks": [],
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "追上我再说！",
+      "emotionalTarget": {
+        "valence": 0.5,
+        "arousal": 0.95
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:15",
+          "end": "T00:23",
+          "duration": 8,
+          "type": "action",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:15-T00:23 / duration: 8s / type: action / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 8,
+        "dialogueFactor": 0.9666666666666667,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "狂傲"
+    },
+    {
+      "shotId": "SC04",
+      "sceneType": "action",
+      "sceneFunction": "climax",
+      "timing": {
+        "start": 23,
+        "duration": 7,
+        "end": 30
+      },
+      "duration": 7,
+      "scene": "废弃车间里，灰色砖墙布满油污与锈渍，LED顶灯直射强光，破损机床与金属支架倾倒歪斜，水磨石地面碎裂凹陷不平。",
+      "mood": "愤怒狂暴，威压陡然爆发，杀气弥漫四周，令人窒息",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg; 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "二郎神怒目圆睁，挥刀在身前画出一道弧光，猛踏前一步，左手指向前方，气势凶猛。",
+      "dialogue": "二郎神|台词|怒喝|变化之术，班门弄斧！|LIP_SYNC:YES",
+      "dialogueBlocks": [],
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "变化之术，班门弄斧！",
+      "emotionalTarget": {
+        "valence": 0.5,
+        "arousal": 0.9
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:23",
+          "end": "T00:30",
+          "duration": 7,
+          "type": "action",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:23-T00:30 / duration: 7s / type: action / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 7,
+        "dialogueFactor": 1.1,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "愤怒"
+    },
+    {
+      "shotId": "SC05",
+      "sceneType": "climax",
+      "sceneFunction": "peak",
+      "timing": {
+        "start": 30,
+        "duration": 8,
+        "end": 38
+      },
+      "duration": 8,
+      "scene": "废弃厂房中，红砖墙面焦黑烟熏，工业荧光灯高悬照明，倒塌货架与金属管交错堆叠，水泥地面碎石遍布坑洼裂痕。",
+      "mood": "暴怒狂躁，杀气腾腾四溢，战意沸腾几欲失控",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg; 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "孙悟空双手抡起金箍棒，跨步跃起腾空，双臂肌肉绷紧，握棒过头顶猛力劈向二郎神。",
+      "dialogue": "孙悟空|台词|暴怒|吃我一棒！|LIP_SYNC:YES",
+      "dialogueBlocks": [],
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "吃我一棒！",
+      "emotionalTarget": {
+        "valence": 0.3,
+        "arousal": 1
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:30",
+          "end": "T00:38",
+          "duration": 8,
+          "type": "climax",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:30-T00:38 / duration: 8s / type: climax / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 8,
+        "dialogueFactor": 0.9333333333333333,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "暴怒"
+    },
+    {
+      "shotId": "SC06",
+      "sceneType": "action",
+      "sceneFunction": "peak",
+      "timing": {
+        "start": 38,
+        "duration": 7,
+        "end": 45
+      },
+      "duration": 7,
+      "scene": "废弃工厂内，混凝土墙面龟裂渗水，无影灯强光照射中央，金属器械与空白展板靠墙排列，灰色地砖缝隙积灰厚重。",
+      "mood": "庄严神圣不可侵犯，神性威压笼罩全场，凝重肃穆",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg; 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "二郎神凝神静立，右手缓缓抬至额头，手指按紧眉心，头部微仰，眉心反射顶灯强烈白光。",
+      "dialogue": "二郎神|台词|威严|天眼，开！|LIP_SYNC:YES",
+      "dialogueBlocks": [],
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "天眼，开！",
+      "emotionalTarget": {
+        "valence": 0.4,
+        "arousal": 0.95
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:38",
+          "end": "T00:45",
+          "duration": 7,
+          "type": "action",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:38-T00:45 / duration: 7s / type: action / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 7,
+        "dialogueFactor": 0.9333333333333333,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "威严"
+    },
+    {
+      "shotId": "SC07",
+      "sceneType": "action",
+      "sceneFunction": "climax",
+      "timing": {
+        "start": 45,
+        "duration": 8,
+        "end": 53
+      },
+      "duration": 8,
+      "scene": "废弃车间内，水泥墙面斑驳脱落严重，LED顶灯冷光满布，废旧机床与破损木箱散落四周，灰色水泥地面裂纹交错。",
+      "mood": "不屈战意燃烧不灭，愈挫愈勇，血性翻涌不止",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg; 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "孙悟空抬臂擦去嘴角，重新握紧金箍棒，双腿弓步下沉，眼神凌厉如刀直视对手。",
+      "dialogue": "孙悟空|台词|战意|再来！|LIP_SYNC:YES",
+      "dialogueBlocks": [],
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "再来！",
+      "emotionalTarget": {
+        "valence": 0.5,
+        "arousal": 1
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:45",
+          "end": "T00:53",
+          "duration": 8,
+          "type": "action",
+          "mood": "neutral, calm, intense, dramatic"
+        },
+        "string": "T00:45-T00:53 / duration: 8s / type: action / mood: neutral, calm, intense, dramatic"
+      },
+      "allocation": {
+        "baseDuration": 8,
+        "dialogueFactor": 0.8666666666666667,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "战意"
+    },
+    {
+      "shotId": "SC08",
+      "sceneType": "resolution",
+      "sceneFunction": "resolve",
+      "timing": {
+        "start": 53,
+        "duration": 7,
+        "end": 60
+      },
+      "duration": 7,
+      "scene": "废弃厂房中，灰色砖墙沉寂无声，西侧窗光透入照明，金属管道与废弃设备静立角落，水磨石地面光影斑驳交错。",
+      "mood": "凝重压抑，胜负未分的不甘，沉重气氛弥漫",
+      "character": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "characterRef": "孙悟空: image://characters/wukong/portraits/portrait-front.jpg; 二郎神: image://characters/erlang-shen/portraits/portrait-front.jpg",
+      "action": "二郎神缓缓收刀于身后，侧身回望孙悟空，肩膀微沉，脚步后移转身，准备离场。",
+      "dialogue": "二郎神|台词|凝重|今日暂且作罢。|LIP_SYNC:YES",
+      "dialogueBlocks": [],
+      "characters": [
+        "wukong",
+        "erlang-shen"
+      ],
+      "characterDescs": "孙悟空: human, golden armor, monkey face, fiery eyes, golden staff, fierce aura, 二郎神: human, silver armor, third eye glowing, spear weapon, cold aura, divine warrior",
+      "dialogueText": "今日暂且作罢。",
+      "emotionalTarget": {
+        "valence": 0.5,
+        "arousal": 0.7
+      },
+      "visualDirection": {},
+      "promptBase": "",
+      "worldId": "mythology_chinese",
+      "status": "pending",
+      "timeline": {
+        "object": {
+          "start": "T00:53",
+          "end": "T01:00",
+          "duration": 7,
+          "type": "resolution",
+          "mood": "peaceful, warm, nostalgic, hopeful"
+        },
+        "string": "T00:53-T01:00 / duration: 7s / type: resolution / mood: peaceful, warm, nostalgic, hopeful"
+      },
+      "allocation": {
+        "baseDuration": 7,
+        "dialogueFactor": 1,
+        "typeWeight": 1,
+        "preserved": true
+      },
+      "emotional_target": "凝重"
+    }
+  ],
+  "opening": {
+    "shotId": "S00",
+    "scene": "混沌天穹骤裂，金箍棒与三尖两刃刀轰然对撞，神光炸裂如星云爆开，两道绝世身影在雷霆万钧中交锋，天地为之变色。",
+    "mood": "史诗压迫与神性对决",
+    "camera": {
+      "shot_size": "极近景特写至大全景",
+      "movement": "急速后拉配合螺旋上升",
+      "angle": "低角度仰拍"
+    },
+    "cameraString": "从兵器碰撞的极近景特写急速后拉至大全景，随即螺旋上升环绕，以低角度仰拍强化两位神祇对峙的压迫感与视觉冲击力。",
+    "lighting": {
+      "key_light": "高对比侧逆光",
+      "atmosphere": "戏剧化顶光与爆点神辉"
+    },
+    "lightingString": "高对比侧逆光锐化兵器与神祇轮廓，戏剧化顶光压下浓重阴影，碰撞中心爆发出刺目的神性辉光向四周辐射。",
+    "audioLayer": {
+      "bgm": "史诗级中国神话管弦乐，战鼓与大号齐鸣",
+      "sound_effects": "金属剧烈撞击、雷霆炸裂、狂风呼啸"
+    },
+    "audioLayerString": "史诗管弦乐以低沉战鼓与大号齐鸣铺底，瞬间切入金属剧烈撞击、雷霆炸裂与狂风呼啸，构建神战级听觉压迫。",
+    "titleOverlay": {
+      "main_title": "孙悟空大战二郎神",
+      "sub_title": "神魔对决",
+      "style": "金属质感书法字体，金银双色渐变，带粒子消散"
+    },
+    "titleOverlayString": "主标题「孙悟空大战二郎神」以金属质感书法字体炸裂呈现，副标题「神魔对决」紧随而出，金银双色渐变裹挟粒子消散。",
+    "duration": 8
+  },
+  "llmStats": {},
+  "blueprintFingerprint": {
+    "sceneCount": 8,
+    "shotIds": "SC01,SC02,SC03,SC04,SC05,SC06,SC07,SC08",
+    "hash": "1fc51010"
+  },
+  "savedAt": "2026-06-29T17:02:09.812Z"
+}

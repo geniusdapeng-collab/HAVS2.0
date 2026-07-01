@@ -450,8 +450,134 @@ S01-S04、S06 的 prompt 中同时存在两套运镜描述：
 - 文档、测试、示例、资源文件全部保留
 - 生产版本备份 (`.production-v1.0.*`)
 
-### 后续建议
-1. 运行 smoke-test 验证功能完整性
-2. 更新 `.env` 配置匹配新模块
-3. 更新 VERSION 文件为 v2.1.7
-4. 确认自定义入口适配新 index.js 接口
+## 仓库迁移：HAVS2.0（2026-06-30）
+
+### 背景
+用户要求新建独立云端仓库，专用于 HAVS 系统代码托管，与旧仓库 StormaxeAIVideoSystem 解耦。
+
+### 操作记录
+1. **新建私有仓库**: `github.com/geniusdapeng-collab/HAVS2.0`
+   - 类型: 私有仓库
+   - 描述: Hyperreality AI Video System v2.0 - 好莱坞工业级AI视频自动生产系统
+   - 分支: main (默认)
+   - 仓库 ID: 1284209056
+
+2. **推送代码 (第一轮)**: 本地 `master` → 远程 `main`
+   - 推送内容: `hyperreality-system/` 核心代码 (267 文件, ~4.4 万行)
+   - 推送方式: force-with-lease
+   - 代码基线: HAVS v2.1.7-audit 完整迁移
+
+3. **推送代码 (第二轮)**: 补充 `workspace/systems/` 模块
+   - 推送内容: 215 个文件, 70,519 行代码
+   - 包含模块: field-check, field-guard, field-repair, stages, story-craft-engine, beast-archive, camera-movement-systems, character compliance, render adapters 等
+   - 仓库路径: `hyperreality-system/external-systems/`
+   - 提交: `45e195d`
+
+4. **远程仓库替换**:
+   - 移除旧远程: `origin` → `StormaxeAIVideoSystem` (已取消关联)
+   - 新远程: `origin` → `https://github.com/geniusdapeng-collab/HAVS2.0.git`
+   - 本地当前分支仍为 `master`，远程为 `origin/main`
+
+### 当前状态
+- 本地仓库: `hyperreality-system/` (master 分支)
+- 远程仓库: `geniusdapeng-collab/HAVS2.0` (main 分支)
+- 旧仓库: `StormaxeAIVideoSystem` (已解除关联，仓库本身仍存在)
+- 总代码量: ~482 文件, ~11.5 万行
+
+### 云端仓库地址
+- **HTTPS**: `https://github.com/geniusdapeng-collab/HAVS2.0`
+- **SSH**: `git@github.com:geniusdapeng-collab/HAVS2.0.git`
+- **Clone**: `git clone https://github.com/geniusdapeng-collab/HAVS2.0.git`
+
+### 注意事项
+- 本地 `master` 与远程 `main` 分支名不一致，后续 `git pull` 可能需要显式指定分支或使用 `--set-upstream`
+- 建议操作: `git branch --set-upstream-to=origin/main master` 或本地重命名 `master` → `main`
+- `external-systems/` 目录对应原 `workspace/systems/`，为保持原有引用路径不变，后续可能需要调整目录结构
+
+---
+
+
+
+
+### 已完成
+
+#### P0 基础设施
+- ✅ Hyperreality-System: 20 Topics, About优化, MCP/Plugin/Skill manifest, ROADMAP, CHANGELOG, 治理文件
+- ✅ PandaCineForge: 20 Topics, MCP/Plugin/Skill manifest, ROADMAP, CHANGELOG
+- ✅ Hyperreality-System v1.0.0 Release 已发布
+- ⚠️ CI/CD workflow: 两个项目均因token缺少`workflow` scope未推送，已提供手动粘贴方案
+
+#### P1 推广素材
+- ✅ 社交媒体全套文案（X/Twitter、微博、即刻、V2EX、Reddit、Hacker News、掘金/知乎）
+- ✅ 深度技术文章 2 篇（PandaCineForge 4053字 + Hyperreality-System 6278字）
+- ✅ CI/CD 手动配置指南（含 workflow 文件内容）
+
+### 待执行（需用户配合）
+- [ ] CI/CD workflow 手动粘贴或更新token
+- [ ] 社交媒体发布（需用户登录各平台账号）
+- [ ] Awesome list提交（awesome-ai-agents, awesome-llm, awesome-aigc等）
+- [ ] 技术文章发布到掘金/知乎/Medium/dev.to
+- [ ] 60秒Demo GIF制作
+- [ ] 社区建设（Discord/微信群）
+
+### 文件清单
+- `/root/.openclaw/workspace/output/social-media-kit.md` — 社交媒体文案
+- `/root/.openclaw/workspace/output/panda-cineforge-deep-article.md` — PandaCineForge深度文章
+- `/root/.openclaw/workspace/output/hyperreality-deep-article.md` — Hyperreality深度文章
+- `/root/.openclaw/workspace/output/cicd-manual-guide.md` — CI/CD手动配置指南
+- `/root/.openclaw/workspace/output/github-marketing-strategy.md` — 完整营销策略
+
+---
+
+按用户要求执行系统性GitHub运营优化，核心策略：**AI-First + Human-Second**（让AI Agent先发现、理解、推荐，再触达人类开发者）。
+
+### 调研核心发现
+
+1. **AI Agent可发现性是新赛道**：Claude Code、OpenClaw等平台正在构建技能市场，标准化 SKILL.md + MCP manifest 让AI直接"看懂"项目
+2. **GitHub SEO排名因素**：Topics（20个全满）、About描述（关键词开头）、Stars（社交证明）、Release频率（动态信号）
+3. **成功项目共性**：一句话定位 + 架构图 + 30秒Quick Start + 持续内容输出
+
+### 已完成优化
+
+#### Hyperreality-System
+- ✅ 20 Topics设置（agent-framework, ai-video, ai-cinema, film-production, hollywood等）
+- ✅ About描述优化："Hollywood-grade AI video production system: Multi-Agent orchestration..."
+- ✅ .claude-plugin/plugin.json（Claude Code标准）
+- ✅ .openclaw/skill.json（OpenClaw标准）
+- ✅ mcp-server/index.js（MCP协议适配）
+- ✅ ROADMAP.md（Q3 2026 - Q2 2027+ 四阶段规划）
+- ✅ CHANGELOG.md（v1.0.0发布说明）
+- ✅ CONTRIBUTING.md + SECURITY.md + CODE_OF_CONDUCT.md
+- ✅ v1.0.0 Release已发布（StormaxeAIVideoSystem）
+- ⚠️ CI/CD workflow未推送（token缺少workflow scope）
+
+#### PandaCineForge
+- ✅ 20 Topics已设置（ai-agent, skill-engine, ai-cinema等）
+- ✅ .claude-plugin/plugin.json（Claude Code标准）
+- ✅ .openclaw/skill.json（OpenClaw标准）
+- ✅ mcp-server/index.py（Python版MCP适配）
+- ✅ ROADMAP.md（3年规划）
+- ✅ CHANGELOG.md（v1.0.0发布说明）
+- ⚠️ CI/CD workflow未推送（token缺少workflow scope）
+
+#### 推广素材准备
+- ✅ 社交媒体发布素材包（X/Twitter、微博、即刻、V2EX、Reddit、Hacker News、掘金/知乎）
+- 文件：`/root/.openclaw/workspace/output/social-media-kit.md`
+
+### 预期KPI
+
+- 短期1个月：PandaCineForge 50-100 stars，Hyperreality 30-50 stars
+- 中期3个月：PandaCineForge 300-500 stars，Hyperreality 200-300 stars
+- 核心定位：PandaCineForge = **全球首个面向AI Agent的影视技能生成引擎**；Hyperreality = **面向好莱坞工业级标准的AI视频自动生产系统**
+
+### 待办事项
+
+- [ ] CI/CD workflow推送（需workflow scope token）
+- [ ] 社交媒体发布执行（需用户确认或授权发布）
+- [ ] Awesome list提交（awesome-ai-agents, awesome-llm等）
+- [ ] AI Agent目录提交（smithery.ai, skills.mp, OpenClaw marketplace）
+- [ ] 深度技术文章发布（掘金/知乎/Medium/dev.to）
+- [ ] 60秒Demo GIF制作
+- [ ] 社区建设（Discord/微信群）
+
+---
